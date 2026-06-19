@@ -1,0 +1,2 @@
+#!/bin/bash
+java --enable-native-access=ALL-UNNAMED -cp ".:./jline-3.26.0.jar" OierToolKit
