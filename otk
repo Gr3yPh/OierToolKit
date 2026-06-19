@@ -1,2 +1,20 @@
 #!/bin/bash
-java --enable-native-access=ALL-UNNAMED -cp ".:./jline-3.26.0.jar" OierToolKit
+
+PROJECT_ROOT="$(dirname "$(readlink -f "$0")")"
+
+JAVA_SRC="$PROJECT_ROOT/src/OierToolKit.java"
+JAVA_CLASS="$PROJECT_ROOT/src/OierToolKit.class"
+JLINE_JAR="$PROJECT_ROOT/lib/jline-3.26.0.jar"
+
+if [ ! -f "$JAVA_CLASS" ] || [ "$JAVA_SRC" -nt "$JAVA_CLASS" ]; then
+  echo "Source modified, recompiling..."
+
+  javac -cp "$PROJECT_ROOT/src:$JLINE_JAR" -d "$PROJECT_ROOT/src" "$JAVA_SRC"
+
+  if [ $? -ne 0 ]; then
+    echo "Compilation failed!"
+    exit 1
+  fi
+fi
+
+java --enable-native-access=ALL-UNNAMED -cp "$PROJECT_ROOT/src:$JLINE_JAR" OierToolKit
