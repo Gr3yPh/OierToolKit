@@ -3,7 +3,7 @@
 一个为 Oier 量身定制的轻量级 Linux 本地评测姬与题目管理工具。
 ~~叫做OierOperationSimplifier更合理吧。。~~
 
-![OierToolKit 运行演示](docs/demo.gif)
+![OierToolKit 运行演示](demo.gif)
 
 ## 🌟 Features
 * **清爽的控制台**：内嵌交互式 Shell，支持键盘【上下键】回溯命令历史。
@@ -17,3 +17,4 @@
 2. 运行编译命令：
    ```bash
    javac -cp ".:lib/jline-3.26.0.jar" src/OierToolKit.java
+3. 之后运行直接使用`./otk`即可！
