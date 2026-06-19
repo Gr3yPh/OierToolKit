@@ -13,8 +13,8 @@
 * 总之就是很流畅啦～
 
 ## 🚀 Installation
-1. 下载本项目并确保系统安装了 `time` 和 `g++`。
+1. 下载本项目并确保系统安装了 `time`(测量时间需要，若不装就会报RE） 和 `g++`。
 2. 运行编译命令：
    ```bash
    javac -cp ".:lib/jline-3.26.0.jar" src/OierToolKit.java
-3. 之后运行直接使用`./otk`即可！
+3. 之后运行直接使用`./otk`即可！（其实otk脚本也会顺便编译）
