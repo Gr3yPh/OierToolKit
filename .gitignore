@@ -1,3 +1,5 @@
 *.class
 *.out
 .time.tmp
+tmp_build/
+*.jar
