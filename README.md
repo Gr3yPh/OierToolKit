@@ -13,7 +13,7 @@
 * 总之就是很流畅啦～
 
 ## 🚀 Installation
-1. 下载本项目并确保系统安装了 `time`(测量时间需要，若不装就会报RE） 和 `g++`。
+1. clone本项目并确保系统安装了 `time`(测量时间需要，若不装就会报RE） 和 `g++`。
 2. 每次运行 `./otk` 即可
 
 **(C)opyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
