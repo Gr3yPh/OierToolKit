@@ -7,7 +7,7 @@ JAVA_CLASS="$PROJECT_ROOT/src/OierToolKit.class"
 JLINE_JAR="$PROJECT_ROOT/lib/jline-3.26.0.jar"
 
 if [ ! -f "$JAVA_CLASS" ] || [ "$JAVA_SRC" -nt "$JAVA_CLASS" ]; then
-  echo "Source modified, recompiling..."
+  echo "Compiling..."
 
   javac -cp "$PROJECT_ROOT/src:$JLINE_JAR" -d "$PROJECT_ROOT/src" "$JAVA_SRC"
 
