@@ -16,6 +16,6 @@
 1. 下载本项目并确保系统安装了 `time`(测量时间需要，若不装就会报RE） 和 `g++`。
 2. 每次运行 `./otk` 即可
 
-**(C)Copyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
+**(C)opyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
 
 本工具依据 **GNU General Public License v3.0 (GPLv3)** 开源协议免费分发与修改，详情参见仓库下LICENSE文件。
