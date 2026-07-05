@@ -1,6 +1,6 @@
 # OierToolKit (otk)
 
-一个为 Oier 量身定制的轻量级 Linux 本地评测姬与题目管理工具。
+一个为 Oier 量身定制的轻量级跨平台本地评测姬与题目管理工具。
 ~~叫做OierOperationSimplifier更合理吧。。~~
 
 ![Demo Image](demo.png)
@@ -14,7 +14,7 @@
 
 ## 🚀 Installation
 1. clone本项目并确保系统安装了GNU工具集并包含 `g++` 与 `time` 命令。
-2. 运行 `go build -o otk`
+2. 运行 `go build -o otk` 并执行可执行文件
 
 **(C)opyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
 

@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"runtime"
 )
 
-// 颜色常量
 const (
 	RESET  = "\u001B[0m"
 	RED    = "\u001B[31m"
@@ -27,6 +27,7 @@ var (
 	baseDir        string
 	currentDir     string
 	currentProject string
+	runningWindows bool
 )
 
 func main() {
@@ -41,6 +42,9 @@ func main() {
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		fmt.Printf("%s无法创建根目录 ~/otk/: %v%s\n", RED, err, RESET)
 		return
+	}
+	if runtime.GOOS=="windows" {
+		runningWindows=true;
 	}
 
 	startUpMes := `
@@ -382,7 +386,6 @@ func createSample(reader *bufio.Reader) { //
 	fmt.Printf("%s成功添加样例 #%d%s\n", GREEN, id, RESET)
 }
 
-// 核心改进：Go 原生完美捕获由 Ctrl+D 触发的 io.EOF 异常，原汁原味绝不吞字！
 func readUntilEOF(reader *bufio.Reader) string {
 	var sb strings.Builder
 	for {
@@ -390,7 +393,7 @@ func readUntilEOF(reader *bufio.Reader) string {
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
-				sb.WriteString(line) // 把最后未换行的数据也塞进去
+				sb.WriteString(line) 
 				break
 			}
 			return ""
@@ -403,7 +406,10 @@ func readUntilEOF(reader *bufio.Reader) string {
 func runTest() { //
 	cppName := currentProject + ".cpp"
 	cppPath := filepath.Join(currentDir, cppName)
-	exePath := filepath.Join(currentDir, currentProject+".out")
+	exePath := filepath.Join(currentDir, currentProject)
+	if runningWindows {
+		exePath+=".exe"
+	}
 	timeTmpPath := filepath.Join(currentDir, ".time.tmp")
 
 	if _, err := os.Stat(cppPath); os.IsNotExist(err) {
@@ -420,7 +426,6 @@ func runTest() { //
 	o2Switch := props["o2"]
 	if o2Switch == "" { o2Switch = "1" }
 
-	// 动态构建 g++ 编译命令
 	var compileArgs []string
 	compileArgs = append(compileArgs, "-std="+cppVersion)
 	if o2Switch == "1" {
