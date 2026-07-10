@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 	"runtime"
+	"github.com/chzyer/readline"
 )
 
 const (
@@ -46,7 +47,19 @@ func main() {
 	if runtime.GOOS=="windows" {
 		runningWindows=true;
 	}
-
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:            "",
+		HistoryFile:       filepath.Join(baseDir, ".otk_history"), 
+		//AutoComplete:      completer, 
+		InterruptPrompt:   "^C",
+		EOFPrompt:         "exit",
+		HistorySearchFold: true,
+	})
+	if err != nil {
+		fmt.Println(RED + "无法初始化命令行: " + err.Error() + RESET)
+		return
+	}
+	defer rl.Close()
 	startUpMes := `
 ###############################################################################
 #            ____       ________    ________  ______   _______                #
@@ -74,15 +87,17 @@ func main() {
 		if currentProject != "" {
 			promptProject = currentProject
 		}
-		fmt.Printf("%s[otk @ %s]$ %s", BLUE, promptProject, RESET)
+		//fmt.Printf("%s[otk @ %s]$ %s", BLUE, promptProject, RESET)
+		rl.SetPrompt(fmt.Sprintf("%s[otk @ %s]$ %s", BLUE, promptProject, RESET))
 
-		line, err := reader.ReadString('\n')
+		line, err := rl.Readline()
 		if err != nil {
-			if err == io.EOF { 
+			if err == readline.ErrInterrupt {
+				continue
+			} else {
 				fmt.Println(GREEN + "\nGoodbye, Oier!" + RESET)
 				break
 			}
-			continue
 		}
 
 		line = strings.TrimSpace(line)
