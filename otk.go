@@ -375,10 +375,10 @@ func createSample(reader *bufio.Reader) { //
 		id++
 	}
 
-	fmt.Println("请输入样例输入 (输入完成后换行，并按 Ctrl+D 提交):")
+	fmt.Println("请输入样例输入 (输入完成后换行，并输入EOF提交):")
 	inputData := readUntilEOF(reader)
 
-	fmt.Println("请输入样例输出 (输入完成后换行，并按 Ctrl+D 提交):")
+	fmt.Println("请输入样例输出 (输入完成后换行，并输入EOF提交):")
 	inputDataOut := readUntilEOF(reader)
 
 	_ = os.WriteFile(filepath.Join(currentDir, fmt.Sprintf("%d.in", id)), []byte(inputData), 0644)
