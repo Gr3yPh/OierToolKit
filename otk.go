@@ -205,17 +205,28 @@ func printHelp() { //
 	fmt.Println("  q, exit              - 退出")
 }
 
+
 func executeSystemCommand(sysCmd string) { //
 	if sysCmd == "" {
 		fmt.Println(YELLOW + "用法: cmd [系统命令]" + RESET)
 		return
 	}
-	cmd := exec.Command("bash", "-c", sysCmd)
+	
+	var cmd *exec.Cmd
+	if runningWindows {
+		// Windows用cmd
+		cmd = exec.Command("cmd.exe", "/c", sysCmd)
+	} else {
+		cmd = exec.Command("bash", "-c", sysCmd)
+	}
+	
 	cmd.Dir = currentDir
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	_ = cmd.Run()
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%s执行命令失败: %v%s\n", RED, err, RESET)
+	}
 }
 
 func createProject(proj string) { //
