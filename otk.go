@@ -114,52 +114,119 @@ func main() {
 		cmd := strings.ToLower(tokens[0])
 
 		switch cmd {
-		case "c", "create": //
+		case "p", "project":
 			if len(tokens) < 2 {
-				fmt.Println(YELLOW + "用法: c [PROJECT]" + RESET)
-			} else {
-				createProject(tokens[1])
+				fmt.Println(YELLOW + "用法: p [n/d/s/l] ..." + RESET)
+				continue
 			}
-		case "s", "switch": //
-			if len(tokens) < 2 {
-				fmt.Println(YELLOW + "用法: s [PROJECT]" + RESET)
-			} else {
-				switchProject(tokens[1])
+			sub := strings.ToLower(tokens[1])
+			switch sub {
+			case "n", "new":
+				if len(tokens) < 3 {
+					fmt.Println(YELLOW + "用法: p n [PROJECT]" + RESET)
+				} else {
+					createProject(tokens[2])
+				}
+			case "d", "delete":
+				if len(tokens) < 3 {
+					fmt.Println(YELLOW + "用法: p d [PROJECT]" + RESET)
+				} else {
+					deleteProject(tokens[2])
+				}
+			case "s", "switch":
+				if len(tokens) < 3 {
+					fmt.Println(YELLOW + "用法: p s [PROJECT]" + RESET)
+				} else {
+					switchProject(tokens[2])
+				}
+			case "l", "list":
+				listInfo()
+			default:
+				fmt.Printf("未知的 p 子命令: %s\n", sub)
 			}
-		case "d", "delete": //
-			if len(tokens) < 2 {
-				fmt.Println(YELLOW + "用法: d [PROJECT]" + RESET)
-			} else {
-				deleteProject(tokens[1])
-			}
-		case "l","list": //
-			listInfo()
-		case "set": //
+
+		case "e": // example management
 			if currentProject == "" {
 				fmt.Println(RED + "请先进入一个项目！" + RESET)
-			} else {
-				handleSetCommand(tokens)
+				continue
 			}
-		case "ne": //
-			if currentProject == "" {
-				fmt.Println(RED + "请先进入一个项目！" + RESET)
-			} else {
-				createSample(reader)
+			if len(tokens) < 2 {
+				fmt.Println(YELLOW + "用法: e [n/v/c/l] ..." + RESET)
+				continue
 			}
-		case "r", "run": //
+			sub := strings.ToLower(tokens[1])
+			switch sub {
+			case "n", "new":
+				// e new  OR e new [INPUT FILE] [ANSWER FILE]
+				if len(tokens) == 2 {
+					createSample(reader)
+				} else if len(tokens) >= 4 {
+					inputF := tokens[2]
+					ansF := tokens[3]
+					createSampleFromFiles(inputF, ansF)
+				} else {
+					fmt.Println(YELLOW + "用法: e new 或 e new [INPUT FILE] [ANSWER FILE]" + RESET)
+				}
+			case "v", "view":
+				if len(tokens) < 3 {
+					fmt.Println(YELLOW + "用法: e v [EXAMPLE_ID]" + RESET)
+				} else {
+					viewSample(tokens[2])
+				}
+			case "c", "clear":
+				clearSamples()
+			case "l", "list":
+				listSamples()
+			default:
+				fmt.Printf("未知的 e 子命令: %s\n", sub)
+			}
+
+		case "j", "judge":
 			if currentProject == "" {
 				fmt.Println(RED + "请先进入一个项目！" + RESET)
 			} else {
 				runTest()
 			}
-		case "author": //
+
+		case "r", "run":
+			if currentProject == "" {
+				fmt.Println(RED + "请先进入一个项目！" + RESET)
+			} else {
+				runOnly()
+			}
+
+		case "d", "debug":
+			if currentProject == "" {
+				fmt.Println(RED + "请先进入一个项目！" + RESET)
+			} else {
+				debugCurrent()
+			}
+
+		case "cmd":
+			if len(tokens) < 2 {
+				fmt.Println(YELLOW + "用法: cmd [系统命令]" + RESET)
+			} else {
+				executeSystemCommand(strings.Join(tokens[1:], " "))
+			}
+
+		case "edit":
+			if currentProject == "" {
+				fmt.Println(RED + "请先进入一个项目！" + RESET)
+			} else {
+				editCurrent()
+			}
+
+		case "author":
 			printAuthor()
-		case "h", "help": //
+
+		case "h", "help":
 			printHelp()
-		case "q", "exit", "quit": //
+
+		case "q", "exit", "quit":
 			fmt.Println(GREEN + "Goodbye, Oier!" + RESET)
 			return
-		case "show": //
+
+		case "show":
 			if len(tokens) < 2 {
 				fmt.Println(YELLOW + "用法: show w (免责声明) 或 show c (许可证)" + RESET)
 			} else {
@@ -176,6 +243,7 @@ func main() {
 					fmt.Printf("%s错误: 未知的 show 参数 '%s'，请输入 'show w' 或 'show c'%s\n", RED, tokens[1], RESET)
 				}
 			}
+
 		default:
 			fmt.Printf("未知命令: %s。输入 'h' 查看帮助。\n", cmd)
 		}
@@ -190,19 +258,28 @@ func printAuthor() { //
 
 func printHelp() { //
 	fmt.Println("可用命令列表:")
-	fmt.Println("  c, create [PROJECT]  - 新建一个题目项目")
-	fmt.Println("  s, switch [PROJECT]  - 切换题目项目 (s ~ 返回根目录)")
-	fmt.Println("  d, delete [PROJECT]  - 删除指定项目")
-	fmt.Println("  l, list              - 列出项目、配置与样例")
-	fmt.Println("  set [key] [value]    - 设置当前项目的配置 (支持 time / memory / version / o2)")
-	fmt.Println("  ne                   - 新建测试样例")
-	fmt.Println("  r, run               - 编译并评测当前项目 (高精度时间/内存/Diff)")
-	fmt.Println("  cmd [SYS_CMD]        - 直接执行 Linux 系统命令 (e.g., cmd ls -la)")
-	fmt.Println("  author               - 查看作者信息")
-	fmt.Println("  h, help              - 显示帮助")
-	fmt.Println("  show w               - 显示软件免责声明 (Warranty)")
-	fmt.Println("  show c               - 显示软件复制与分发条件 (Copying/License)")
-	fmt.Println("  q, exit              - 退出")
+	fmt.Println("  项目管理 (统一为 p 命令):")
+	fmt.Println("    p n(ew) [PROJECT]   - 创建项目")
+	fmt.Println("    p d(elete) [PROJECT]- 删除项目")
+	fmt.Println("    p s(witch) [PROJECT]- 切换项目 (p s ~ 返回根目录)")
+	fmt.Println("    p l(ist)            - 列出项目")
+	fmt.Println("  样例管理 (统一为 e 命令，在进入项目后使用):")
+	fmt.Println("    e n(ew)             - 交互式新建样例")
+	fmt.Println("    e n(ew) [IN] [OUT]  - 从文件新建样例")
+	fmt.Println("    e v(iew) [ID]       - 查看指定ID的样例文件")
+	fmt.Println("    e c(lear)           - 删除所有样例")
+	fmt.Println("    e l(ist)            - 列出样例")
+	fmt.Println("  程序运行与调试:")
+	fmt.Println("    j(udge)            - 编译并评测 (遍历样例进行评测)")
+	fmt.Println("    r(un)              - 仅编译并运行程序 (交互模式)")
+	fmt.Println("    d(ebug)            - 使用 gdb 调试当前可执行文件")
+	fmt.Println("    cmd [SYS_CMD]      - 执行系统命令")
+	fmt.Println("    edit               - 用 vim 编辑当前源码文件")
+	fmt.Println("  其他杂项:")
+	fmt.Println("    h, help            - 帮助信息")
+	fmt.Println("    show w             - 查看担保 (Warranty)")
+	fmt.Println("    show c             - 查看版权/许可证信息 (Copying)")
+	fmt.Println("    q, exit            - 退出")
 }
 
 
@@ -355,7 +432,7 @@ func listInfo() { //
 		sort.Strings(inFiles)
 		fmt.Println("已录入样例:")
 		if len(inFiles) == 0 {
-			fmt.Println("  （无可用样例，使用 'ne' 录入）")
+			fmt.Println("  （无可用样例，使用 'e n' 录入）")
 		} else {
 			for _, f := range inFiles {
 				id := f[:strings.LastIndex(f, ".")]
@@ -412,6 +489,82 @@ func createSample(reader *bufio.Reader) { //
 	fmt.Printf("%s成功添加样例 #%d%s\n", GREEN, id, RESET)
 }
 
+func createSampleFromFiles(inputPath, answerPath string) {
+	// copy given files into current project as next sample id
+	id := 1
+	for {
+		inPath := filepath.Join(currentDir, fmt.Sprintf("%d.in", id))
+		if _, err := os.Stat(inPath); os.IsNotExist(err) {
+			break
+		}
+		id++
+	}
+
+	// read input file
+	inBytes, err := os.ReadFile(inputPath)
+	if err != nil {
+		fmt.Printf("%s无法读取输入文件: %v%s\n", RED, err, RESET)
+		return
+	}
+	outBytes, err := os.ReadFile(answerPath)
+	if err != nil {
+		fmt.Printf("%s无法读取答案文件: %v%s\n", RED, err, RESET)
+		return
+	}
+	_ = os.WriteFile(filepath.Join(currentDir, fmt.Sprintf("%d.in", id)), inBytes, 0644)
+	_ = os.WriteFile(filepath.Join(currentDir, fmt.Sprintf("%d.out", id)), outBytes, 0644)
+	fmt.Printf("%s成功从文件添加样例 #%d%s\n", GREEN, id, RESET)
+}
+
+func viewSample(id string) {
+	inFile := filepath.Join(currentDir, id+".in")
+	outFile := filepath.Join(currentDir, id+".out")
+	if _, err := os.Stat(inFile); os.IsNotExist(err) {
+		fmt.Println(YELLOW + "未找到指定样例输入文件" + RESET)
+		return
+	}
+	inB, _ := os.ReadFile(inFile)
+	fmt.Printf("---- 样例 #%s 输入 ----\n%s\n", id, string(inB))
+	if _, err := os.Stat(outFile); os.IsNotExist(err) {
+		fmt.Println(YELLOW + "未找到指定样例输出文件" + RESET)
+		return
+	}
+	outB, _ := os.ReadFile(outFile)
+	fmt.Printf("---- 样例 #%s 输出 ----\n%s\n", id, string(outB))
+}
+
+func clearSamples() {
+	files, _ := os.ReadDir(currentDir)
+	count := 0
+	for _, f := range files {
+		if !f.IsDir() && (strings.HasSuffix(f.Name(), ".in") || strings.HasSuffix(f.Name(), ".out")) {
+			_ = os.Remove(filepath.Join(currentDir, f.Name()))
+			count++
+		}
+	}
+	fmt.Printf("%s已删除 %d 个样例相关文件%s\n", GREEN, count, RESET)
+}
+
+func listSamples() {
+	files, _ := os.ReadDir(currentDir)
+	var inFiles []string
+	for _, f := range files {
+		if !f.IsDir() && strings.HasSuffix(f.Name(), ".in") {
+			inFiles = append(inFiles, f.Name())
+		}
+	}
+	sort.Strings(inFiles)
+	if len(inFiles) == 0 {
+		fmt.Println("（无可用样例，使用 'e n' 录入）")
+		return
+	}
+	fmt.Println("已录入样例:")
+	for _, f := range inFiles {
+		id := f[:strings.LastIndex(f, ".")]
+		fmt.Println("  样例 #" + id)
+	}
+}
+
 func readUntilEOF(reader *bufio.Reader) string {
 	var sb strings.Builder
 	for {
@@ -429,7 +582,7 @@ func readUntilEOF(reader *bufio.Reader) string {
 	return sb.String()
 }
 
-func runTest() { //
+func runTest() { // judge: compile and evaluate against samples
 	cppName := currentProject + ".cpp"
 	cppPath := filepath.Join(currentDir, cppName)
 	exePath := filepath.Join(currentDir, currentProject)
@@ -488,7 +641,7 @@ func runTest() { //
 		}
 	}
 	if len(inFiles) == 0 {
-		fmt.Println(YELLOW + "提示: 未找到测试样例。请先使用 'ne' 创建。" + RESET)
+		fmt.Println(YELLOW + "提示: 未找到测试样例。请先使用 'e n' 创建。" + RESET)
 		return
 	}
 	sort.Strings(inFiles)
@@ -586,6 +739,108 @@ func runTest() { //
 			fmt.Printf("    %s[标准输出]%s\n    %s\n", GREEN, RESET, strings.ReplaceAll(stdOut, "\n", "\n    "))
 			fmt.Printf("    %s[你的输出]%s\n    %s\n", RED, RESET, strings.ReplaceAll(userOut, "\n", "\n    "))
 			fmt.Println("    -----------------------------------------")
+		}
+	}
+}
+
+func runOnly() {
+	cppName := currentProject + ".cpp"
+	cppPath := filepath.Join(currentDir, cppName)
+	exePath := filepath.Join(currentDir, currentProject)
+	if runningWindows {
+		exePath+=".exe"
+	}
+
+	if _, err := os.Stat(cppPath); os.IsNotExist(err) {
+		fmt.Printf("%s错误: 未找到源码文件 %s%s\n", RED, cppName, RESET)
+		return
+	}
+
+	fmt.Printf("正在编译 %s... ", cppName)
+	iniPath := filepath.Join(currentDir, currentProject+".ini")
+	props := readIni(iniPath)
+
+	cppVersion := props["version"]
+	if cppVersion == "" { cppVersion = "c++17" }
+	o2Switch := props["o2"]
+	if o2Switch == "" { o2Switch = "1" }
+
+	var compileArgs []string
+	compileArgs = append(compileArgs, "-std="+cppVersion)
+	if o2Switch == "1" {
+		compileArgs = append(compileArgs, "-O2")
+	}
+	compileArgs = append(compileArgs, cppPath, "-o", exePath)
+
+	cmdCompile := exec.Command("g++", compileArgs...)
+	var errBuf strings.Builder
+	cmdCompile.Stderr = &errBuf
+
+	if err := cmdCompile.Run(); err != nil {
+		fmt.Println(RED + "[ CE ] 编译失败！" + RESET)
+		fmt.Println(RED + errBuf.String() + RESET)
+		return
+	}
+	fmt.Println(GREEN + "编译成功" + RESET)
+
+	// 运行可执行文件，继承终端
+	var cmdRun *exec.Cmd
+	if runningWindows {
+		cmdRun = exec.Command(exePath)
+	} else {
+		cmdRun = exec.Command(exePath)
+	}
+	cmdRun.Dir = currentDir
+	cmdRun.Stdin = os.Stdin
+	cmdRun.Stdout = os.Stdout
+	cmdRun.Stderr = os.Stderr
+	if err := cmdRun.Run(); err != nil {
+		fmt.Printf("%s运行失败: %v%s\n", RED, err, RESET)
+	}
+}
+
+func debugCurrent() {
+	if runningWindows {
+		fmt.Println(YELLOW + "Windows 平台暂不支持 gdb 调试" + RESET)
+		return
+	}
+	exePath := filepath.Join(currentDir, currentProject)
+	if _, err := os.Stat(exePath); os.IsNotExist(err) {
+		fmt.Println(YELLOW + "未找到可执行文件，请先运行 r 或 j 以编译程序" + RESET)
+		return
+	}
+	cmd := exec.Command("gdb", "--args", exePath)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = currentDir
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%s启动 gdb 失败: %v%s\n", RED, err, RESET)
+	}
+}
+
+func editCurrent() {
+	src := filepath.Join(currentDir, currentProject+".cpp")
+	if _, err := os.Stat(src); os.IsNotExist(err) {
+		fmt.Println(YELLOW + "未找到源码文件，无法编辑" + RESET)
+		return
+	}
+	if runningWindows {
+		cmd := exec.Command("notepad.exe", src)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("%s打开编辑器失败: %v%s\n", RED, err, RESET)
+		}
+	} else {
+		cmd := exec.Command("vim", src)
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		cmd.Dir = currentDir
+		if err := cmd.Run(); err != nil {
+			fmt.Printf("%s打开 vim 失败: %v%s\n", RED, err, RESET)
 		}
 	}
 }
