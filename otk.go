@@ -71,10 +71,11 @@ func main() {
 #     |     | /     /|  \|______|  \   \       /     /|\|     |               #
 #     |\     \_____/ |           \  \___\     /_____/ |/_____/|               #
 #     | \_____\   | /             \ |   |    |     | / |    | |               #
-#      \ |    |___|/               \|___|    |_____|/  |____|/                #
+#      \ |    |___|/               \|___|    |_____|/  |____/|                #
 #       \|____|                                                 OierToolKit   #
-#                                            v1.0 Go Edition by Gr3yPh4ntom   #
-###############################################################################`
+#                                            v1.3 Go Edition by Gr3yPh4ntom   #
+###############################################################################
+                    https://github.com/Gr3yPh/OierToolKit`
 	fmt.Println(CYAN + startUpMes + RESET)
 	fmt.Println(`本程序不提供任何担保；详情请输入“show w”。
 这是自由软件，欢迎您重新分发。
@@ -140,7 +141,7 @@ func main() {
 					switchProject(tokens[2])
 				}
 			case "l", "list":
-				listInfo()
+				listInfo(true)
 			default:
 				fmt.Printf("未知的 p 子命令: %s\n", sub)
 			}
@@ -179,6 +180,32 @@ func main() {
 				listSamples()
 			default:
 				fmt.Printf("未知的 e 子命令: %s\n", sub)
+			}
+
+		case "c", "config":
+			if currentProject == "" {
+				fmt.Println(RED + "请先进入一个项目！" + RESET)
+				continue
+			}
+			if len(tokens) < 2 {
+				fmt.Println(YELLOW + "用法: c l(ist) - 列出当前配置" + RESET)
+				fmt.Println(YELLOW + "      c s(et) [ITEM] [VALUE] - 设置配置项" + RESET)
+				fmt.Println(YELLOW + "      配置项: time, memory, version, o2" + RESET)
+				continue
+			}
+			sub := strings.ToLower(tokens[1])
+			switch sub {
+			case "l", "list":
+				showConfig()
+			case "s", "set":
+				if len(tokens) < 4 {
+					fmt.Println(YELLOW + "用法: c s(et) [ITEM] [VALUE]" + RESET)
+					fmt.Println(YELLOW + "      配置项: time, memory, version, o2" + RESET)
+				} else {
+					setConfig(tokens[2], tokens[3])
+				}
+			default:
+				fmt.Printf("未知的 c 子命令: %s\n", sub)
 			}
 
 		case "j", "judge":
@@ -258,24 +285,28 @@ func printAuthor() { //
 
 func printHelp() { //
 	fmt.Println("可用命令列表:")
-	fmt.Println("  项目管理 (统一为 p 命令):")
+	fmt.Println("  项目管理:")
 	fmt.Println("    p n(ew) [PROJECT]   - 创建项目")
 	fmt.Println("    p d(elete) [PROJECT]- 删除项目")
 	fmt.Println("    p s(witch) [PROJECT]- 切换项目 (p s ~ 返回根目录)")
 	fmt.Println("    p l(ist)            - 列出项目")
-	fmt.Println("  样例管理 (统一为 e 命令，在进入项目后使用):")
+	fmt.Println("  样例管理:")
 	fmt.Println("    e n(ew)             - 交互式新建样例")
 	fmt.Println("    e n(ew) [IN] [OUT]  - 从文件新建样例")
 	fmt.Println("    e v(iew) [ID]       - 查看指定ID的样例文件")
 	fmt.Println("    e c(lear)           - 删除所有样例")
 	fmt.Println("    e l(ist)            - 列出样例")
-	fmt.Println("  程序运行与调试:")
+	fmt.Println("  项目配置:")
+	fmt.Println("    c l(ist)            - 列出当前项目的所有配置")
+	fmt.Println("    c s(et) [ITEM] [VAL]- 设置配置项")
+	fmt.Println("      配置项: time(时间限制), memory(内存限制), version(C++版本), o2(是否启用O2优化)")
+	fmt.Println("  运行与调试:")
 	fmt.Println("    j(udge)            - 编译并评测 (遍历样例进行评测)")
 	fmt.Println("    r(un)              - 仅编译并运行程序 (交互模式)")
 	fmt.Println("    d(ebug)            - 使用 gdb 调试当前可执行文件")
 	fmt.Println("    cmd [SYS_CMD]      - 执行系统命令")
 	fmt.Println("    edit               - 用 vim 编辑当前源码文件")
-	fmt.Println("  其他杂项:")
+	fmt.Println("  杂项:")
 	fmt.Println("    h, help            - 帮助信息")
 	fmt.Println("    show w             - 查看担保 (Warranty)")
 	fmt.Println("    show c             - 查看版权/许可证信息 (Copying)")
@@ -385,8 +416,8 @@ func writeIni(path string, props map[string]string) {
 	_ = os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0644)
 }
 
-func listInfo() { //
-	if currentProject == "" {
+func listInfo(listProject bool) { //
+	if  listProject {
 		fmt.Println("=== 现有项目列表 ===")
 		files, err := os.ReadDir(baseDir)
 		if err != nil {
@@ -442,31 +473,104 @@ func listInfo() { //
 	}
 }
 
-func handleSetCommand(tokens []string) { //
-	if len(tokens) < 3 {
-		fmt.Println(YELLOW + "用法: set time/memory/version/o2 [VALUE]" + RESET)
+// ========== 新增配置管理函数 ==========
+
+func showConfig() {
+	if currentProject == "" {
+		fmt.Println(RED + "请先进入一个项目！" + RESET)
 		return
 	}
-	key := strings.ToLower(tokens[1])
-	value := tokens[2]
 	iniPath := filepath.Join(currentDir, currentProject+".ini")
 	props := readIni(iniPath)
+	
+	fmt.Printf("=== 项目 [%s] 配置 ===\n", currentProject)
+	
+	timeLimit := props["time_limit"]
+	if timeLimit == "" { timeLimit = "1.00" }
+	memoryLimit := props["memory_limit"]
+	if memoryLimit == "" { memoryLimit = "125" }
+	version := props["version"]
+	if version == "" { version = "c++17" }
+	o2 := props["o2"]
+	if o2 == "" { o2 = "1" }
+	
+	fmt.Printf("  %-12s: %s (秒)\n", "time", timeLimit)
+	fmt.Printf("  %-12s: %s (MB)\n", "memory", memoryLimit)
+	fmt.Printf("  %-12s: %s\n", "version", version)
+	fmt.Printf("  %-12s: %s (0=关闭, 1=开启)\n", "o2", o2)
+	fmt.Println("  使用 'c s [ITEM] [VALUE]' 修改配置")
+}
 
-	switch key {
-	case "time":
-		props["time_limit"] = value
-	case "memory", "mem":
-		props["memory_limit"] = value
-	case "version", "ver":
-		props["version"] = value
-	case "o2":
-		props["o2"] = value
-	default:
-		fmt.Println(YELLOW + "未知配置项: " + key + RESET)
+func setConfig(item, value string) {
+	if currentProject == "" {
+		fmt.Println(RED + "请先进入一个项目！" + RESET)
 		return
 	}
+	
+	item = strings.ToLower(item)
+	iniPath := filepath.Join(currentDir, currentProject+".ini")
+	props := readIni(iniPath)
+	
+	// 验证配置项和值
+	switch item {
+	case "time":
+		// 验证是否为有效数字
+		if _, err := strconv.ParseFloat(value, 64); err != nil {
+			fmt.Printf("%s错误: time 必须是数字 (如: 1.00)%s\n", RED, RESET)
+			return
+		}
+		props["time_limit"] = value
+		fmt.Printf("%s已设置 time = %s 秒%s\n", GREEN, value, RESET)
+		
+	case "memory", "mem":
+		if _, err := strconv.ParseFloat(value, 64); err != nil {
+			fmt.Printf("%s错误: memory 必须是数字 (如: 125)%s\n", RED, RESET)
+			return
+		}
+		props["memory_limit"] = value
+		fmt.Printf("%s已设置 memory = %s MB%s\n", GREEN, value, RESET)
+		
+	case "version", "ver":
+		// 常见C++标准
+		validVersions := []string{"c++98", "c++11", "c++14", "c++17", "c++20", "c++23"}
+		valid := false
+		for _, v := range validVersions {
+			if value == v {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			fmt.Printf("%s警告: '%s' 不是标准C++版本，但会尝试使用%s\n", YELLOW, value, RESET)
+		}
+		props["version"] = value
+		fmt.Printf("%s已设置 version = %s%s\n", GREEN, value, RESET)
+		
+	case "o2":
+		val := strings.ToLower(value)
+		if val != "0" && val != "1" && val != "on" && val != "off" && val != "true" && val != "false" {
+			fmt.Printf("%s错误: o2 必须是 0/1 或 on/off%s\n", RED, RESET)
+			return
+		}
+		// 统一为 0 或 1
+		if val == "on" || val == "true" {
+			val = "1"
+		} else if val == "off" || val == "false" {
+			val = "0"
+		}
+		props["o2"] = val
+		fmt.Printf("%s已设置 o2 = %s%s\n", GREEN, val, RESET)
+		
+	default:
+		fmt.Printf("%s错误: 未知配置项 '%s'%s\n", RED, item, RESET)
+		fmt.Println("  可用配置项: time, memory, version, o2")
+		return
+	}
+	
 	writeIni(iniPath, props)
 }
+
+// ========== 原有函数继续 ==========
 
 func createSample(reader *bufio.Reader) { //
 	id := 1
@@ -659,7 +763,14 @@ func runTest() { // judge: compile and evaluate against samples
 		}
 
 		// 调用 Linux time 工具压榨进程开销
-		cmdRun := exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
+		var cmdRun *exec.Cmd
+		if runningWindows {
+			// Windows 使用 -ExecutionPolicy Bypass 绕过策略限制，或直接使用 measure-command
+			cmdRun = exec.Command("powershell", "-Command", 
+				fmt.Sprintf("Measure-Command { %s | Set-Content .time.tmp }", exePath))
+		} else {
+			cmdRun = exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
+		}
 		
 		// 重定向文件输入
 		fIn, _ := os.Open(inFile)
@@ -667,6 +778,9 @@ func runTest() { // judge: compile and evaluate against samples
 
 		var userOutBuf strings.Builder
 		cmdRun.Stdout = &userOutBuf
+		if !runningWindows {
+			cmdRun.Stderr = &userOutBuf
+		}
 
 		startNano := time.Now()
 		if err := cmdRun.Start(); err != nil {
@@ -705,23 +819,43 @@ func runTest() { // judge: compile and evaluate against samples
 		runTimeSec := endNano.Sub(startNano).Seconds()
 		runMemMB := 0.0
 
-		if tBytes, err := os.ReadFile(timeTmpPath); err == nil {
-			tParts := strings.Fields(string(tBytes))
-			if len(tParts) >= 2 {
-				if rts, err := strconv.ParseFloat(tParts[0], 64); err == nil {
-					runTimeSec = rts
-				}
-				if rmm, err := strconv.ParseFloat(tParts[1], 64); err == nil {
-					runMemMB = rmm / 1024.0
+		if runningWindows {
+			// Windows PowerShell Measure-Command 输出解析
+			if tBytes, err := os.ReadFile(".time.tmp"); err == nil {
+				output := string(tBytes)
+				// 提取 TotalSeconds
+				lines := strings.Split(output, "\n")
+				for _, line := range lines {
+					if strings.Contains(line, "TotalSeconds") {
+						parts := strings.Split(line, ":")
+						if len(parts) >= 2 {
+							if val, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
+								runTimeSec = val
+							}
+						}
+					}
 				}
 			}
+			_ = os.Remove(".time.tmp")
+		} else {
+			if tBytes, err := os.ReadFile(timeTmpPath); err == nil {
+				tParts := strings.Fields(string(tBytes))
+				if len(tParts) >= 2 {
+					if rts, err := strconv.ParseFloat(tParts[0], 64); err == nil {
+						runTimeSec = rts
+					}
+					if rmm, err := strconv.ParseFloat(tParts[1], 64); err == nil {
+						runMemMB = rmm / 1024.0
+					}
+				}
+			}
+			_ = os.Remove(timeTmpPath)
 		}
-		_ = os.Remove(timeTmpPath)
 
 		runTimeMs := int64(runTimeSec * 1000)
 		metricsStr := fmt.Sprintf(" (%dms, %.2fMB)", runTimeMs, runMemMB)
 
-		if runMemMB > memLimit {
+		if runMemMB > memLimit && !runningWindows { // Windows下内存测量不准确，跳过MLE检查
 			fmt.Println(RED + "MLE" + RESET + metricsStr)
 			continue
 		}
@@ -800,22 +934,31 @@ func runOnly() {
 }
 
 func debugCurrent() {
-	if runningWindows {
-		fmt.Println(YELLOW + "Windows 平台暂不支持 gdb 调试" + RESET)
-		return
-	}
 	exePath := filepath.Join(currentDir, currentProject)
+	if runningWindows {
+		exePath += ".exe"
+	}
+	
 	if _, err := os.Stat(exePath); os.IsNotExist(err) {
 		fmt.Println(YELLOW + "未找到可执行文件，请先运行 r 或 j 以编译程序" + RESET)
 		return
 	}
-	cmd := exec.Command("gdb", "--args", exePath)
+	
+	var cmd *exec.Cmd
+	if runningWindows {
+		// Windows 下使用 gdb (需在 PATH 中，或使用完整路径)
+		cmd = exec.Command("gdb", exePath)
+	} else {
+		cmd = exec.Command("gdb", "--args", exePath)
+	}
+	
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = currentDir
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("%s启动 gdb 失败: %v%s\n", RED, err, RESET)
+		fmt.Println(YELLOW + "提示: 请确保 gdb 已安装并在 PATH 中" + RESET)
 	}
 }
 
