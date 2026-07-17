@@ -37,11 +37,11 @@ func main() {
 		fmt.Println(RED + "无法获取用户主目录" + RESET)
 		return
 	}
-	baseDir = filepath.Join(home, "otk")
+	baseDir = filepath.Join(home, ".otk")
 	currentDir = baseDir
 
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
-		fmt.Printf("%s无法创建根目录 ~/otk/: %v%s\n", RED, err, RESET)
+		fmt.Printf("%s无法创建根目录 ~/.otk/: %v%s\n", RED, err, RESET)
 		return
 	}
 	if runtime.GOOS=="windows" {
