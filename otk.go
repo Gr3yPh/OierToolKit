@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -29,6 +30,8 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
+	otkVersion     = "1.5"
+	otkEditor      string
 )
 
 func main() {
@@ -47,6 +50,7 @@ func main() {
 	if runtime.GOOS=="windows" {
 		runningWindows=true;
 	}
+	loadOtkRc()
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "",
 		HistoryFile:       filepath.Join(baseDir, ".otk_history"), 
@@ -60,7 +64,7 @@ func main() {
 		return
 	}
 	defer rl.Close()
-	startUpMes := `
+	startUpMes := fmt.Sprintf(`
 ###############################################################################
 #            ____       ________    ________  ______   _______                #
 #        ____\_  \__   /        \  /        \|\     \  \      \               #
@@ -73,9 +77,9 @@ func main() {
 #     | \_____\   | /             \ |   |    |     | / |    | |               #
 #      \ |    |___|/               \|___|    |_____|/  |____/|                #
 #       \|____|                                                 OierToolKit   #
-#                                            v1.3 Go Edition by Gr3yPh4ntom   #
+#                                            v%s Go Edition by Gr3yPh4ntom   #
 ###############################################################################
-                    https://github.com/Gr3yPh/OierToolKit`
+                    https://github.com/Gr3yPh/OierToolKit`, otkVersion)
 	fmt.Println(CYAN + startUpMes + RESET)
 	fmt.Println(`本程序不提供任何担保；详情请输入“show w”。
 这是自由软件，欢迎您重新分发。
@@ -111,22 +115,26 @@ func main() {
 			continue
 		}
 
-		tokens := strings.Fields(line)
+		tokens := splitQuoted(line)
 		cmd := strings.ToLower(tokens[0])
 
 		switch cmd {
 		case "p", "project":
 			if len(tokens) < 2 {
-				fmt.Println(YELLOW + "用法: p [n/d/s/l] ..." + RESET)
+				fmt.Println(YELLOW + "用法: p [n/d/s/l/se] ..." + RESET)
 				continue
 			}
 			sub := strings.ToLower(tokens[1])
 			switch sub {
 			case "n", "new":
 				if len(tokens) < 3 {
-					fmt.Println(YELLOW + "用法: p n [PROJECT]" + RESET)
+					fmt.Println(YELLOW + "用法: p n [PROJECT] [TAG]" + RESET)
 				} else {
-					createProject(tokens[2])
+					tag := ""
+					if len(tokens) >= 4 {
+						tag = tokens[3]
+					}
+					createProject(tokens[2], tag)
 				}
 			case "d", "delete":
 				if len(tokens) < 3 {
@@ -142,6 +150,12 @@ func main() {
 				}
 			case "l", "list":
 				listInfo(true)
+			case "se", "search":
+				if len(tokens) < 3 {
+					fmt.Println(YELLOW + "用法: p se(arch) [REGEX]" + RESET)
+				} else {
+					searchProjects(tokens[2])
+				}
 			default:
 				fmt.Printf("未知的 p 子命令: %s\n", sub)
 			}
@@ -236,7 +250,7 @@ func main() {
 				executeSystemCommand(strings.Join(tokens[1:], " "))
 			}
 
-		case "edit":
+		case "ed", "edit":
 			if currentProject == "" {
 				fmt.Println(RED + "请先进入一个项目！" + RESET)
 			} else {
@@ -271,10 +285,40 @@ func main() {
 				}
 			}
 
+	case "cl", "clear":
+		fmt.Print("\u001B[2J\u001B[H")
+
 		default:
 			fmt.Printf("未知命令: %s。输入 'h' 查看帮助。\n", cmd)
 		}
 	}
+}
+
+func splitQuoted(s string) []string {
+	var args []string
+	var buf strings.Builder
+	inSingle := false
+	inDouble := false
+
+	for _, r := range s {
+		switch {
+		case r == '\'' && !inDouble:
+			inSingle = !inSingle
+		case r == '"' && !inSingle:
+			inDouble = !inDouble
+		case r == ' ' && !inSingle && !inDouble:
+			if buf.Len() > 0 {
+				args = append(args, buf.String())
+				buf.Reset()
+			}
+		default:
+			buf.WriteRune(r)
+		}
+	}
+	if buf.Len() > 0 {
+		args = append(args, buf.String())
+	}
+	return args
 }
 
 func printAuthor() { //
@@ -286,10 +330,11 @@ func printAuthor() { //
 func printHelp() { //
 	fmt.Println("可用命令列表:")
 	fmt.Println("  项目管理:")
-	fmt.Println("    p n(ew) [PROJECT]   - 创建项目")
-	fmt.Println("    p d(elete) [PROJECT]- 删除项目")
-	fmt.Println("    p s(witch) [PROJECT]- 切换项目 (p s ~ 返回根目录)")
-	fmt.Println("    p l(ist)            - 列出项目")
+	fmt.Println("    p n(ew) [PROJECT] [TAG] - 创建项目 (可指定标签)")
+	fmt.Println("    p d(elete) [PROJECT]  - 删除项目")
+	fmt.Println("    p s(witch) [PROJECT]  - 切换项目 (p s ~ 返回根目录)")
+	fmt.Println("    p l(ist)              - 列出项目 (带标签高亮)")
+	fmt.Println("    p se(arch) [REGEX]    - 按名称或标签搜索项目")
 	fmt.Println("  样例管理:")
 	fmt.Println("    e n(ew)             - 交互式新建样例")
 	fmt.Println("    e n(ew) [IN] [OUT]  - 从文件新建样例")
@@ -305,14 +350,40 @@ func printHelp() { //
 	fmt.Println("    r(un)              - 仅编译并运行程序 (交互模式)")
 	fmt.Println("    d(ebug)            - 使用 gdb 调试当前可执行文件")
 	fmt.Println("    cmd [SYS_CMD]      - 执行系统命令")
-	fmt.Println("    edit               - 用 vim 编辑当前源码文件")
+	fmt.Println("    ed(it)             - 用 vim 编辑当前源码文件")
 	fmt.Println("  杂项:")
+	fmt.Println("    cl, clear          - 清屏")
 	fmt.Println("    h, help            - 帮助信息")
 	fmt.Println("    show w             - 查看担保 (Warranty)")
 	fmt.Println("    show c             - 查看版权/许可证信息 (Copying)")
 	fmt.Println("    q, exit            - 退出")
 }
 
+func loadOtkRc() {
+	home, err := os.UserHomeDir()
+	rcPath := filepath.Join(home,".otkrc")
+	bytes, err := os.ReadFile(rcPath)
+	if err != nil {
+		return // no config file, use defaults
+	}
+	lines := strings.Split(string(bytes), "\n")
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(l, ";") {
+			continue
+		}
+		parts := strings.SplitN(l, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		switch key {
+		case "otk.editor":
+			otkEditor = value
+		}
+	}
+}
 
 func executeSystemCommand(sysCmd string) { //
 	if sysCmd == "" {
@@ -337,10 +408,18 @@ func executeSystemCommand(sysCmd string) { //
 	}
 }
 
-func createProject(proj string) { //
+func createProject(proj, tag string) { //
 	projDir := filepath.Join(baseDir, proj)
 	if _, err := os.Stat(projDir); err == nil {
-		fmt.Printf("项目 %s 已存在，正在为您切换。\n", proj)
+		if tag != "" {
+			iniPath := filepath.Join(projDir, proj+".ini")
+			props := readIni(iniPath)
+			props["tag"] = tag
+			writeIni(iniPath, props)
+			fmt.Printf("%s已为项目 %s 添加标签: %s%s\n", GREEN, proj, tag, RESET)
+		} else {
+			fmt.Printf("项目 %s 已存在，正在为您切换。\n", proj)
+		}
 		switchProject(proj)
 		return
 	}
@@ -349,10 +428,21 @@ func createProject(proj string) { //
 	cppCode := "#include<iostream>\nusing namespace std;\n\nint main(){\n    // Write code here\n    return 0;\n}\n"
 	_ = os.WriteFile(filepath.Join(projDir, proj+".cpp"), []byte(cppCode), 0644)
 
-	iniContent := "time_limit=1.00\nmemory_limit=125\nversion=c++17\no2=1"
-	_ = os.WriteFile(filepath.Join(projDir, proj+".ini"), []byte(iniContent), 0644)
+	props := map[string]string{
+		"time_limit":   "1.00",
+		"memory_limit": "125",
+		"version":      "c++17",
+		"o2":           "1",
+	}
+	if tag != "" {
+		props["tag"] = tag
+	}
+	writeIni(filepath.Join(projDir, proj+".ini"), props)
 
 	fmt.Println(GREEN + "成功创建项目: " + proj + RESET)
+	if tag != "" {
+		fmt.Printf("  标签: %s%s%s\n", CYAN, tag, RESET)
+	}
 	switchProject(proj)
 }
 
@@ -364,7 +454,7 @@ func switchProject(proj string) { //
 		return
 	}
 	projDir := filepath.Join(baseDir, proj)
-	if fi, err := os.Stat(projDir); err == nil && fi.IsDir() {
+	if fi, err := os.Stat(projDir); err == nil && fi.IsDir() && proj!="." && proj!=".." {
 		currentDir = projDir
 		currentProject = proj
 		fmt.Println("已切换至: " + proj)
@@ -384,6 +474,50 @@ func deleteProject(proj string) { //
 	if currentProject == proj {
 		currentDir = baseDir
 		currentProject = ""
+	}
+}
+
+func searchProjects(pattern string) {
+	fmt.Printf("=== 搜索项目 (模式: %s) ===\n", pattern)
+
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		fmt.Printf("%s错误: 正则表达式无效 - %v%s\n", RED, err, RESET)
+		return
+	}
+
+	files, err := os.ReadDir(baseDir)
+	if err != nil {
+		fmt.Println(RED + "无法读取目录: " + err.Error() + RESET)
+		return
+	}
+
+	count := 0
+	for _, f := range files {
+		if !f.IsDir() {
+			continue
+		}
+		projName := f.Name()
+		tag := ""
+		iniPath := filepath.Join(baseDir, projName, projName+".ini")
+		if props := readIni(iniPath); props["tag"] != "" {
+			tag = props["tag"]
+		}
+
+		if re.MatchString(projName) || (tag != "" && re.MatchString(tag)) {
+			if tag != "" {
+				fmt.Printf("  * %s %s[%s]%s\n", projName, CYAN, tag, RESET)
+			} else {
+				fmt.Println("  * " + projName)
+			}
+			count++
+		}
+	}
+
+	if count == 0 {
+		fmt.Println("未找到匹配的项目。")
+	} else {
+		fmt.Printf("找到 %d 个匹配的项目。\n", count)
 	}
 }
 
@@ -427,12 +561,22 @@ func listInfo(listProject bool) { //
 		count := 0
 		for _, f := range files {
 			if f.IsDir() {
-				fmt.Println("  * " + f.Name())
+				projName := f.Name()
+				tag := ""
+				iniPath := filepath.Join(baseDir, projName, projName+".ini")
+				if props := readIni(iniPath); props["tag"] != "" {
+					tag = props["tag"]
+				}
+				if tag != "" {
+					fmt.Printf("  * %s %s[%s]%s\n", projName, CYAN, tag, RESET)
+				} else {
+					fmt.Println("  * " + projName)
+				}
 				count++
 			}
 		}
 		if count == 0 {
-			fmt.Println("（暂无项目，使用 create [PROJECT] 新建一个吧）")
+			fmt.Println("（暂无项目，使用 p n [PROJECT] 新建一个吧）")
 		}
 	} else {
 		fmt.Printf("=== 项目 [%s] 的详细状态 ===\n", currentProject)
@@ -968,22 +1112,22 @@ func editCurrent() {
 		fmt.Println(YELLOW + "未找到源码文件，无法编辑" + RESET)
 		return
 	}
-	if runningWindows {
-		cmd := exec.Command("notepad.exe", src)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("%s打开编辑器失败: %v%s\n", RED, err, RESET)
+
+	editor := otkEditor
+	if editor == "" {
+		if runningWindows {
+			editor = "notepad.exe"
+		} else {
+			editor = "vim"
 		}
-	} else {
-		cmd := exec.Command("vim", src)
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Dir = currentDir
-		if err := cmd.Run(); err != nil {
-			fmt.Printf("%s打开 vim 失败: %v%s\n", RED, err, RESET)
-		}
+	}
+
+	cmd := exec.Command(editor, src)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	cmd.Dir = currentDir
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, editor, err, RESET)
 	}
 }
