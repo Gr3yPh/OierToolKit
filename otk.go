@@ -425,7 +425,7 @@ func createProject(proj, tag string) { //
 	}
 
 	_ = os.MkdirAll(projDir, 0755)
-	cppCode := "#include<iostream>\nusing namespace std;\n\nint main(){\n    // Write code here\n    return 0;\n}\n"
+	cppCode := "#include<iostream>\nusing namespace std;\n\nint main(){\n    \n    return 0;\n}\n"
 	_ = os.WriteFile(filepath.Join(projDir, proj+".cpp"), []byte(cppCode), 0644)
 
 	props := map[string]string{
@@ -675,8 +675,8 @@ func setConfig(item, value string) {
 		fmt.Printf("%s已设置 memory = %s MB%s\n", GREEN, value, RESET)
 		
 	case "version", "ver":
-		// 常见C++标准
-		validVersions := []string{"c++98", "c++11", "c++14", "c++17", "c++20", "c++23"}
+		// 与时俱进(^^;)
+		validVersions := []string{"c++98", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"}
 		valid := false
 		for _, v := range validVersions {
 			if value == v {
@@ -714,9 +714,8 @@ func setConfig(item, value string) {
 	writeIni(iniPath, props)
 }
 
-// ========== 原有函数继续 ==========
 
-func createSample(reader *bufio.Reader) { //
+func createSample(reader *bufio.Reader) { 
 	id := 1
 	for {
 		inPath := filepath.Join(currentDir, fmt.Sprintf("%d.in", id))
@@ -738,7 +737,6 @@ func createSample(reader *bufio.Reader) { //
 }
 
 func createSampleFromFiles(inputPath, answerPath string) {
-	// copy given files into current project as next sample id
 	id := 1
 	for {
 		inPath := filepath.Join(currentDir, fmt.Sprintf("%d.in", id))
@@ -748,7 +746,6 @@ func createSampleFromFiles(inputPath, answerPath string) {
 		id++
 	}
 
-	// read input file
 	inBytes, err := os.ReadFile(inputPath)
 	if err != nil {
 		fmt.Printf("%s无法读取输入文件: %v%s\n", RED, err, RESET)
@@ -816,7 +813,6 @@ func listSamples() {
 func readUntilEOF(reader *bufio.Reader) string {
 	var sb strings.Builder
 	for {
-		fmt.Print(" > ")
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -830,7 +826,7 @@ func readUntilEOF(reader *bufio.Reader) string {
 	return sb.String()
 }
 
-func runTest() { // judge: compile and evaluate against samples
+func runTest() {
 	cppName := currentProject + ".cpp"
 	cppPath := filepath.Join(currentDir, cppName)
 	exePath := filepath.Join(currentDir, currentProject)
@@ -871,7 +867,6 @@ func runTest() { // judge: compile and evaluate against samples
 	}
 	fmt.Println(GREEN + "编译成功" + RESET)
 
-	// 读取时空限制
 	timeLimit := 1.00
 	if tl, err := strconv.ParseFloat(props["time_limit"], 64); err == nil {
 		timeLimit = tl
@@ -933,7 +928,6 @@ func runTest() { // judge: compile and evaluate against samples
 			continue
 		}
 
-		// 处理 TLE 计时器
 		done := make(chan error, 1)
 		go func() { done <- cmdRun.Wait() }()
 
@@ -959,7 +953,6 @@ func runTest() { // judge: compile and evaluate against samples
 			continue
 		}
 
-		// 解析时间与内存
 		runTimeSec := endNano.Sub(startNano).Seconds()
 		runMemMB := 0.0
 
@@ -999,12 +992,11 @@ func runTest() { // judge: compile and evaluate against samples
 		runTimeMs := int64(runTimeSec * 1000)
 		metricsStr := fmt.Sprintf(" (%dms, %.2fMB)", runTimeMs, runMemMB)
 
-		if runMemMB > memLimit && !runningWindows { // Windows下内存测量不准确，跳过MLE检查
+		if runMemMB > memLimit { 
 			fmt.Println(RED + "MLE" + RESET + metricsStr)
 			continue
 		}
 
-		// 标准 Diff 对比（格式化换行符与末尾空格）
 		userOut := strings.TrimSpace(strings.ReplaceAll(userOutBuf.String(), "\r\n", "\n"))
 		stdBytes, _ := os.ReadFile(outFile)
 		stdOut := strings.TrimSpace(strings.ReplaceAll(string(stdBytes), "\r\n", "\n"))
@@ -1014,7 +1006,7 @@ func runTest() { // judge: compile and evaluate against samples
 		} else {
 			fmt.Println(RED + "WA" + RESET + metricsStr)
 			fmt.Println("    -----------------------------------------")
-			fmt.Printf("    %s[标准输出]%s\n    %s\n", GREEN, RESET, strings.ReplaceAll(stdOut, "\n", "\n    "))
+			fmt.Printf("    %s[样例输出]%s\n    %s\n", GREEN, RESET, strings.ReplaceAll(stdOut, "\n", "\n    "))
 			fmt.Printf("    %s[你的输出]%s\n    %s\n", RED, RESET, strings.ReplaceAll(userOut, "\n", "\n    "))
 			fmt.Println("    -----------------------------------------")
 		}
@@ -1061,7 +1053,6 @@ func runOnly() {
 	}
 	fmt.Println(GREEN + "编译成功" + RESET)
 
-	// 运行可执行文件，继承终端
 	var cmdRun *exec.Cmd
 	if runningWindows {
 		cmdRun = exec.Command(exePath)
@@ -1090,7 +1081,6 @@ func debugCurrent() {
 	
 	var cmd *exec.Cmd
 	if runningWindows {
-		// Windows 下使用 gdb (需在 PATH 中，或使用完整路径)
 		cmd = exec.Command("gdb", exePath)
 	} else {
 		cmd = exec.Command("gdb", "--args", exePath)
