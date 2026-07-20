@@ -1,3 +1,5 @@
+[中文](README.md) | [English](README.en.md)
+
 # OierToolKit (otk)
 
 A lightweight cross-platform local judge and problem management tool customized for Oiers.
