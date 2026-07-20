@@ -11,6 +11,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **Clean Control Interface**: Built-in interactive Shell with eye-pleasing colorized output.
 * **Precise Time and Space Monitoring**: Captures high-precision runtime (ms) and maximum resident memory (MB) using GNU time.
 * **Intelligent Diff Engine**: Automatically compares standard output with your output when WA (Wrong Answer) occurs.
+* **Auto Stress-testing Mode**: Prepare the code, and type `st` to start stress-testing immediately, using standard I/O.
 * **Command Passthrough**: Execute system commands via `cmd` shortcut without switching terminals.
 
 ## 🚀 Installation

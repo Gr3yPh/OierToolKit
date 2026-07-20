@@ -1,3 +1,3 @@
 ### Changelog
 
-- Added a workflow to create releases
+- 新增对拍功能

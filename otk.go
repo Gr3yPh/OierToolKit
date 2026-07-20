@@ -30,7 +30,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "1.5"
+	otkVersion     = "1.6"
 	otkEditor      string
 )
 
@@ -288,6 +288,15 @@ func main() {
 	case "cl", "clear":
 		fmt.Print("\u001B[2J\u001B[H")
 
+	case "st", "stress-test":
+		count := 100
+		if len(tokens) >= 2 {
+			if c, err := strconv.Atoi(tokens[1]); err == nil && c > 0 {
+				count = c
+			}
+		}
+		stressTest(count)
+
 		default:
 			fmt.Printf("未知命令: %s。输入 'h' 查看帮助。\n", cmd)
 		}
@@ -351,6 +360,7 @@ func printHelp() { //
 	fmt.Println("    d(ebug)            - 使用 gdb 调试当前可执行文件")
 	fmt.Println("    cmd [SYS_CMD]      - 执行系统命令")
 	fmt.Println("    ed(it)             - 用 vim 编辑当前源码文件")
+	fmt.Println("    st(ress-test) [N]  - 对拍 N 轮 (默认100轮)，需要 gen.cpp brute.cpp")
 	fmt.Println("  杂项:")
 	fmt.Println("    cl, clear          - 清屏")
 	fmt.Println("    h, help            - 帮助信息")
@@ -1119,5 +1129,162 @@ func editCurrent() {
 	cmd.Dir = currentDir
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, editor, err, RESET)
+	}
+}
+
+
+// ========== 对拍功能 (stress-test) ==========
+
+func compileCpp(srcPath, exePath, version, o2 string) bool {
+	args := []string{"-std=" + version}
+	if o2 == "1" {
+		args = append(args, "-O2")
+	}
+	args = append(args, srcPath, "-o", exePath)
+	cmd := exec.Command("g++", args...)
+	var errBuf strings.Builder
+	cmd.Stderr = &errBuf
+	if err := cmd.Run(); err != nil {
+		fmt.Println(RED + "[ CE ] 编译失败！" + RESET)
+		fmt.Println(RED + errBuf.String() + RESET)
+		return false
+	}
+	fmt.Println(GREEN + "编译成功" + RESET)
+	return true
+}
+
+func execCmdCapture(exePath, inputStr, workDir string) (string, error) {
+	cmd := exec.Command(exePath)
+	cmd.Dir = workDir
+	if inputStr != "" {
+		cmd.Stdin = strings.NewReader(inputStr)
+	}
+	var outBuf strings.Builder
+	cmd.Stdout = &outBuf
+	err := cmd.Run()
+	return outBuf.String(), err
+}
+
+func stressTest(count int) {
+	if currentProject == "" {
+		fmt.Println(RED + "请先进入一个项目！" + RESET)
+		return
+	}
+
+	projName := currentProject
+	projCpp := filepath.Join(currentDir, projName+".cpp")
+	genCpp := filepath.Join(currentDir, "gen.cpp")
+	bruteCpp := filepath.Join(currentDir, "brute.cpp")
+
+	// 检查文件是否存在
+	missing := false
+	for _, pair := range [][2]string{{genCpp, "gen.cpp"}, {bruteCpp, "brute.cpp"}, {projCpp, projName + ".cpp"}} {
+		if _, err := os.Stat(pair[0]); os.IsNotExist(err) {
+			fmt.Printf("%s错误: 未找到 %s%s\n", RED, pair[1], RESET)
+			missing = true
+		}
+	}
+	if missing {
+		return
+	}
+
+	// 读取项目配置
+	iniPath := filepath.Join(currentDir, projName+".ini")
+	props := readIni(iniPath)
+	cppVersion := props["version"]
+	if cppVersion == "" {
+		cppVersion = "c++17"
+	}
+	o2Switch := props["o2"]
+	if o2Switch == "" {
+		o2Switch = "1"
+	}
+
+	// 编译 gen.cpp
+	fmt.Print("正在编译 gen.cpp... ")
+	genExe := filepath.Join(currentDir, "gen")
+	if runningWindows {
+		genExe += ".exe"
+	}
+	if !compileCpp(genCpp, genExe, "c++17", "0") {
+		return
+	}
+
+	// 编译 brute.cpp
+	fmt.Print("正在编译 brute.cpp... ")
+	bruteExe := filepath.Join(currentDir, "brute")
+	if runningWindows {
+		bruteExe += ".exe"
+	}
+	if !compileCpp(bruteCpp, bruteExe, "c++17", "0") {
+		return
+	}
+
+	// 编译项目代码
+	fmt.Printf("正在编译 %s... ", projName+".cpp")
+	projExe := filepath.Join(currentDir, projName)
+	if runningWindows {
+		projExe += ".exe"
+	}
+	if !compileCpp(projCpp, projExe, cppVersion, o2Switch) {
+		return
+	}
+
+	// 创建对拍输出目录
+	stressDir := filepath.Join(currentDir, ".stress")
+	os.MkdirAll(stressDir, 0755)
+
+	fmt.Printf("开始对拍, 共 %d 轮...\n", count)
+	passed := 0
+	for i := 1; i <= count; i++ {
+		// 运行 gen 产生输入数据
+		genOut, err := execCmdCapture(genExe, "", currentDir)
+		if err != nil {
+			fmt.Printf("\n%s第 %d 轮: gen 运行时错误 (RE)%s\n", RED, i, RESET)
+			return
+		}
+		inputData := genOut
+
+		// 运行 brute 获取正确输出
+		bruteOut, err := execCmdCapture(bruteExe, inputData, currentDir)
+		if err != nil {
+			fmt.Printf("\n%s第 %d 轮: brute 运行时错误 (RE)%s\n", RED, i, RESET)
+			return
+		}
+		expectedOut := strings.TrimSpace(strings.ReplaceAll(bruteOut, "\r\n", "\n"))
+
+		// 运行项目代码获取待检验输出
+		projOut, err := execCmdCapture(projExe, inputData, currentDir)
+		if err != nil {
+			fmt.Printf("\n%s第 %d 轮: 项目程序运行时错误 (RE)%s\n", RED, i, RESET)
+			return
+		}
+		userOut := strings.TrimSpace(strings.ReplaceAll(projOut, "\r\n", "\n"))
+
+		// 比较
+		if userOut == expectedOut {
+			passed++
+			fmt.Printf("\r  第 %d/%d 轮通过", i, count)
+		} else {
+			fmt.Printf("\n%s第 %d 轮: 答案不正确 (WA)%s\n", RED, i, RESET)
+			// 保存测试数据
+			inFile := filepath.Join(stressDir, fmt.Sprintf("%d.in", i))
+			ansFile := filepath.Join(stressDir, fmt.Sprintf("%d.ans", i))
+			outFile := filepath.Join(stressDir, fmt.Sprintf("%d.out", i))
+			os.WriteFile(inFile, []byte(inputData), 0644)
+			os.WriteFile(ansFile, []byte(expectedOut), 0644)
+			os.WriteFile(outFile, []byte(userOut), 0644)
+			fmt.Printf("  已保存测试数据至 %s\n", stressDir)
+			fmt.Println("  -----------------------------------------")
+			fmt.Printf("  %s[正确输出]%s\n  %s\n", GREEN, RESET, expectedOut)
+			fmt.Printf("  %s[你的输出]%s\n  %s\n", RED, RESET, userOut)
+			fmt.Println("  -----------------------------------------")
+		}
+	}
+	fmt.Println()
+	if passed == count {
+		fmt.Printf("%s全部 %d 轮通过！%s\n", GREEN, count, RESET)
+	} else {
+		fmt.Printf("%s%d/%d 轮通过, %d 轮失败%s\n", YELLOW, passed, count, count-passed, RESET)
 	}
 }
