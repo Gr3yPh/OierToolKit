@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'  
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}_${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            arch: amd64
+            ext: ''
+            target: otk-linux-amd64
+          - os: linux
+            arch: arm64
+            ext: ''
+            target: otk-linux-arm64
+          - os: windows
+            arch: amd64
+            ext: .exe
+            target: otk-windows-amd64.exe
+          - os: darwin
+            arch: amd64
+            ext: ''
+            target: otk-darwin-amd64
+          - os: darwin
+            arch: arm64
+            ext: ''
+            target: otk-darwin-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21' 
+
+      - name: Build binary
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+        run: |
+          go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o ${{ matrix.target }} .
+
+      - name: Package (Linux/macOS)
+        if: matrix.os != 'windows'
+        run: |
+          chmod +x ${{ matrix.target }}
+          tar -czf ${{ matrix.target }}.tar.gz ${{ matrix.target }}
+
+      - name: Package (Windows)
+        if: matrix.os == 'windows'
+        run: |
+          zip ${{ matrix.target }}.zip ${{ matrix.target }}
+
+      - name: Generate Changelog for this version
+        id: changelog
+        run: |
+          PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREVIOUS_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s" HEAD)
+          else
+            CHANGELOG=$(git log --pretty=format:"- %s" $PREVIOUS_TAG..HEAD)
+          fi
+          echo "$CHANGELOG" > changelog.txt
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Create Release and Upload Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          body: |
+            ### 更新日志
+
+            ${{ steps.changelog.outputs.changelog }}
+
+          files: |
+            ${{ matrix.target }}.tar.gz
+            ${{ matrix.target }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
