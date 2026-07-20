@@ -77,7 +77,7 @@ func main() {
 #     | \_____\   | /             \ |   |    |     | / |    | |               #
 #      \ |    |___|/               \|___|    |_____|/  |____/|                #
 #       \|____|                                                 OierToolKit   #
-#                                            v%s Go Edition by Gr3yPh4ntom   #
+#                                          %s Go Edition by Gr3yPh4ntom   #
 ###############################################################################
                     https://github.com/Gr3yPh/OierToolKit`, otkVersion)
 	fmt.Println(CYAN + startUpMes + RESET)
