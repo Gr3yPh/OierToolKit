@@ -30,7 +30,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "1.6"
+	otkVersion     = "v1.6.1"
 	otkEditor      string
 )
 
@@ -257,9 +257,6 @@ func main() {
 				editCurrent()
 			}
 
-		case "author":
-			printAuthor()
-
 		case "h", "help":
 			printHelp()
 
@@ -328,12 +325,6 @@ func splitQuoted(s string) []string {
 		args = append(args, buf.String())
 	}
 	return args
-}
-
-func printAuthor() { //
-	fmt.Println("OierToolKit v1.0 by 魇珩Gr3yPh4ntom\n" +
-		"（严格来讲应该叫OierOperationSimplifier才对吧。。）\n" +
-		"repo: https://github.com/Gr3yPh/OierToolKit\nblog: https://gr3yph4ntom.cn")
 }
 
 func printHelp() { //
