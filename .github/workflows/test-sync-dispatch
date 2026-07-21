@@ -1,0 +1,47 @@
+name: Test Sync Release (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to download and sync (e.g. v1.5.2)'
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install gh CLI
+        uses: cli/gh-action@v2
+
+      - name: Download release assets for input tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          echo "Downloading assets for tag: ${{ inputs.tag }}"
+          gh release download "${{ inputs.tag }}" --pattern "*" -D downloads
+          echo "Downloaded files:"
+          ls -lah downloads || true
+
+      - name: Upload each file to mirror via HTTP
+        env:
+          MIRROR_URL: ${{ secrets.MIRROR_UPLOAD_URL }}
+          MIRROR_TOKEN: ${{ secrets.MIRROR_UPLOAD_TOKEN }}
+        run: |
+          set -euo pipefail
+          cd downloads
+          for f in *; do
+            [ -e "$f" ] || continue
+            echo "Uploading $f ..."
+            resp=$(curl -s -w "\n%{http_code}" -H "X-UPLOAD-TOKEN: $MIRROR_TOKEN" -F "file=@$f" "$MIRROR_URL")
+            body=$(echo "$resp" | sed '$d')
+            code=$(echo "$resp" | tail -n1)
+            echo "Response code: $code"
+            echo "Body: $body"
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              echo "Upload failed for $f"
+              exit 1
+            fi
+          done
