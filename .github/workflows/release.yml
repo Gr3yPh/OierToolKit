@@ -62,6 +62,38 @@ jobs:
         run: |
           zip ${{ matrix.target }}.zip ${{ matrix.target }}
 
+      - name: Upload artifact (non-Windows)
+        if: matrix.os != 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            ${{ matrix.target }}
+            ${{ matrix.target }}.tar.gz
+
+      - name: Upload artifact (Windows)
+        if: matrix.os == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ matrix.target }}.zip
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
       - name: Generate Changelog for this version
         id: changelog
         run: |
@@ -82,11 +114,10 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           body: |
+            ### CHANGELOG
 
             ${{ steps.changelog.outputs.changelog }}
-
           files: |
-            ${{ matrix.target }}.tar.gz
-            ${{ matrix.target }}.zip
+            artifacts/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
