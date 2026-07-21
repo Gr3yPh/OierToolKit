@@ -24,11 +24,11 @@
 2. 运行 `go build -o otk` 并执行可执行文件
 3. 也可以从release页面下载预编译二进制
 
-## ✳️ 配置.otkrc
-可以说是目前没啥配置的，所以用不用关系不大
-```
-# 设置edit命令的编辑器为nvim
-otk.editor=nvim
+## ✳️ 额外配置
+OierToolKit的编辑功能会使用环境变量 `OTK_EDITOR` 中的命令来打开编辑器，可以作如下修改：
+```bash
+# 使用命令行下的emacs编辑文件，其中%s会被自动替换为文件名
+export OTK_EDITOR='emacs -nw %s'
 ```
 
 ## 📋 TODO

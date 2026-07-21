@@ -19,11 +19,11 @@ A lightweight cross-platform local judge and problem management tool customized 
 2. Run `go build -o otk` and execute the binary
 3. Alternatively, download precompiled binaries from the release page
 
-## ✳️ Configure .otkrc
-Currently has minimal configuration, so usage is optional
-```
-# Set the editor for the edit command to nvim
-otk.editor=nvim
+## ✳️ Extra Configuration
+OierToolKit uses the command stored in environment variable `OTK_EDITOR` to edit files. For example:
+```bash
+# Using emacs to edit the file under command line interface
+export OTK_EDITOR='emacs -nw %s'
 ```
 
 ## 📋 TODO

@@ -30,8 +30,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.1"
-	otkEditor      string
+	otkVersion     = "v1.6.3"
 )
 
 func main() {
@@ -50,7 +49,7 @@ func main() {
 	if runtime.GOOS=="windows" {
 		runningWindows=true;
 	}
-	loadOtkRc()
+
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "",
 		HistoryFile:       filepath.Join(baseDir, ".otk_history"), 
@@ -358,32 +357,6 @@ func printHelp() { //
 	fmt.Println("    show w             - 查看担保 (Warranty)")
 	fmt.Println("    show c             - 查看版权/许可证信息 (Copying)")
 	fmt.Println("    q, exit            - 退出")
-}
-
-func loadOtkRc() {
-	home, err := os.UserHomeDir()
-	rcPath := filepath.Join(home,".otkrc")
-	bytes, err := os.ReadFile(rcPath)
-	if err != nil {
-		return // no config file, use defaults
-	}
-	lines := strings.Split(string(bytes), "\n")
-	for _, l := range lines {
-		l = strings.TrimSpace(l)
-		if l == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(l, ";") {
-			continue
-		}
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) != 2 {
-			continue
-		}
-		key := strings.TrimSpace(parts[0])
-		value := strings.TrimSpace(parts[1])
-		switch key {
-		case "otk.editor":
-			otkEditor = value
-		}
-	}
 }
 
 func executeSystemCommand(sysCmd string) { //
@@ -1104,22 +1077,32 @@ func editCurrent() {
 		return
 	}
 
-	editor := otkEditor
+	editor := os.Getenv("OTK_EDITOR")
 	if editor == "" {
 		if runningWindows {
-			editor = "notepad.exe"
+			editor = "notepad %s"
 		} else {
-			editor = "vim"
+			editor = "vim %s"
 		}
 	}
 
-	cmd := exec.Command(editor, src)
+	// 将 %s 替换为源码文件路径
+	cmdStr := fmt.Sprintf(editor, src)
+
+	// 解析命令行
+	parts := splitQuoted(cmdStr)
+	if len(parts) == 0 {
+		fmt.Println(RED + "无效的编辑器命令" + RESET)
+		return
+	}
+
+	cmd := exec.Command(parts[0], parts[1:]...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = currentDir
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, editor, err, RESET)
+		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, parts[0], err, RESET)
 	}
 }
 
