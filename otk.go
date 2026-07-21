@@ -6,11 +6,13 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"runtime"
 	"github.com/chzyer/readline"
@@ -30,7 +32,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.1"
+	otkVersion     = "v1.6.2"
 	otkEditor      string
 )
 
@@ -726,11 +728,31 @@ func createSample(reader *bufio.Reader) {
 		id++
 	}
 
+	// 创建中断通道
+	interruptChan := make(chan bool, 1)
+	go func() {
+		// 使用独立的信号监听
+		sigChan := make(chan os.Signal, 1)
+		signal.Notify(sigChan, syscall.SIGINT)
+		<-sigChan
+		interruptChan <- true
+	}()
+
 	fmt.Println("请输入样例输入 (输入完成后换行，并输入EOF提交):")
-	inputData := readUntilEOF(reader)
+	//inputData := readUntilEOF(reader)
+	inputData := readUntilEOFWithReadline();
+	if inputData == "##INTERRUPTED##" {
+		fmt.Println("\n" + YELLOW + "已取消样例录入" + RESET)
+		return
+	}
 
 	fmt.Println("请输入样例输出 (输入完成后换行，并输入EOF提交):")
-	inputDataOut := readUntilEOF(reader)
+	//inputDataOut := readUntilEOF(reader)
+	inputDataOut := readUntilEOFWithReadline();
+	if inputDataOut == "##INTERRUPTED##" {
+		fmt.Println("\n" + YELLOW + "已取消样例录入" + RESET)
+		return
+	}
 
 	_ = os.WriteFile(filepath.Join(currentDir, fmt.Sprintf("%d.in", id)), []byte(inputData), 0644)
 	_ = os.WriteFile(filepath.Join(currentDir, fmt.Sprintf("%d.out", id)), []byte(inputDataOut), 0644)
@@ -823,6 +845,33 @@ func readUntilEOF(reader *bufio.Reader) string {
 			return ""
 		}
 		sb.WriteString(line)
+	}
+	return sb.String()
+}
+
+func readUntilEOFWithReadline() string {
+	var sb strings.Builder
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt: "> ",
+	})
+	if err != nil {
+		return ""
+	}
+	defer rl.Close()
+
+	for {
+		line, err := rl.Readline()
+		if err != nil {
+			if err == readline.ErrInterrupt {
+				return "##INTERRUPTED##"
+			}
+			return ""
+		}
+		
+		if strings.TrimSpace(line) == "EOF" {
+			break
+		}
+		sb.WriteString(line + "\n")
 	}
 	return sb.String()
 }
@@ -1167,7 +1216,6 @@ func stressTest(count int) {
 	genCpp := filepath.Join(currentDir, "gen.cpp")
 	bruteCpp := filepath.Join(currentDir, "brute.cpp")
 
-	// 检查文件是否存在
 	missing := false
 	for _, pair := range [][2]string{{genCpp, "gen.cpp"}, {bruteCpp, "brute.cpp"}, {projCpp, projName + ".cpp"}} {
 		if _, err := os.Stat(pair[0]); os.IsNotExist(err) {
@@ -1179,7 +1227,6 @@ func stressTest(count int) {
 		return
 	}
 
-	// 读取项目配置
 	iniPath := filepath.Join(currentDir, projName+".ini")
 	props := readIni(iniPath)
 	cppVersion := props["version"]
@@ -1191,7 +1238,6 @@ func stressTest(count int) {
 		o2Switch = "1"
 	}
 
-	// 编译 gen.cpp
 	fmt.Print("正在编译 gen.cpp... ")
 	genExe := filepath.Join(currentDir, "gen")
 	if runningWindows {
@@ -1201,7 +1247,6 @@ func stressTest(count int) {
 		return
 	}
 
-	// 编译 brute.cpp
 	fmt.Print("正在编译 brute.cpp... ")
 	bruteExe := filepath.Join(currentDir, "brute")
 	if runningWindows {
@@ -1211,7 +1256,6 @@ func stressTest(count int) {
 		return
 	}
 
-	// 编译项目代码
 	fmt.Printf("正在编译 %s... ", projName+".cpp")
 	projExe := filepath.Join(currentDir, projName)
 	if runningWindows {
@@ -1221,14 +1265,43 @@ func stressTest(count int) {
 		return
 	}
 
-	// 创建对拍输出目录
 	stressDir := filepath.Join(currentDir, ".stress")
 	os.MkdirAll(stressDir, 0755)
+
+	// 创建一个 readline 实例用于监听 C-c
+	rl, err := readline.NewEx(&readline.Config{
+		Prompt:            "",
+		InterruptPrompt:   "^C",
+		HistorySearchFold: true,
+	})
+	if err != nil {
+		fmt.Println(RED + "无法初始化输入监听: " + err.Error() + RESET)
+		return
+	}
+	defer rl.Close()
+
+	// 创建一个 channel 用于接收中断信号
+	interruptChan := make(chan bool, 1)
+	go func() {
+		// 在一个单独的 goroutine 中等待 C-c
+		_, err := rl.Readline()
+		if err == readline.ErrInterrupt {
+			interruptChan <- true
+		}
+	}()
 
 	fmt.Printf("开始对拍, 共 %d 轮...\n", count)
 	passed := 0
 	for i := 1; i <= count; i++ {
-		// 运行 gen 产生输入数据
+		select {
+		case <-interruptChan:
+			fmt.Println("\n" + YELLOW + "对拍被中断" + RESET)
+			cleanupStressFiles(genExe, bruteExe, projExe)
+			return
+		default:
+			// 继续跑
+		}
+
 		genOut, err := execCmdCapture(genExe, "", currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: gen 运行时错误 (RE)%s\n", RED, i, RESET)
@@ -1236,7 +1309,6 @@ func stressTest(count int) {
 		}
 		inputData := genOut
 
-		// 运行 brute 获取正确输出
 		bruteOut, err := execCmdCapture(bruteExe, inputData, currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: brute 运行时错误 (RE)%s\n", RED, i, RESET)
@@ -1244,7 +1316,6 @@ func stressTest(count int) {
 		}
 		expectedOut := strings.TrimSpace(strings.ReplaceAll(bruteOut, "\r\n", "\n"))
 
-		// 运行项目代码获取待检验输出
 		projOut, err := execCmdCapture(projExe, inputData, currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: 项目程序运行时错误 (RE)%s\n", RED, i, RESET)
@@ -1252,7 +1323,6 @@ func stressTest(count int) {
 		}
 		userOut := strings.TrimSpace(strings.ReplaceAll(projOut, "\r\n", "\n"))
 
-		// 比较
 		if userOut == expectedOut {
 			passed++
 			fmt.Printf("\r  第 %d/%d 轮通过", i, count)
@@ -1277,5 +1347,13 @@ func stressTest(count int) {
 		fmt.Printf("%s全部 %d 轮通过！%s\n", GREEN, count, RESET)
 	} else {
 		fmt.Printf("%s%d/%d 轮通过, %d 轮失败%s\n", YELLOW, passed, count, count-passed, RESET)
+	}
+}
+
+func cleanupStressFiles(files ...string) {
+	for _, f := range files {
+		if f != "" {
+			_ = os.Remove(f)
+		}
 	}
 }
