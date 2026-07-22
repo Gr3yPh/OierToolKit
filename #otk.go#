@@ -32,7 +32,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.4"
+	otkVersion     = "v1.6.2"
 	otkEditor      string
 )
 
@@ -52,7 +52,7 @@ func main() {
 	if runtime.GOOS=="windows" {
 		runningWindows=true;
 	}
-
+	loadOtkRc()
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "",
 		HistoryFile:       filepath.Join(baseDir, ".otk_history"), 
@@ -360,6 +360,32 @@ func printHelp() { //
 	fmt.Println("    show w             - 查看担保 (Warranty)")
 	fmt.Println("    show c             - 查看版权/许可证信息 (Copying)")
 	fmt.Println("    q, exit            - 退出")
+}
+
+func loadOtkRc() {
+	home, err := os.UserHomeDir()
+	rcPath := filepath.Join(home,".otkrc")
+	bytes, err := os.ReadFile(rcPath)
+	if err != nil {
+		return // no config file, use defaults
+	}
+	lines := strings.Split(string(bytes), "\n")
+	for _, l := range lines {
+		l = strings.TrimSpace(l)
+		if l == "" || strings.HasPrefix(l, "#") || strings.HasPrefix(l, ";") {
+			continue
+		}
+		parts := strings.SplitN(l, "=", 2)
+		if len(parts) != 2 {
+			continue
+		}
+		key := strings.TrimSpace(parts[0])
+		value := strings.TrimSpace(parts[1])
+		switch key {
+		case "otk.editor":
+			otkEditor = value
+		}
+	}
 }
 
 func executeSystemCommand(sysCmd string) { //
@@ -1096,19 +1122,21 @@ func runOnly() {
 	cmdRun.Stdin = os.Stdin
 	cmdRun.Stdout = os.Stdout
 	cmdRun.Stderr = os.Stderr
-
+		// 使用 goroutine 运行程序
 	done := make(chan error, 1)
 	go func() {
 		done <- cmdRun.Run()
 	}()
 
+	// 等待程序结束或被中断
 	select {
 	case <-interruptChan:
+		// 用户按了 Ctrl+C，终止子进程
 		if cmdRun.Process != nil {
 			if err := cmdRun.Process.Kill(); err != nil {
 				fmt.Printf("\n%s终止进程失败: %v%s\n", RED, err, RESET)
 			} else {
-				fmt.Println("\n" + YELLOW + "程序已被终止" + RESET)
+				fmt.Println("\n" + YELLOW + "程序已被用户终止" + RESET)
 			}
 		}
 	case err := <-done:
@@ -1116,8 +1144,7 @@ func runOnly() {
 			fmt.Printf("%s运行失败: %v%s\n", RED, err, RESET)
 		}
 	}
-
-	
+	}
 }
 
 func debugCurrent() {
@@ -1155,32 +1182,22 @@ func editCurrent() {
 		return
 	}
 
-	editor := os.Getenv("OTK_EDITOR")
+	editor := otkEditor
 	if editor == "" {
 		if runningWindows {
-			editor = "notepad %s"
+			editor = "notepad.exe"
 		} else {
-			editor = "vim %s"
+			editor = "vim"
 		}
 	}
 
-	// 将 %s 替换为源码文件路径
-	cmdStr := fmt.Sprintf(editor, src)
-
-	// 解析命令行
-	parts := splitQuoted(cmdStr)
-	if len(parts) == 0 {
-		fmt.Println(RED + "无效的编辑器命令" + RESET)
-		return
-	}
-
-	cmd := exec.Command(parts[0], parts[1:]...)
+	cmd := exec.Command(editor, src)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Dir = currentDir
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, parts[0], err, RESET)
+		fmt.Printf("%s打开编辑器 %s 失败: %v%s\n", RED, editor, err, RESET)
 	}
 }
 
