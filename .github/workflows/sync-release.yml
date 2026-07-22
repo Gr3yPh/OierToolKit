@@ -1,10 +1,10 @@
-name: Test Sync Release (manual)
+name: Sync Release (manual)
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to download and sync (e.g. v1.5.2)'
+        description: 'Release tag'
         required: true
 
 jobs:
