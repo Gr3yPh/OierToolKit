@@ -32,7 +32,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.4"
+	otkVersion     = "v1.6.5"
 	otkEditor      string
 )
 
@@ -838,6 +838,9 @@ func readUntilEOFWithReadline() string {
 		if err != nil {
 			if err == readline.ErrInterrupt {
 				return "##INTERRUPTED##"
+			}
+			if err == io.EOF {
+				break
 			}
 			return ""
 		}
