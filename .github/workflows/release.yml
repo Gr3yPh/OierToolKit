@@ -66,16 +66,14 @@ jobs:
         if: matrix.os != 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}
-          path: |
-            ${{ matrix.target }}
-            ${{ matrix.target }}.tar.gz
+          name: ${{ matrix.target }}.tar.gz
+          path: ${{ matrix.target }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}
+          name: ${{ matrix.target }}.zip
           path: ${{ matrix.target }}.zip
 
   release:
@@ -118,6 +116,7 @@ jobs:
 
             ${{ steps.changelog.outputs.changelog }}
           files: |
-            artifacts/**/*
+            artifacts/**/*.tar.gz
+            artifacts/**/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

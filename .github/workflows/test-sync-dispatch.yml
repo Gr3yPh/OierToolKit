@@ -1,0 +1,81 @@
+name: Test Sync Release (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to download and sync (e.g. v1.5.2)'
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    env:
+      REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      MIRROR_URL: ${{ secrets.MIRROR_UPLOAD_URL }}
+      MIRROR_TOKEN: ${{ secrets.MIRROR_UPLOAD_TOKEN }}
+    steps:
+      - name: Prepare runner (install jq)
+        run: |
+          set -euo pipefail
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+
+      - name: Download release assets via GitHub API
+        run: |
+          set -euo pipefail
+          mkdir -p downloads
+          echo "Fetching release metadata for $REPO tag $TAG"
+          release_json=$(curl -s -H "Authorization: Bearer $GITHUB_TOKEN" \
+                            -H "Accept: application/vnd.github+json" \
+                            "https://api.github.com/repos/$REPO/releases/tags/$TAG")
+          # If tag not found, API returns message key
+          if echo "$release_json" | jq -e 'has("message") and .message == "Not Found"' >/dev/null 2>&1; then
+            echo "Release with tag $TAG not found."
+            echo "API response:"
+            echo "$release_json"
+            exit 1
+          fi
+          assets_count=$(echo "$release_json" | jq '.assets | length')
+          echo "Assets count: $assets_count"
+          if [ "$assets_count" -eq 0 ]; then
+            echo "No assets found for release $TAG"
+            exit 1
+          fi
+          for i in $(seq 0 $((assets_count-1))); do
+            asset_url=$(echo "$release_json" | jq -r ".assets[$i].url")
+            asset_name=$(echo "$release_json" | jq -r ".assets[$i].name")
+            echo "Downloading asset #$i : $asset_name"
+            # asset_url is the API asset url; must use Accept: application/octet-stream to get binary
+            curl -L -sS -H "Authorization: Bearer $GITHUB_TOKEN" \
+                 -H "Accept: application/octet-stream" \
+                 "$asset_url" -o "downloads/$asset_name"
+            echo "Saved downloads/$asset_name"
+          done
+          echo "Downloaded files:"
+          ls -lah downloads || true
+
+      - name: Upload each file to mirror via HTTP
+        run: |
+          set -euo pipefail
+          if [ -z "${MIRROR_URL:-}" ] || [ -z "${MIRROR_TOKEN:-}" ]; then
+            echo "MIRROR_UPLOAD_URL or MIRROR_UPLOAD_TOKEN not set in repository secrets"
+            exit 1
+          fi
+          cd downloads
+          for f in *; do
+            [ -e "$f" ] || continue
+            echo "Uploading $f ..."
+            # Use curl to POST file; capture body and HTTP status
+            resp=$(curl -s -w "\n%{http_code}" -H "X-UPLOAD-TOKEN: $MIRROR_TOKEN" -F "file=@$f" "$MIRROR_URL")
+            body=$(echo "$resp" | sed '$d')
+            code=$(echo "$resp" | tail -n1)
+            echo "Response code: $code"
+            echo "Body: $body"
+            if [ "$code" != "200" ] && [ "$code" != "201" ]; then
+              echo "Upload failed for $f (HTTP $code)"
+              exit 1
+            fi
+          done
