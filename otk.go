@@ -48,8 +48,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.5"
-	otkEditor      string
+	otkVersion     = "v1.6.6"
 )
 
 func main() {
@@ -58,7 +57,20 @@ func main() {
 		fmt.Println(RED + "无法获取用户主目录" + RESET)
 		return
 	}
-	baseDir = filepath.Join(home, ".otk")
+
+	otkHome := os.Getenv("OTK_HOME")
+	if otkHome != "" {
+		baseDir = otkHome
+		if !filepath.IsAbs(baseDir) {
+			absPath, err := filepath.Abs(baseDir)
+			if err == nil {
+				baseDir = absPath
+			}
+		}
+	} else {
+		baseDir = filepath.Join(home, ".otk")
+	}
+
 	currentDir = baseDir
 
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
@@ -99,10 +111,14 @@ func main() {
 ###############################################################################
                     https://github.com/Gr3yPh/OierToolKit`, otkVersion)
 	fmt.Println(CYAN + startUpMes + RESET)
+	fmt.Println()
+	fmt.Printf("当前目录: %s\n", baseDir)
+	fmt.Println()
 	fmt.Println(`本程序不提供任何担保；详情请输入“show w”。
 这是自由软件，欢迎您重新分发。
 在特定条件下；输入“show c”查看详情。`)
-	fmt.Println("输入 'h' 查看帮助。输入 'cmd [命令]' 执行外部系统命令。\n")
+	fmt.Println("输入 'h' 查看帮助。输入 'cmd [命令]' 执行外部系统命令。")
+	fmt.Println()
 
 	reader := bufio.NewReader(os.Stdin)
 	for {
@@ -294,7 +310,7 @@ func main() {
 				} else if subCmd == "c" {
 					fmt.Println("这是一个自由软件，欢迎您在 GPLv3 协议下重新分发它。")
 					fmt.Println("在特定条件下，您可以修改并共享它。")
-					fmt.Println("完整许可证全文请查看根目录下的 LICENSE 文件。")
+					fmt.Println("完整许可证全文请查看项目中的 LICENSE 文件：https://github.com/Gr3yPh/OierToolKit/blob/main/LICENSE。")
 				} else {
 					fmt.Printf("%s错误: 未知的 show 参数 '%s'，请输入 'show w' 或 'show c'%s\n", RED, tokens[1], RESET)
 				}
