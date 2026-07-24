@@ -25,11 +25,9 @@
 3. 也可以从release页面下载预编译二进制
 
 ## ✳️ 额外配置
-OierToolKit的编辑功能会使用环境变量 `OTK_EDITOR` 中的命令来打开编辑器，可以作如下修改：
-```bash
-# 使用命令行下的emacs编辑文件，其中%s会被自动替换为文件名
-export OTK_EDITOR='emacs -nw %s'
-```
+OierToolKit的部分功能可以通过设置环境变量来自定义。
+- `OTK_HOME`：设定项目存储目录，推荐空目录
+- `OTK_EDITOR`：设定ed命令打开的编辑器，例如`emacs -nw %s`
 
 ## 📋 TODO
 - [x] 重构命令集
