@@ -38,7 +38,7 @@ OierToolKit的部分功能可以通过设置环境变量来自定义。
 ---
 
 
-**(C)opyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
+**Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
 
-本工具依据 **GNU General Public License v3.0 (GPLv3)** 开源协议免费分发与修改，详情参见仓库下LICENSE文件。
+本工具是自由软件，依据 **GNU General Public License v3.0 (GPLv3)** 自由软件许可证免费分发与修改，详情参见仓库下LICENSE文件。

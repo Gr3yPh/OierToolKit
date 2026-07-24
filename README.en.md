@@ -31,6 +31,6 @@ Some features of OierToolKit can be configured by setting the environment variab
 
 ---
 
-**(C)opyright 2026 魇珩Gr3yPh4ntom. All rights reserved.**
+**Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
-This tool is freely distributed and modified under the **GNU General Public License v3.0 (GPLv3)** open-source license. See the LICENSE file in the repository for details.
+This tool is freely distributed and modified under the **GNU General Public License v3.0 (GPLv3)**. See the LICENSE file in the repository for details.
