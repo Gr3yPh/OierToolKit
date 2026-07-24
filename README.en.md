@@ -20,11 +20,9 @@ A lightweight cross-platform local judge and problem management tool customized 
 3. Alternatively, download precompiled binaries from the release page
 
 ## ✳️ Extra Configuration
-OierToolKit uses the command stored in environment variable `OTK_EDITOR` to edit files. For example:
-```bash
-# Using emacs to edit the file under command line interface
-export OTK_EDITOR='emacs -nw %s'
-```
+Some features of OierToolKit can be configured by setting the environment variables, for example:
+- `OTK_HOME`: The directory to store the projects.
+- `OTK_EDITOR`: The command to be run when typing the edit command, e.g. `emacs -nw %s`
 
 ## 📋 TODO
 - [x] Refactor command set
