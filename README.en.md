@@ -34,3 +34,7 @@ Some features of OierToolKit can be configured by setting the environment variab
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
 This tool is freely distributed and modified under the **GNU General Public License v3.0 (GPLv3)**. See the LICENSE file in the repository for details.
+
+## License Exception
+
+OierToolKit is licensed under the GNU General Public License, version 3 or later. As a special exception, permission is granted to link OierToolKit with the Go standard library (including its OpenSSL-licensed components) and distribute the resulting binaries, without being subject to the restrictions of the GPL with respect to those components. This exception does not grant permission to link OierToolKit with other non-GPL-compatible code, nor does it change the GPL terms for any other part of the software. See the `EXCEPTION` file in the root of this repository for the full text.

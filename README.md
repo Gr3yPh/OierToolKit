@@ -42,3 +42,7 @@ OierToolKit的部分功能可以通过设置环境变量来自定义。
 
 
 本工具是自由软件，依据 **GNU General Public License v3.0 (GPLv3)** 自由软件许可证免费分发与修改，详情参见仓库下LICENSE文件。
+
+## 许可证例外
+
+OierToolKit 采用 GPLv3 或更高版本授权。为允许本软件在 Go 环境下正常编译与运行，特此添加一项额外例外：允许将 OierToolKit 与 Go 标准库（包括其可能包含的 OpenSSL 许可证组件）进行链接和分发。此例外条款不影响本软件整体的 GPL 授权性质，也不授予链接其他非 GPL 兼容代码的额外权利。详细内容请参见项目根目录下的 `EXCEPTION` 文件。
