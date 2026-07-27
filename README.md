@@ -1,8 +1,18 @@
+<p align="center">
+  <img src="logo.png" width="140" alt="OierToolKit Logo">
+</p>
+
+<h1 align="center">OierToolKit</h1>
+
+<p align="center">
+  <strong>Cross-platform CLI toolkit for competitive programmers.</strong><br>
+  本地评测 · 项目管理 · 样例管理 · 对拍
+</p>
+
+<p align="center">
+
+
 [中文](README.md) | [English](README.en.md)
-
-
-# OierToolKit (otk)
-
 
 一个为 Oier 量身定制的轻量级跨平台本地评测姬与题目管理工具。
 ~~叫做OierOperationSimplifier更合理吧。。~~
