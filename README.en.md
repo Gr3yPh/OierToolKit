@@ -1,6 +1,18 @@
-[中文](README.md) | [English](README.en.md)
+<p align="center">
+  <img src="logo.png" width="140" alt="OierToolKit Logo">
+</p>
 
-# OierToolKit (otk)
+<h1 align="center">OierToolKit</h1>
+
+<p align="center">
+  <strong>Modern CLI Toolkit for Competitive Programming.</strong>
+</p>
+
+<p align="center">
+  Local Judge · Project Management · Sample Management · Stress Testing
+</p>
+
+[中文](README.md) | [English](README.en.md)
 
 A lightweight cross-platform local judge and problem management tool customized for Oiers.
 ~~It would be more reasonable to call it OierOperationSimplifier...~~
