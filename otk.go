@@ -48,7 +48,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.6"
+	otkVersion     = "v1.6.7"
 )
 
 func main() {
@@ -515,7 +515,7 @@ func searchProjects(pattern string) {
 
 		if re.MatchString(projName) || (tag != "" && re.MatchString(tag)) {
 			if tag != "" {
-				fmt.Printf("  * %s %s[%s]%s\n", projName, CYAN, tag, RESET)
+				fmt.Printf("  * %s %s%s%s\n", projName, CYAN, tag, RESET)
 			} else {
 				fmt.Println("  * " + projName)
 			}
@@ -577,7 +577,7 @@ func listInfo(listProject bool) { //
 					tag = props["tag"]
 				}
 				if tag != "" {
-					fmt.Printf("  * %s %s[%s]%s\n", projName, CYAN, tag, RESET)
+					fmt.Printf("  * %s %s%s%s\n", projName, CYAN, tag, RESET)
 				} else {
 					fmt.Println("  * " + projName)
 				}
