@@ -48,7 +48,8 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.6"
+	hasBash        bool
+	otkVersion     = "v1.6.8"
 )
 
 func main() {
@@ -79,6 +80,10 @@ func main() {
 	}
 	if runtime.GOOS=="windows" {
 		runningWindows=true;
+		hasBash = checkBashAvailability()
+		if !hasBash {
+			fmt.Printf("%s请在GNU/Linux或MSYS2/Bash环境中使用以获得最佳体验%s\n\n",YELLOW,RESET)
+		}
 	}
 
 	rl, err := readline.NewEx(&readline.Config{
@@ -334,6 +339,31 @@ func main() {
 	}
 }
 
+// 检查bash可用性
+func checkBashAvailability() bool {
+     bashPaths := []string{
+        "bash.exe",
+        "C:\\Program Files\\Git\\bin\\bash.exe",
+        "C:\\Program Files (x86)\\Git\\bin\\bash.exe",
+        "C:\\Windows\\System32\\bash.exe",
+        "C:\\cygwin64\\bin\\bash.exe",
+        "C:\\cygwin\\bin\\bash.exe",
+    }
+    
+    for _, path := range bashPaths {
+        if _, err := os.Stat(path); err == nil {
+            return true
+        }
+    }
+    
+     cmd := exec.Command("where", "bash")
+    if err := cmd.Run(); err == nil {
+        return true
+    }
+    
+    return false
+}
+  
 func splitQuoted(s string) []string {
 	var args []string
 	var buf strings.Builder
@@ -402,8 +432,11 @@ func executeSystemCommand(sysCmd string) { //
 	
 	var cmd *exec.Cmd
 	if runningWindows {
-		// Windows用cmd
-		cmd = exec.Command("cmd.exe", "/c", sysCmd)
+		if hasBash {
+			cmd = exec.Command("bash","-c",sysCmd);
+		}else{
+			cmd = exec.Command("cmd.exe", "/c", sysCmd)
+		}
 	} else {
 		cmd = exec.Command("bash", "-c", sysCmd)
 	}
@@ -434,7 +467,7 @@ func createProject(proj, tag string) { //
 	}
 
 	_ = os.MkdirAll(projDir, 0755)
-	cppCode := "#include<iostream>\nusing namespace std;\n\nint main(){\n    \n    return 0;\n}\n"
+	cppCode := "#include<bits/stdc++.h>\nusing namespace std;\n\nint main(){\n    \n    return 0;\n}\n"
 	_ = os.WriteFile(filepath.Join(projDir, proj+".cpp"), []byte(cppCode), 0644)
 
 	props := map[string]string{
@@ -960,16 +993,9 @@ func runTest() {
 			continue
 		}
 
-		// 调用 Linux time 工具压榨进程开销
 		var cmdRun *exec.Cmd
-		if runningWindows {
-			// Windows 使用 -ExecutionPolicy Bypass 绕过策略限制，或直接使用 measure-command
-			cmdRun = exec.Command("powershell", "-Command", 
-				fmt.Sprintf("Measure-Command { %s | Set-Content .time.tmp }", exePath))
-		} else {
-			cmdRun = exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
-		}
-		
+		cmdRun = exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
+			
 		// 重定向文件输入
 		fIn, _ := os.Open(inFile)
 		cmdRun.Stdin = fIn
