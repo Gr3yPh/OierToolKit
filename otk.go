@@ -48,7 +48,7 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.7"
+	otkVersion     = "v1.6.9"
 )
 
 func main() {
@@ -1315,43 +1315,26 @@ func stressTest(count int) {
 	stressDir := filepath.Join(currentDir, ".stress")
 	os.MkdirAll(stressDir, 0755)
 
-	// 创建一个 readline 实例用于监听 C-c
-	rl, err := readline.NewEx(&readline.Config{
-		Prompt:            "",
-		InterruptPrompt:   "^C",
-		HistorySearchFold: true,
-	})
-	if err != nil {
-		fmt.Println(RED + "无法初始化输入监听: " + err.Error() + RESET)
-		return
-	}
-	defer rl.Close()
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT)
+	defer signal.Stop(sigChan)
 
-	// 创建一个 channel 用于接收中断信号
-	interruptChan := make(chan bool, 1)
-	go func() {
-		// 在一个单独的 goroutine 中等待 C-c
-		_, err := rl.Readline()
-		if err == readline.ErrInterrupt {
-			interruptChan <- true
-		}
-	}()
-
-	fmt.Printf("开始对拍, 共 %d 轮...\n", count)
+	fmt.Printf("开始对拍, 共 %d 轮... (按 Ctrl+C 中断)\n", count)
 	passed := 0
+
 	for i := 1; i <= count; i++ {
 		select {
-		case <-interruptChan:
+		case <-sigChan:
 			fmt.Println("\n" + YELLOW + "对拍被中断" + RESET)
 			cleanupStressFiles(genExe, bruteExe, projExe)
 			return
 		default:
-			// 继续跑
 		}
 
 		genOut, err := execCmdCapture(genExe, "", currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: gen 运行时错误 (RE)%s\n", RED, i, RESET)
+			cleanupStressFiles(genExe, bruteExe, projExe)
 			return
 		}
 		inputData := genOut
@@ -1359,6 +1342,7 @@ func stressTest(count int) {
 		bruteOut, err := execCmdCapture(bruteExe, inputData, currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: brute 运行时错误 (RE)%s\n", RED, i, RESET)
+			cleanupStressFiles(genExe, bruteExe, projExe)
 			return
 		}
 		expectedOut := strings.TrimSpace(strings.ReplaceAll(bruteOut, "\r\n", "\n"))
@@ -1366,6 +1350,7 @@ func stressTest(count int) {
 		projOut, err := execCmdCapture(projExe, inputData, currentDir)
 		if err != nil {
 			fmt.Printf("\n%s第 %d 轮: 项目程序运行时错误 (RE)%s\n", RED, i, RESET)
+			cleanupStressFiles(genExe, bruteExe, projExe)
 			return
 		}
 		userOut := strings.TrimSpace(strings.ReplaceAll(projOut, "\r\n", "\n"))
@@ -1375,7 +1360,6 @@ func stressTest(count int) {
 			fmt.Printf("\r  第 %d/%d 轮通过", i, count)
 		} else {
 			fmt.Printf("\n%s第 %d 轮: 答案不正确 (WA)%s\n", RED, i, RESET)
-			// 保存测试数据
 			inFile := filepath.Join(stressDir, fmt.Sprintf("%d.in", i))
 			ansFile := filepath.Join(stressDir, fmt.Sprintf("%d.ans", i))
 			outFile := filepath.Join(stressDir, fmt.Sprintf("%d.out", i))
@@ -1387,14 +1371,18 @@ func stressTest(count int) {
 			fmt.Printf("  %s[正确输出]%s\n  %s\n", GREEN, RESET, expectedOut)
 			fmt.Printf("  %s[你的输出]%s\n  %s\n", RED, RESET, userOut)
 			fmt.Println("  -----------------------------------------")
+			cleanupStressFiles(genExe, bruteExe, projExe)
+			return
 		}
 	}
 	fmt.Println()
+
 	if passed == count {
 		fmt.Printf("%s全部 %d 轮通过！%s\n", GREEN, count, RESET)
 	} else {
 		fmt.Printf("%s%d/%d 轮通过, %d 轮失败%s\n", YELLOW, passed, count, count-passed, RESET)
 	}
+	cleanupStressFiles(genExe, bruteExe, projExe)
 }
 
 func cleanupStressFiles(files ...string) {
