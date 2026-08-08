@@ -48,7 +48,8 @@ var (
 	currentDir     string
 	currentProject string
 	runningWindows bool
-	otkVersion     = "v1.6.9"
+	hasBash        bool
+	otkVersion     = "v1.6.11"
 )
 
 func main() {
@@ -81,6 +82,8 @@ func main() {
 		runningWindows=true;
 	}
 
+	hasBash=checkBashAvailable()
+	
 	rl, err := readline.NewEx(&readline.Config{
 		Prompt:            "",
 		HistoryFile:       filepath.Join(baseDir, ".otk_history"), 
@@ -107,7 +110,7 @@ func main() {
 #     | \_____\   | /             \ |   |    |     | / |    | |               #
 #      \ |    |___|/               \|___|    |_____|/  |____/|                #
 #       \|____|                                                 OierToolKit   #
-#                                          %s Go Edition by Gr3yPh4ntom   #
+#                                         %s Go Edition by Gr3yPh4ntom   #
 ###############################################################################
                     https://github.com/Gr3yPh/OierToolKit`, otkVersion)
 	fmt.Println(CYAN + startUpMes + RESET)
@@ -401,9 +404,8 @@ func executeSystemCommand(sysCmd string) { //
 	}
 	
 	var cmd *exec.Cmd
-	if runningWindows {
-		// Windows用cmd
-		cmd = exec.Command("cmd.exe", "/c", sysCmd)
+	if !hasBash {
+			cmd = exec.Command("cmd.exe", "/c", sysCmd)
 	} else {
 		cmd = exec.Command("bash", "-c", sysCmd)
 	}
@@ -425,9 +427,8 @@ func createProject(proj, tag string) { //
 			props := readIni(iniPath)
 			props["tag"] = tag
 			writeIni(iniPath, props)
-			fmt.Printf("%s已为项目 %s 添加标签: %s%s\n", GREEN, proj, tag, RESET)
 		} else {
-			fmt.Printf("项目 %s 已存在，正在为您切换。\n", proj)
+			fmt.Printf("项目 %s 已存在，正在切换。\n", proj)
 		}
 		switchProject(proj)
 		return
@@ -447,11 +448,6 @@ func createProject(proj, tag string) { //
 		props["tag"] = tag
 	}
 	writeIni(filepath.Join(projDir, proj+".ini"), props)
-
-	fmt.Println(GREEN + "成功创建项目: " + proj + RESET)
-	if tag != "" {
-		fmt.Printf("  标签: %s%s%s\n", CYAN, tag, RESET)
-	}
 	switchProject(proj)
 }
 
@@ -459,14 +455,12 @@ func switchProject(proj string) { //
 	if proj == "~" {
 		currentDir = baseDir
 		currentProject = ""
-		fmt.Println("已返回根目录")
 		return
 	}
 	projDir := filepath.Join(baseDir, proj)
 	if fi, err := os.Stat(projDir); err == nil && fi.IsDir() && proj!="." && proj!=".." {
 		currentDir = projDir
 		currentProject = proj
-		fmt.Println("已切换至: " + proj)
 	} else {
 		fmt.Println(RED + "项目 " + proj + " 不存在！" + RESET)
 	}
@@ -479,7 +473,6 @@ func deleteProject(proj string) { //
 		return
 	}
 	_ = os.RemoveAll(projDir)
-	fmt.Println(GREEN + "已删除项目: " + proj + RESET)
 	if currentProject == proj {
 		currentDir = baseDir
 		currentProject = ""
@@ -487,8 +480,6 @@ func deleteProject(proj string) { //
 }
 
 func searchProjects(pattern string) {
-	fmt.Printf("=== 搜索项目 (模式: %s) ===\n", pattern)
-
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		fmt.Printf("%s错误: 正则表达式无效 - %v%s\n", RED, err, RESET)
@@ -664,10 +655,8 @@ func setConfig(item, value string) {
 	iniPath := filepath.Join(currentDir, currentProject+".ini")
 	props := readIni(iniPath)
 	
-	// 验证配置项和值
 	switch item {
 	case "time":
-		// 验证是否为有效数字
 		if _, err := strconv.ParseFloat(value, 64); err != nil {
 			fmt.Printf("%s错误: time 必须是数字 (如: 1.00)%s\n", RED, RESET)
 			return
@@ -816,7 +805,6 @@ func clearSamples() {
 			count++
 		}
 	}
-	fmt.Printf("%s已删除 %d 个样例相关文件%s\n", GREEN, count, RESET)
 }
 
 func listSamples() {
@@ -960,17 +948,10 @@ func runTest() {
 			continue
 		}
 
-		// 调用 Linux time 工具压榨进程开销
+		//必须强制调用time给你们这些windows小鬼瞧瞧了(^^;
 		var cmdRun *exec.Cmd
-		if runningWindows {
-			// Windows 使用 -ExecutionPolicy Bypass 绕过策略限制，或直接使用 measure-command
-			cmdRun = exec.Command("powershell", "-Command", 
-				fmt.Sprintf("Measure-Command { %s | Set-Content .time.tmp }", exePath))
-		} else {
-			cmdRun = exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
-		}
+		cmdRun = exec.Command("time", "-f", "%e %M", "-o", timeTmpPath, exePath)
 		
-		// 重定向文件输入
 		fIn, _ := os.Open(inFile)
 		cmdRun.Stdin = fIn
 
@@ -1015,38 +996,18 @@ func runTest() {
 		runTimeSec := endNano.Sub(startNano).Seconds()
 		runMemMB := 0.0
 
-		if runningWindows {
-			// Windows PowerShell Measure-Command 输出解析
-			if tBytes, err := os.ReadFile(".time.tmp"); err == nil {
-				output := string(tBytes)
-				// 提取 TotalSeconds
-				lines := strings.Split(output, "\n")
-				for _, line := range lines {
-					if strings.Contains(line, "TotalSeconds") {
-						parts := strings.Split(line, ":")
-						if len(parts) >= 2 {
-							if val, err := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64); err == nil {
-								runTimeSec = val
-							}
-						}
-					}
+		if tBytes, err := os.ReadFile(timeTmpPath); err == nil {
+			tParts := strings.Fields(string(tBytes))
+			if len(tParts) >= 2 {
+				if rts, err := strconv.ParseFloat(tParts[0], 64); err == nil {
+					runTimeSec = rts
+				}
+				if rmm, err := strconv.ParseFloat(tParts[1], 64); err == nil {
+					runMemMB = rmm / 1024.0
 				}
 			}
-			_ = os.Remove(".time.tmp")
-		} else {
-			if tBytes, err := os.ReadFile(timeTmpPath); err == nil {
-				tParts := strings.Fields(string(tBytes))
-				if len(tParts) >= 2 {
-					if rts, err := strconv.ParseFloat(tParts[0], 64); err == nil {
-						runTimeSec = rts
-					}
-					if rmm, err := strconv.ParseFloat(tParts[1], 64); err == nil {
-						runMemMB = rmm / 1024.0
-					}
-				}
-			}
-			_ = os.Remove(timeTmpPath)
 		}
+		_ = os.Remove(timeTmpPath)
 
 		runTimeMs := int64(runTimeSec * 1000)
 		metricsStr := fmt.Sprintf(" (%dms, %.2fMB)", runTimeMs, runMemMB)
@@ -1391,4 +1352,15 @@ func cleanupStressFiles(files ...string) {
 			_ = os.Remove(f)
 		}
 	}
+}
+
+func checkBashAvailable() bool {
+	if runtime.GOOS != "windows" {
+		return true
+	}
+	cmd := exec.Command("bash", "--version")
+	if err := cmd.Run(); err == nil {
+		return true
+	}
+	return false
 }
