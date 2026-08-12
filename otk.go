@@ -1,3 +1,4 @@
+// Copyright (C) 2026 魇珩Gr3yPh4ntom
 // This file is part of OierToolKit.
 //
 // OierToolKit is free software: you can redistribute it and/or modify
