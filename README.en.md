@@ -45,7 +45,7 @@ Some features of OierToolKit can be configured by setting the environment variab
 
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
-All images, including logo.png and demo.png, are distributed under the same terms as OierToolKit (GPLv3+).
+logo.png and demo.png are part of OierToolKit and are distributed under the terms of the GNU General Public License, version 3 or any later version, as published by the Free Software Foundation. See the LICENSE file for details.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

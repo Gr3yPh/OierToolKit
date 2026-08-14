@@ -50,7 +50,9 @@ OierToolKit的部分功能可以通过设置环境变量来自定义。
 
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
-All images, including logo.png and demo.png, are distributed under the same terms as OierToolKit (GPLv3+).
+logo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
+
+demo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

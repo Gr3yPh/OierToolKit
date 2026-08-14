@@ -1,4 +1,5 @@
 // Copyright (C) 2026 魇珩Gr3yPh4ntom
+//
 // This file is part of OierToolKit.
 //
 // OierToolKit is free software: you can redistribute it and/or modify
@@ -197,7 +198,7 @@ func main() {
 				fmt.Printf("未知的 p 子命令: %s\n", sub)
 			}
 
-		case "e": // example management
+		case "e": 
 			if currentProject == "" {
 				fmt.Println(RED + "请先进入一个项目！" + RESET)
 				continue
@@ -209,7 +210,6 @@ func main() {
 			sub := strings.ToLower(tokens[1])
 			switch sub {
 			case "n", "new":
-				// e new  OR e new [INPUT FILE] [ANSWER FILE]
 				if len(tokens) == 2 {
 					createSample(reader)
 				} else if len(tokens) >= 4 {
@@ -617,7 +617,6 @@ func listInfo(listProject bool) { //
 	}
 }
 
-// ========== 新增配置管理函数 ==========
 
 func showConfig() {
 	if currentProject == "" {
@@ -694,7 +693,6 @@ func setConfig(item, value string) {
 			fmt.Printf("%s错误: o2 必须是 0/1 或 on/off%s\n", RED, RESET)
 			return
 		}
-		// 统一为 0 或 1
 		if val == "on" || val == "true" {
 			val = "1"
 		} else if val == "off" || val == "false" {
@@ -723,10 +721,8 @@ func createSample(reader *bufio.Reader) {
 		id++
 	}
 
-	// 创建中断通道
 	interruptChan := make(chan bool, 1)
 	go func() {
-		// 使用独立的信号监听
 		sigChan := make(chan os.Signal, 1)
 		signal.Notify(sigChan, syscall.SIGINT)
 		<-sigChan
@@ -1160,10 +1156,8 @@ func editCurrent() {
 		}
 	}
 
-	// 将 %s 替换为源码文件路径
 	cmdStr := fmt.Sprintf(editor, src)
 
-	// 解析命令行
 	parts := splitQuoted(cmdStr)
 	if len(parts) == 0 {
 		fmt.Println(RED + "无效的编辑器命令" + RESET)
@@ -1181,7 +1175,6 @@ func editCurrent() {
 }
 
 
-// ========== 对拍功能 (stress-test) ==========
 
 func compileCpp(srcPath, exePath, version, o2 string) bool {
 	args := []string{"-std=" + version}
