@@ -1,19 +1,19 @@
-// Copyright (C) 2026 魇珩Gr3yPh4ntom
+//    OierToolKit - A lightweight tool designed for practicing and evaluating
+//  in informatics competitions.
+//    Copyright (C) 2026  魇珩Gr3yPh4ntom
 //
-// This file is part of OierToolKit.
+//    This program is free software: you can redistribute it and/or modify
+//    it under the terms of the GNU General Public License as published by
+//    the Free Software Foundation, either version 3 of the License, or
+//    (at your option) any later version.
 //
-// OierToolKit is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
+//    This program is distributed in the hope that it will be useful,
+//    but WITHOUT ANY WARRANTY; without even the implied warranty of
+//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//    GNU General Public License for more details.
 //
-// OierToolKit is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with OierToolKit. If not, see <https://www.gnu.org/licenses/>.
+//    You should have received a copy of the GNU General Public License
+//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
@@ -50,7 +50,7 @@ var (
 	currentProject string
 	runningWindows bool
 	hasBash        bool
-	otkVersion     = "v1.6.11"
+	otkVersion     = "v1.6.12"
 )
 
 func main() {
@@ -367,28 +367,26 @@ func splitQuoted(s string) []string {
 func printHelp() { //
 	fmt.Println("可用命令列表:")
 	fmt.Println("  项目管理:")
-	fmt.Println("    p n(ew) [PROJECT] [TAG] - 创建项目 (可指定标签)")
-	fmt.Println("    p d(elete) [PROJECT]  - 删除项目")
-	fmt.Println("    p s(witch) [PROJECT]  - 切换项目 (p s ~ 返回根目录)")
-	fmt.Println("    p l(ist)              - 列出项目 (带标签高亮)")
-	fmt.Println("    p se(arch) [REGEX]    - 按名称或标签搜索项目")
+	fmt.Println("    p n(ew) <PROJECT> [<TAG>]     - 创建项目 (可指定标签)")
+	fmt.Println("    p d(elete) <PROJECT>          - 删除项目")
+	fmt.Println("    p s(witch) <PROJECT>          - 切换项目 (p s ~ 返回根目录)")
+	fmt.Println("    p l(ist)              	       - 列出项目 (带标签高亮)")
+	fmt.Println("    p se(arch) <REGEX>            - 按名称或标签搜索项目")
 	fmt.Println("  样例管理:")
-	fmt.Println("    e n(ew)             - 交互式新建样例")
-	fmt.Println("    e n(ew) [IN] [OUT]  - 从文件新建样例")
-	fmt.Println("    e v(iew) [ID]       - 查看指定ID的样例文件")
-	fmt.Println("    e c(lear)           - 删除所有样例")
-	fmt.Println("    e l(ist)            - 列出样例")
+	fmt.Println("    e n(ew) [<INFILE> <OUTFILE>]  - 新建样例")
+	fmt.Println("    e v(iew) <ID>                 - 查看指定ID的样例文件")
+	fmt.Println("    e c(lear)                     - 删除所有样例")
+	fmt.Println("    e l(ist)                      - 列出样例")
 	fmt.Println("  项目配置:")
-	fmt.Println("    c l(ist)            - 列出当前项目的所有配置")
-	fmt.Println("    c s(et) [ITEM] [VAL]- 设置配置项")
-	fmt.Println("      配置项: time(时间限制), memory(内存限制), version(C++版本), o2(是否启用O2优化)")
+	fmt.Println("    c l(ist)       		       - 列出当前项目的所有配置")
+	fmt.Println("    c s(et) <ITEM> <VAL>		   - 设置配置项")
 	fmt.Println("  运行与调试:")
-	fmt.Println("    j(udge)            - 编译并评测 (遍历样例进行评测)")
-	fmt.Println("    r(un)              - 仅编译并运行程序 (交互模式)")
-	fmt.Println("    d(ebug)            - 使用 gdb 调试当前可执行文件")
-	fmt.Println("    cmd [SYS_CMD]      - 执行系统命令")
-	fmt.Println("    ed(it)             - 用 vim 编辑当前源码文件")
-	fmt.Println("    st(ress-test) [N]  - 对拍 N 轮 (默认100轮)，需要 gen.cpp brute.cpp")
+	fmt.Println("    j(udge)         			   - 编译并评测 (遍历样例进行评测)")
+	fmt.Println("    r(un)           			   - 仅编译并运行程序 (交互模式)")
+	fmt.Println("    d(ebug)          			   - 使用 gdb 调试当前可执行文件")
+	fmt.Println("    cmd <SYS_CMD>    			   - 执行系统命令")
+	fmt.Println("    ed(it)           			   - 用编辑当前源码文件")
+	fmt.Println("    st(ress-test) [<N>] 		   - 对拍 N 轮 (默认100轮)，需要 gen.cpp brute.cpp")
 	fmt.Println("  杂项:")
 	fmt.Println("    cl, clear          - 清屏")
 	fmt.Println("    h, help            - 帮助信息")
@@ -897,7 +895,7 @@ func runTest() {
 	if o2Switch == "1" {
 		compileArgs = append(compileArgs, "-O2")
 	}
-	compileArgs = append(compileArgs, cppPath, "-o", exePath)
+	compileArgs = append(compileArgs, cppPath, "-o", exePath, "-g")
 
 	cmdCompile := exec.Command("g++", compileArgs...)
 	var errBuf strings.Builder
