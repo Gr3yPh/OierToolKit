@@ -17,8 +17,6 @@
 A lightweight cross-platform local judge and problem management tool customized for Oiers.
 ~~It would be more reasonable to call it OierOperationSimplifier...~~
 
-![Demo Image](demo.png)
-
 ## 🌟 Features
 * **Git-style Command Line**: One-shot commands that exit when done; output is safe to redirect (colors are disabled off-terminal).
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
@@ -87,7 +85,7 @@ Some features of OierToolKit can be configured by setting the environment variab
 
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
-logo.png and demo.png are part of OierToolKit and are distributed under the terms of the GNU General Public License, version 3 or any later version, as published by the Free Software Foundation. See the LICENSE file for details.
+logo.png is part of OierToolKit and is distributed under the terms of the GNU General Public License, version 3 or any later version, as published by the Free Software Foundation. See the LICENSE file for details.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

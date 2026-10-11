@@ -18,9 +18,6 @@
 ~~叫做OierOperationSimplifier更合理吧。。~~
 
 
-![Demo Image](demo.png)
-
-
 ## 🌟 特性
 * **git 风格命令行**：一次性命令，执行完即退出；输出可安全重定向（非终端自动关闭颜色）。
 * **项目库**：项目可以建在任意目录（`otk init`），统一登记到项目库中管理。
@@ -94,8 +91,6 @@ OierToolKit的部分功能可以通过设置环境变量来自定义。
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
 logo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
-
-demo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
