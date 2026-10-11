@@ -283,5 +283,6 @@ func printUsage(w io.Writer) {
 OierToolKit `+otkVersion+` — 魇珩Gr3yPh4ntom
 Copyright (C) 2026 魇珩Gr3yPh4ntom. 按 GPLv3+ 发布，不提供任何担保。
 https://github.com/Gr3yPh/OierToolKit
+主页: https://otk.gr3yph4ntom.cn
 `)
 }

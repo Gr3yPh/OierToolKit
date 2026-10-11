@@ -6,7 +6,8 @@
 
 <p align="center">
   <strong>Cross-platform CLI toolkit for competitive programmers.</strong><br>
-  本地评测 · 项目管理 · 样例管理 · 对拍
+  本地评测 · 项目管理 · 样例管理 · 对拍<br>
+  🌐 <a href="https://otk.gr3yph4ntom.cn">otk.gr3yph4ntom.cn</a>
 </p>
 
 <p align="center">
