@@ -22,21 +22,64 @@
 
 
 ## 🌟 特性
-* **清爽控制界面**：内嵌交互式 Shell，赏心悦目的彩色输出。
-* **时空精准监控**：借由 GNU time 抓取高精度运行时间（ms）与最大常驻内存（MB）。
-* **智能 Diff 引擎**：WA（Wrong Answer）时自动对比标准输出与你的输出差异。
-* **自动对拍进行**：准备好代码，输入 `st` 随即开始对拍，使用标准输入输出。
-* **命令穿透**：通过 `cmd` 快捷执行系统命令而无需切换终端。
+* **git 风格命令行**：一次性命令，执行完即退出；输出可安全重定向（非终端自动关闭颜色）。
+* **项目库**：项目可以建在任意目录（`otk init`），统一登记到项目库中管理。
+* **样例即文件**：目录里放成对的 `.in`/`.out` 文件，`otk refresh` 一下即入样例库。
+* **跨平台时空测量**：运行时间与峰值内存直接来自操作系统接口，不依赖 GNU time 等外部工具。
+* **Diff 引擎**：WA 时对比标准输出与你的输出；RE 时显示 stderr 信息。
+* **对拍**：gen.cpp 造数据、brute.cpp 做标答，反例自动保存到 `.stress/`。
+* **脚本可用**：存在非 AC 结果时退出码非零。
 
 
 ## 🚀 安装
-1. clone本项目并确保系统安装了GNU工具集并包含 `g++` 与 `time` 命令。
-2. 运行 `go build -o otk` 并执行可执行文件
-3. 也可以从release页面下载预编译二进制
+1. clone 本项目，装好 `g++`（除此之外零外部依赖）。
+2. `go build -o otk`，二进制放进 PATH 即可。
+3. 也可以从 release 页面下载预编译版。
+
+
+## 📖 快速上手
+
+以 "输入两个整数，输出它们的和" 为例：
+
+```bash
+mkdir aplusb && cd aplusb
+otk init                      # 当前目录建项目（默认用目录名）
+
+echo "1 2" > sample1.in       # 样例就是目录里的文件对
+echo "3" > sample1.out
+otk refresh                   # 文件对入库
+
+otk edit                      # 编写代码（编辑器由 OTK_EDITOR 决定，默认 vim）
+otk j                         # 编译并评测
+# 编译 aplusb.cpp ... ok
+# 评测 aplusb (1.00s / 125MB)
+#   #sample1 AC    2ms 4.36MB
+```
+
+项目放在哪里都行，`otk init` 都会把它登记进项目库（`~/.otk/registry`）：`otk ls` 统一查看，`otk cd <名称>` 随时跳转（exit 返回原目录），`otk rm` 移出项目库（文件不动）。
+
+写错了就对拍：准备 gen.cpp 与 brute.cpp 后运行 `otk stress 100`，反例数据保存在 `.stress/` 中。
+
+主要命令一览（`otk help` 查看完整帮助）：
+
+| 命令 | 说明 |
+|---|---|
+| `otk init [名称]` | 当前目录初始化项目并登记 |
+| `otk st` | 项目状态 |
+| `otk ls / se <正则> / rm [名称]` | 项目库（统一管理各处的项目） |
+| `otk cd [名称]` | 在新 shell 中打开项目目录 |
+| `otk refresh (rf)` | 同步样例库（.in/.out 文件对入库） |
+| `otk samples` | 列出样例 |
+| `otk config [项 值]` | 查看/修改配置（time/memory/version/o2） |
+| `otk judge (j)` | 编译并评测全部样例 |
+| `otk run (r)` | 编译并运行 |
+| `otk debug (d)` | gdb 调试 |
+| `otk edit (e)` | 编辑源码（OTK_EDITOR） |
+| `otk stress (ss) [N]` | 对拍 N 轮（默认 100） |
 
 ## ✳️ 额外配置
 OierToolKit的部分功能可以通过设置环境变量来自定义。
-- `OTK_HOME`：设定项目存储目录，推荐空目录
+- `OTK_HOME`：项目库位置（默认 `~/.otk`）
 - `OTK_EDITOR`：设定ed命令打开的编辑器，例如`emacs -nw %s`
 
 ## 📋 TODO
