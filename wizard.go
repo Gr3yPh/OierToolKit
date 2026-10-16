@@ -175,15 +175,22 @@ func wizardStep(title string) {
 	fmt.Println(yellow + "▌ " + title + reset)
 }
 
-// wizardInput 显示期望输入的命令并等待用户亲手敲入。
+// wizardInput 展示期望命令后等待用户亲手敲入，提示符明确标出输入位置。
 // 返回 false 表示用户退出（q / EOF）。expect 为空表示按回车继续。
 func wizardInput(expect string) (string, bool) {
 	if !wizardLive {
-		wizardPrompt(expect)
+		if expect != "" {
+			fmt.Println("> " + expect)
+		}
 		return expect, true
 	}
+	wizardHint(expect)
+	prompt := green + "请输入 > " + reset
+	if expect == "" {
+		prompt = green + "按回车继续 > " + reset
+	}
 	for {
-		wizardPrompt(expect)
+		fmt.Print(prompt)
 		line, err := bufio.NewReader(os.Stdin).ReadString('\n')
 		if err != nil {
 			return "", false
@@ -196,23 +203,16 @@ func wizardInput(expect string) (string, bool) {
 			time.Sleep(300 * time.Millisecond)
 			return input, true
 		}
-		fmt.Printf("  嗯？请输入 '%s'（或 q 退出）\n", expect)
+		fmt.Printf("  嗯？再输入一次 '%s'（或 q 退出）\n", expect)
 	}
 }
 
-// wizardPrompt 打印命令提示行，交互模式下命令逐字打出，像向导在演示。
-func wizardPrompt(expect string) {
-	if !wizardLive {
-		if expect != "" {
-			fmt.Println("> " + expect)
-		}
-		return
-	}
+// wizardHint 逐字打出期望输入的命令，像向导在演示；下一行的提示符才是输入位置。
+func wizardHint(expect string) {
 	if expect == "" {
-		fmt.Println("> 按回车继续")
 		return
 	}
-	fmt.Print("> ")
+	fmt.Print("  ")
 	for _, r := range expect {
 		fmt.Print(string(r))
 		time.Sleep(10 * time.Millisecond)
