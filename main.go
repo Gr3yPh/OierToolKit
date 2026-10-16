@@ -31,7 +31,7 @@ import (
 	"runtime"
 )
 
-const otkVersion = "v2.0.2"
+const otkVersion = "v2.1.0"
 
 var (
 	baseDir string
