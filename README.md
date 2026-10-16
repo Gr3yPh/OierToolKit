@@ -65,7 +65,7 @@ otk j                         # 编译并评测
 |---|---|
 | `otk init [名称]` | 当前目录初始化项目并登记 |
 | `otk st` | 项目状态 |
-| `otk ls / se <正则> / rm [--soft&#124;--hard] [名称]` | 项目库管理；rm 默认软删除，也可硬删除 |
+| `otk ls / se <正则> / rm [--soft \| --hard] [名称]` | 项目库管理；rm 默认软删除，也可硬删除 |
 | `otk cd [名称]` | 在新 shell 中打开项目目录 |
 | `otk refresh (rf)` | 同步样例库（.in/.out 文件对入库） |
 | `otk samples` | 列出样例 |
