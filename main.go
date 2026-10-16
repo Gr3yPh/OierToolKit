@@ -1,19 +1,19 @@
-//    OierToolKit - A lightweight tool designed for practicing and evaluating
-//  in informatics competitions.
-//    Copyright (C) 2026  魇珩Gr3yPh4ntom
+// Copyright (C) 2026 魇珩Gr3yPh4ntom
 //
-//    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License as published by
-//    the Free Software Foundation, either version 3 of the License, or
-//    (at your option) any later version.
+// This file is part of OierToolKit.
 //
-//    This program is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+// OierToolKit is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-//    You should have received a copy of the GNU General Public License
-//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// OierToolKit is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with OierToolKit.  If not, see <https://www.gnu.org/licenses/>.
 
 // OierToolKit 提供 git 风格的子命令界面，例如：
 //
@@ -240,27 +240,27 @@ func printUsage(w io.Writer) {
 	fmt.Fprint(w, `用法: otk <命令> [参数...]
 
 项目:
-  otk init [名称]        在当前目录初始化项目（默认用目录名）
+  otk init [名称]        在当前目录初始化项目
   otk status | st        当前项目状态
-  otk ls                 列出项目库中的所有项目
+  otk ls                 列出全部项目
   otk se <正则>          搜索项目
-	otk rm [--soft|--hard] [名称]  移除项目（默认软删除）
+  otk rm [--soft|--hard] [名称]  移除项目
   otk cd [名称]          在新 shell 中打开项目目录
 
 样例:
-  otk refresh | rf       扫描目录中的 .in/.out 文件对，同步样例库
+  otk refresh | rf       同步样例库
   otk samples            列出样例
 
 配置:
   otk config             查看配置
-	otk config <项> <值>   修改配置（time/memory/version/o2/editor）
+  otk config <项> <值>   修改配置
 
 运行:
-  otk judge | j          编译并评测（存在非 AC 时退出码非零）
+  otk judge | j          编译并评测
   otk run | r            编译并运行
   otk debug | d          gdb 调试
   otk edit | e           编辑源码
-  otk stress | ss [N]    对拍（默认 100 轮，需 gen.cpp 与 brute.cpp）
+  otk stress | ss [N]    对拍
 
 杂项:
   otk show w|c           担保 / 许可证

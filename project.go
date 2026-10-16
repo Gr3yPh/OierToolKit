@@ -1,19 +1,19 @@
-//    OierToolKit - A lightweight tool designed for practicing and evaluating
-//  in informatics competitions.
-//    Copyright (C) 2026  魇珩Gr3yPh4ntom
+// Copyright (C) 2026 魇珩Gr3yPh4ntom
 //
-//    This program is free software: you can redistribute it and/or modify
-//    it under the terms of the GNU General Public License as published by
-//    the Free Software Foundation, either version 3 of the License, or
-//    (at your option) any later version.
+// This file is part of OierToolKit.
 //
-//    This program is distributed in the hope that it will be useful,
-//    but WITHOUT ANY WARRANTY; without even the implied warranty of
-//    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-//    GNU General Public License for more details.
+// OierToolKit is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-//    You should have received a copy of the GNU General Public License
-//    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+// OierToolKit is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with OierToolKit.  If not, see <https://www.gnu.org/licenses/>.
 
 package main
 
@@ -56,10 +56,10 @@ func findProject() (project, bool) {
 	}
 }
 
-// isProjectRoot 判断目录是否为项目根：新布局看 .otk/，
+// isProjectRoot 判断目录是否为项目根：新布局看 .otk/config 文件，
 // 同时兼容旧布局的 <目录名>.ini。
 func isProjectRoot(dir string) bool {
-	if fi, err := os.Stat(filepath.Join(dir, ".otk")); err == nil && fi.IsDir() {
+	if fileExists(filepath.Join(dir, ".otk", "config")) {
 		return true
 	}
 	_, err := os.Stat(filepath.Join(dir, filepath.Base(dir)+".ini"))
