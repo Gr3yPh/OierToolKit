@@ -73,20 +73,20 @@ func cmdWizard() {
 
 	if !wizardRun() {
 		fmt.Println()
-		wizardSay("已退出，演示项目自动清理。想再来随时 otk wizard。")
+		wizardSay("已退出向导。")
 		return
 	}
 	fmt.Println()
 	wizardSay("otk cd <名称> 可跳到项目库中的项目，otk help 查看全部命令。")
+	wizardSay("如果觉得好用，一定要返回来给个 star！ https://github.com/Gr3yPh/OierToolKit")
 }
 
 func wizardRun() bool {
 	wizardSay("你好，我是 otk 向导。带你花两分钟，亲手走一遍完整流程。")
-	wizardSay("放心：全程在临时目录里演练，结束自动清理，不碰你现在的文件。")
 
 	wizardStep("第 1 步 · 建项目")
-	wizardSay("做题先要有个放代码和样例的目录——题目目录我已经替你建好了。")
-	wizardSay("接下来每一步的命令都由你亲手输入。先初始化项目：")
+	wizardSay("做题先要有个放代码和样例的目录，题目目录我已经替你建好了。")
+	wizardSay("接下来每一步的命令都要你自己亲手输。先初始化：")
 	if _, ok := wizardInput("otk init demo"); !ok {
 		return false
 	}
@@ -94,7 +94,7 @@ func wizardRun() bool {
 	wizardSay("很好，项目已经登记进项目库了。")
 
 	wizardStep("第 2 步 · 样例与代码")
-	wizardSay("样例就是目录里成对的 .in/.out 文件，相当于比赛时把题面样例复制过来。")
+	wizardSay("样例就是目录里成对的 .in/.out 文件。")
 	wizardSay("我替你放好一组，还写了一个 A+B 的解：")
 	wizardSay("  sample1.in   1 2")
 	wizardSay("  sample1.out  3")
@@ -116,7 +116,7 @@ func wizardRun() bool {
 	wizardSay("入库完成，样例库里现在有一组数据。")
 
 	wizardStep("第 4 步 · 看状态")
-	wizardSay("评测之前，先看一眼项目全貌：")
+	wizardSay("评测之前，先检查项目状态：")
 	if _, ok := wizardInput("otk st"); !ok {
 		return false
 	}
@@ -130,10 +130,10 @@ func wizardRun() bool {
 	}
 	cmdJudge()
 
-	wizardSay("全 AC！从建项目到评测，完整闭环跑通了。")
+	wizardSay("恭喜你 AC 了这道题！")
 	wizardSay("回顾一下：init 建项目、refresh 样例入库、j 评测。")
-	wizardSay("对拍、调试、改配置也都是同样的一条命令，otk help 里都有。")
-	wizardSay("演示项目随向导退出自动清理。去自己的目录试一把吧！")
+	wizardSay("还有很多有用的功能没有在这里展示，可以运行 otk help 查看完整的帮助文件 。")
+	wizardSay("向导流程完毕，赶紧给我做题去")
 	return true
 }
 
