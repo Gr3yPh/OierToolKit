@@ -44,14 +44,15 @@ echo "1 2" > sample1.in       # samples are paired files in the directory
 echo "3" > sample1.out
 otk refresh                   # register the pairs
 
-otk edit                      # write your code (editor from OTK_EDITOR, vim by default)
+otk config editor "emacs -nw %s" # set the global editor command
+otk edit                      # write your code (vim by default)
 otk j                         # compile and judge
 # Compiling aplusb.cpp ... ok
 # Judging aplusb (1.00s / 125MB)
 #   #sample1 AC    2ms 4.36MB
 ```
 
-Projects can live anywhere — `otk init` registers them into the registry (`~/.otk/registry`): browse them with `otk ls`, jump to one with `otk cd <name>` (exit returns to the original directory), or unregister with `otk rm` (files stay untouched).
+Projects can live anywhere — `otk init` registers them into the registry (`~/.otkprofile/registry`): browse them with `otk ls`, jump to one with `otk cd <name>` (exit returns to the original directory), or unregister with `otk rm` (files stay untouched).
 
 For a wrong solution, stress-test it: prepare gen.cpp and brute.cpp, then run `otk stress 100`; counter-examples are saved to `.stress/`.
 
@@ -65,17 +66,15 @@ Main commands at a glance (`otk help` for the full list):
 | `otk cd [name]` | Open a new shell in the project directory |
 | `otk refresh (rf)` | Sync the sample database (.in/.out pairs) |
 | `otk samples` | List samples |
-| `otk config [key value]` | Show/update config (time/memory/version/o2) |
+| `otk config [key value]` | Show/update config (project: time/memory/version/o2; global: editor) |
 | `otk judge (j)` | Compile and judge all samples |
 | `otk run (r)` | Compile and run |
 | `otk debug (d)` | Debug with gdb |
-| `otk edit (e)` | Open source file (OTK_EDITOR) |
+| `otk edit (e)` | Open source file (global editor setting) |
 | `otk stress (ss) [N]` | Stress-test for N rounds (default 100) |
 
-## ✳️ Extra Configuration
-Some features of OierToolKit can be configured by setting the environment variables, for example:
-- `OTK_HOME`: The registry location (defaults to `~/.otk`).
-- `OTK_EDITOR`: The command to be run when typing the edit command, e.g. `emacs -nw %s`
+## ✳️ Global Configuration
+Global configuration and the project registry are stored in `~/.otkprofile`. Set the editor command with `otk config editor "emacs -nw %s"`; `%s` is replaced with the current project's source path. The default is `vim %s` (`notepad %s` on Windows).
 
 ## 📋 TODO
 - [x] Refactor command set

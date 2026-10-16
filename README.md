@@ -47,14 +47,15 @@ echo "1 2" > sample1.in       # 样例就是目录里的文件对
 echo "3" > sample1.out
 otk refresh                   # 文件对入库
 
-otk edit                      # 编写代码（编辑器由 OTK_EDITOR 决定，默认 vim）
+otk config editor "emacs -nw %s" # 设置全局编辑器命令
+otk edit                      # 编写代码（默认 vim）
 otk j                         # 编译并评测
 # 编译 aplusb.cpp ... ok
 # 评测 aplusb (1.00s / 125MB)
 #   #sample1 AC    2ms 4.36MB
 ```
 
-项目放在哪里都行，`otk init` 都会把它登记进项目库（`~/.otk/registry`）：`otk ls` 统一查看，`otk cd <名称>` 随时跳转（exit 返回原目录），`otk rm` 移出项目库（文件不动）。
+项目放在哪里都行，`otk init` 都会把它登记进项目库（`~/.otkprofile/registry`）：`otk ls` 统一查看，`otk cd <名称>` 随时跳转（exit 返回原目录），`otk rm` 移出项目库（文件不动）。
 
 写错了就对拍：准备 gen.cpp 与 brute.cpp 后运行 `otk stress 100`，反例数据保存在 `.stress/` 中。
 
@@ -68,17 +69,15 @@ otk j                         # 编译并评测
 | `otk cd [名称]` | 在新 shell 中打开项目目录 |
 | `otk refresh (rf)` | 同步样例库（.in/.out 文件对入库） |
 | `otk samples` | 列出样例 |
-| `otk config [项 值]` | 查看/修改配置（time/memory/version/o2） |
+| `otk config [项 值]` | 查看/修改配置（项目项：time/memory/version/o2；全局项：editor） |
 | `otk judge (j)` | 编译并评测全部样例 |
 | `otk run (r)` | 编译并运行 |
 | `otk debug (d)` | gdb 调试 |
-| `otk edit (e)` | 编辑源码（OTK_EDITOR） |
+| `otk edit (e)` | 编辑源码（使用全局 editor 配置） |
 | `otk stress (ss) [N]` | 对拍 N 轮（默认 100） |
 
-## ✳️ 额外配置
-OierToolKit的部分功能可以通过设置环境变量来自定义。
-- `OTK_HOME`：项目库位置（默认 `~/.otk`）
-- `OTK_EDITOR`：设定ed命令打开的编辑器，例如`emacs -nw %s`
+## ✳️ 全局配置
+全局配置和项目库固定存放在 `~/.otkprofile`。使用 `otk config editor "emacs -nw %s"` 设置编辑器命令，`%s` 会替换为当前项目的源码路径；默认使用 `vim %s`（Windows 使用 `notepad %s`）。
 
 ## 📋 TODO
 - [x] 重构命令集

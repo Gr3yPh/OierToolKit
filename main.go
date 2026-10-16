@@ -31,7 +31,7 @@ import (
 	"runtime"
 )
 
-const otkVersion = "v2.0.0"
+const otkVersion = "v2.0.1"
 
 var (
 	baseDir string
@@ -156,21 +156,12 @@ func requireNoArgs(args []string, cmd string) {
 }
 
 func initBaseDir() {
-	if otkHome := os.Getenv("OTK_HOME"); otkHome != "" {
-		baseDir = otkHome
-		if !filepath.IsAbs(baseDir) {
-			if abs, err := filepath.Abs(baseDir); err == nil {
-				baseDir = abs
-			}
-		}
-	} else {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, "无法获取用户主目录")
-			os.Exit(1)
-		}
-		baseDir = filepath.Join(home, ".otk")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "无法获取用户主目录")
+		os.Exit(1)
 	}
+	baseDir = filepath.Join(home, ".otkprofile")
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "无法创建目录 %s: %v\n", baseDir, err)
 		os.Exit(1)
@@ -262,7 +253,7 @@ func printUsage(w io.Writer) {
 
 配置:
   otk config             查看配置
-  otk config <项> <值>   修改配置（time/memory/version/o2）
+	otk config <项> <值>   修改配置（time/memory/version/o2/editor）
 
 运行:
   otk judge | j          编译并评测（存在非 AC 时退出码非零）
@@ -275,10 +266,6 @@ func printUsage(w io.Writer) {
   otk show w|c           担保 / 许可证
   otk version            版本
   otk help               帮助
-
-环境变量:
-  OTK_HOME     项目库位置（默认 ~/.otk）
-  OTK_EDITOR   编辑器命令（默认 vim / notepad）
 
 OierToolKit `+otkVersion+` — 魇珩Gr3yPh4ntom
 Copyright (C) 2026 魇珩Gr3yPh4ntom. 按 GPLv3+ 发布，不提供任何担保。

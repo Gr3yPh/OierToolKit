@@ -145,14 +145,7 @@ func cmdEdit() {
 		fatal("未找到 %s", p.Name+".cpp")
 	}
 
-	editor := os.Getenv("OTK_EDITOR")
-	if editor == "" {
-		if runtime.GOOS == "windows" {
-			editor = "notepad %s"
-		} else {
-			editor = "vim %s"
-		}
-	}
+	editor := propsOr(readIni(globalConfigPath()), "editor", defaultEditorCommand())
 
 	parts := splitQuoted(fmt.Sprintf(editor, p.sourcePath()))
 	if len(parts) == 0 {

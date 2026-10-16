@@ -19,6 +19,8 @@ package main
 
 import (
 	"fmt"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -30,12 +32,18 @@ func cmdConfig(args []string) {
 	case 2:
 		setConfig(args[0], args[1])
 	default:
-		fatal("用法: otk config 或 otk config <项> <值>（time/memory/version/o2）")
+		fatal("用法: otk config 或 otk config <项> <值>（time/memory/version/o2/editor）")
 	}
 }
 
 func showConfig() {
-	p := requireProject()
+	globalProps := readIni(globalConfigPath())
+	fmt.Printf("editor=%s\n", propsOr(globalProps, "editor", defaultEditorCommand()))
+
+	p, ok := findProject()
+	if !ok {
+		return
+	}
 	props := p.cfg()
 
 	o2 := propsOr(props, "o2", "1")
@@ -55,6 +63,14 @@ func showConfig() {
 }
 
 func setConfig(item, value string) {
+	if strings.EqualFold(item, "editor") {
+		props := readIni(globalConfigPath())
+		props["editor"] = value
+		writeIni(globalConfigPath(), props)
+		fmt.Printf("editor=%s\n", value)
+		return
+	}
+
 	p := requireProject()
 	props := p.cfg()
 
@@ -95,4 +111,13 @@ func setConfig(item, value string) {
 	}
 
 	writeIni(p.configPath(), props)
+}
+
+func globalConfigPath() string { return filepath.Join(baseDir, "config") }
+
+func defaultEditorCommand() string {
+	if runtime.GOOS == "windows" {
+		return "notepad %s"
+	}
+	return "vim %s"
 }
