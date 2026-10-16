@@ -70,6 +70,7 @@ var cmdAlias = map[string]string{
 	"stress":  "stress",
 	"ss":      "stress",
 	"show":    "show",
+	"wizard":  "wizard",
 	"help":    "help",
 	"h":       "help",
 	"version": "version",
@@ -125,6 +126,9 @@ func main() {
 		cmdStress(args[1:])
 	case "show":
 		cmdShow(args[1:])
+	case "wizard":
+		requireNoArgs(args[1:], "wizard")
+		cmdWizard()
 	case "help":
 		printUsage(os.Stdout)
 	case "version":
@@ -263,6 +267,7 @@ func printUsage(w io.Writer) {
   otk stress | ss [N]    对拍
 
 杂项:
+  otk wizard             新手向导，完整体验一遍工作流
   otk show w|c           担保 / 许可证
   otk version            版本
   otk help               帮助

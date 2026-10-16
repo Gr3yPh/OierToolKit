@@ -34,6 +34,8 @@ A lightweight cross-platform local judge and problem management tool customized 
 
 ## 📖 Quick Start
 
+First time here? Run `otk wizard` to walk through the full workflow hands-on in a temporary directory.
+
 Using "read two integers, print their sum" as an example:
 
 ```bash
@@ -72,6 +74,7 @@ Main commands at a glance (`otk help` for the full list):
 | `otk debug (d)` | Debug with gdb |
 | `otk edit (e)` | Open source file (global editor setting) |
 | `otk stress (ss) [N]` | Stress-test for N rounds (default 100) |
+| `otk wizard` | Guided tour for first-time users |
 
 ## ✳️ Global Configuration
 Global configuration and the project registry are stored in `~/.otkprofile`. Set the editor command with `otk config editor "emacs -nw %s"`; `%s` is replaced with the current project's source path. The default is `vim %s` (`notepad %s` on Windows).

@@ -37,6 +37,8 @@
 
 ## 📖 快速上手
 
+第一次上手可以运行 `otk wizard`，在临时目录里跟着引导亲手走一遍完整流程。
+
 以 "输入两个整数，输出它们的和" 为例：
 
 ```bash
@@ -75,6 +77,7 @@ otk j                         # 编译并评测
 | `otk debug (d)` | gdb 调试 |
 | `otk edit (e)` | 编辑源码（使用全局 editor 配置） |
 | `otk stress (ss) [N]` | 对拍 N 轮（默认 100） |
+| `otk wizard` | 新手向导，跟着引导走一遍工作流 |
 
 ## ✳️ 全局配置
 全局配置和项目库固定存放在 `~/.otkprofile`。使用 `otk config editor "emacs -nw %s"` 设置编辑器命令，`%s` 会替换为当前项目的源码路径；默认使用 `vim %s`（Windows 使用 `notepad %s`）。
