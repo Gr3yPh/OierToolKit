@@ -266,11 +266,9 @@ func removeOTKData(p project) error {
 		return err
 	}
 
-	if p.Name != "" && filepath.Base(p.Name) == p.Name && !strings.ContainsAny(p.Name, `/\\`) {
-		for _, name := range []string{p.Name, "gen", "brute"} {
-			if err := removeFileIfExists(exePathIn(p.Dir, name)); err != nil {
-				return err
-			}
+	for _, name := range []string{p.codeName(), "gen", "brute"} {
+		if err := removeFileIfExists(exePathIn(p.Dir, name)); err != nil {
+			return err
 		}
 	}
 	return nil

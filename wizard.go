@@ -41,13 +41,18 @@ func cmdWizard() {
 
 	wizardLive = wizardInteractive()
 
-	dir, err := os.MkdirTemp("", "otk-wizard-")
+	// 父目录放临时垃圾，demo 子目录才是项目根（目录名即代码文件名）。
+	root, err := os.MkdirTemp("", "otk-wizard-")
 	if err != nil {
 		fatal("无法创建临时目录: %v", err)
 	}
+	dir := filepath.Join(root, "demo")
+	if err := os.Mkdir(dir, 0755); err != nil {
+		fatal("无法创建演示目录: %v", err)
+	}
 	cleanup := func() {
 		registryRemove(dir)
-		_ = os.RemoveAll(dir)
+		_ = os.RemoveAll(root)
 	}
 	defer cleanup()
 

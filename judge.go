@@ -29,11 +29,11 @@ import (
 func cmdJudge() {
 	p := requireProject()
 	if !fileExists(p.sourcePath()) {
-		fatal("未找到 %s", p.Name+".cpp")
+		fatal("未找到 %s", p.codeName()+".cpp")
 	}
 	props := p.cfg()
 
-	fmt.Printf("编译 %s ... ", p.Name+".cpp")
+	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	if !compileProject(p.sourcePath(), p.exePath(), props) {
 		os.Exit(1)
 	}
@@ -47,7 +47,7 @@ func cmdJudge() {
 		fatal("无样例（放入 .in/.out 后运行 otk refresh）")
 	}
 
-	fmt.Printf("评测 %s (%.2fs / %.0fMB)\n", p.Name, timeLimit, memLimit)
+	fmt.Printf("评测 %s (%.2fs / %.0fMB)\n", p.codeName(), timeLimit, memLimit)
 	width := 3 // #id 至少占 4 列
 	for _, id := range index {
 		if len(id) > width {
@@ -101,11 +101,11 @@ func cmdJudge() {
 func cmdRun() {
 	p := requireProject()
 	if !fileExists(p.sourcePath()) {
-		fatal("未找到 %s", p.Name+".cpp")
+		fatal("未找到 %s", p.codeName()+".cpp")
 	}
 	props := p.cfg()
 
-	fmt.Printf("编译 %s ... ", p.Name+".cpp")
+	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	if !compileProject(p.sourcePath(), p.exePath(), props) {
 		os.Exit(1)
 	}
@@ -142,7 +142,7 @@ func cmdDebug() {
 func cmdEdit() {
 	p := requireProject()
 	if !fileExists(p.sourcePath()) {
-		fatal("未找到 %s", p.Name+".cpp")
+		fatal("未找到 %s", p.codeName()+".cpp")
 	}
 
 	editor := propsOr(readIni(globalConfigPath()), "editor", defaultEditorCommand())

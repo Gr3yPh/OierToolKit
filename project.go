@@ -92,10 +92,15 @@ func requireProject() project {
 	return p
 }
 
-func (p project) metaDir() string        { return filepath.Join(p.Dir, ".otk") }
-func (p project) samplesPath() string    { return filepath.Join(p.metaDir(), "samples") }
-func (p project) sourcePath() string     { return filepath.Join(p.Dir, p.Name+".cpp") }
-func (p project) exePath() string        { return exePathIn(p.Dir, p.Name) }
+func (p project) metaDir() string     { return filepath.Join(p.Dir, ".otk") }
+func (p project) samplesPath() string { return filepath.Join(p.metaDir(), "samples") }
+
+// codeName 是代码文件的基名：固定跟随目录名，与项目标签（Name）解耦。
+// 标签可以是任意文字（如题面标题），目录名才是文件系统友好的身份。
+func (p project) codeName() string { return filepath.Base(p.Dir) }
+
+func (p project) sourcePath() string     { return filepath.Join(p.Dir, p.codeName()+".cpp") }
+func (p project) exePath() string        { return exePathIn(p.Dir, p.codeName()) }
 func (p project) cfg() map[string]string { return readIni(p.configPath()) }
 
 // configPath 优先读新布局，旧布局项目尚未迁移时读同名 .ini。
@@ -122,12 +127,14 @@ func cmdInit(args []string) {
 
 	created := false
 	cfgPath := filepath.Join(cwd, ".otk", "config")
+	oldLabel := readIni(cfgPath)["name"] // 现有项目的旧标签，用于源码文件名迁移
 	if !fileExists(cfgPath) {
 		// 旧版布局迁移：<名称>.ini → .otk/config
 		props := map[string]string{}
 		legacy := filepath.Join(cwd, name+".ini")
 		if fileExists(legacy) {
 			props = readIni(legacy)
+			oldLabel = props["name"]
 		}
 		props["name"] = name
 		setDefault(props, "time_limit", "1.00")
@@ -141,7 +148,14 @@ func cmdInit(args []string) {
 		created = true
 	}
 
-	src := filepath.Join(cwd, name+".cpp")
+	base := filepath.Base(cwd)
+	src := filepath.Join(cwd, base+".cpp")
+	// 旧版本以项目名作源码文件名，旧标签与目录名不同时自动改名迁移。
+	if !fileExists(src) && oldLabel != "" && oldLabel != base && !strings.ContainsAny(oldLabel, `/\`) {
+		if fileExists(filepath.Join(cwd, oldLabel+".cpp")) {
+			_ = os.Rename(filepath.Join(cwd, oldLabel+".cpp"), src)
+		}
+	}
 	if !fileExists(src) {
 		tmpl := "#include<iostream>\nusing namespace std;\n\nint main(){\n    \n    return 0;\n}\n"
 		if err := os.WriteFile(src, []byte(tmpl), 0644); err != nil {
@@ -180,7 +194,7 @@ func cmdStatus() {
 	}
 	fmt.Printf("%s%s%s  %s\n", cyan, p.Name, reset, p.Dir)
 	fmt.Printf("  %s.cpp · %ss / %sMB · %s %s · 样例 %d\n",
-		p.Name,
+		p.codeName(),
 		propsOr(props, "time_limit", "1.00"),
 		propsOr(props, "memory_limit", "125"),
 		propsOr(props, "version", "c++17"),

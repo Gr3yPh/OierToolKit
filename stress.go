@@ -45,7 +45,7 @@ func cmdStress(args []string) {
 	genCpp := filepath.Join(p.Dir, "gen.cpp")
 	bruteCpp := filepath.Join(p.Dir, "brute.cpp")
 
-	for _, pair := range [][2]string{{projCpp, p.Name + ".cpp"}, {genCpp, "gen.cpp"}, {bruteCpp, "brute.cpp"}} {
+	for _, pair := range [][2]string{{projCpp, p.codeName() + ".cpp"}, {genCpp, "gen.cpp"}, {bruteCpp, "brute.cpp"}} {
 		if !fileExists(pair[0]) {
 			fatal("未找到 %s", pair[1])
 		}
@@ -68,7 +68,7 @@ func cmdStress(args []string) {
 	}
 	fmt.Println(green + "ok" + reset)
 
-	fmt.Printf("编译 %s ... ", p.Name+".cpp")
+	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	projExe := p.exePath()
 	if !compileProject(projCpp, projExe, props) {
 		os.Exit(1)
