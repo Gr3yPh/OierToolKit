@@ -52,7 +52,7 @@ otk j                         # compile and judge
 #   #sample1 AC    2ms 4.36MB
 ```
 
-Projects can live anywhere — `otk init` registers them into the registry (`~/.otkprofile/registry`): browse them with `otk ls`, jump to one with `otk cd <name>` (exit returns to the original directory), or unregister with `otk rm` (files stay untouched).
+Projects can live anywhere — `otk init` registers them into the registry (`~/.otkprofile/registry`): browse them with `otk ls` and jump to one with `otk cd <name>` (exit returns to the original directory). `otk rm [--soft|--hard] [name]` soft-deletes OTK metadata, stress data, and compiled artifacts by default while preserving source and sample files; `--hard` deletes the entire project directory.
 
 For a wrong solution, stress-test it: prepare gen.cpp and brute.cpp, then run `otk stress 100`; counter-examples are saved to `.stress/`.
 
@@ -62,7 +62,7 @@ Main commands at a glance (`otk help` for the full list):
 |---|---|
 | `otk init [name]` | Initialize a project in the current directory and register it |
 | `otk st` | Project status |
-| `otk ls / se <regex> / rm [name]` | Project registry (manage projects everywhere) |
+| `otk ls / se <regex> / rm [--soft&#124;--hard] [name]` | Project registry; rm soft-deletes by default or deletes the project |
 | `otk cd [name]` | Open a new shell in the project directory |
 | `otk refresh (rf)` | Sync the sample database (.in/.out pairs) |
 | `otk samples` | List samples |

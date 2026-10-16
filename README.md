@@ -55,7 +55,7 @@ otk j                         # 编译并评测
 #   #sample1 AC    2ms 4.36MB
 ```
 
-项目放在哪里都行，`otk init` 都会把它登记进项目库（`~/.otkprofile/registry`）：`otk ls` 统一查看，`otk cd <名称>` 随时跳转（exit 返回原目录），`otk rm` 移出项目库（文件不动）。
+项目放在哪里都行，`otk init` 都会把它登记进项目库（`~/.otkprofile/registry`）：`otk ls` 统一查看，`otk cd <名称>` 随时跳转（exit 返回原目录）。`otk rm [--soft|--hard] [名称]` 默认软删除 OTK 元数据、对拍数据和编译产物，保留源码与样例；`--hard` 删除整个项目目录。
 
 写错了就对拍：准备 gen.cpp 与 brute.cpp 后运行 `otk stress 100`，反例数据保存在 `.stress/` 中。
 
@@ -65,7 +65,7 @@ otk j                         # 编译并评测
 |---|---|
 | `otk init [名称]` | 当前目录初始化项目并登记 |
 | `otk st` | 项目状态 |
-| `otk ls / se <正则> / rm [名称]` | 项目库（统一管理各处的项目） |
+| `otk ls / se <正则> / rm [--soft&#124;--hard] [名称]` | 项目库管理；rm 默认软删除，也可硬删除 |
 | `otk cd [名称]` | 在新 shell 中打开项目目录 |
 | `otk refresh (rf)` | 同步样例库（.in/.out 文件对入库） |
 | `otk samples` | 列出样例 |

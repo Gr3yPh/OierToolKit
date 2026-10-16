@@ -31,7 +31,7 @@ import (
 	"runtime"
 )
 
-const otkVersion = "v2.0.1"
+const otkVersion = "v2.0.2"
 
 var (
 	baseDir string
@@ -244,7 +244,7 @@ func printUsage(w io.Writer) {
   otk status | st        当前项目状态
   otk ls                 列出项目库中的所有项目
   otk se <正则>          搜索项目
-  otk rm [名称]          从项目库移除（不删文件）
+	otk rm [--soft|--hard] [名称]  移除项目（默认软删除）
   otk cd [名称]          在新 shell 中打开项目目录
 
 样例:

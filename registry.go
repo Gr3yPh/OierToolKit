@@ -18,6 +18,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -177,23 +178,108 @@ func cmdSearch(args []string) {
 	}
 }
 
-// cmdRm 从项目库移除项目，文件保留不动。
+// cmdRm 从项目库移除项目，可选择清除 OTK 数据或整个项目目录。
 func cmdRm(args []string) {
+	mode := "soft"
+	selectedMode := ""
+	name := ""
+	for _, arg := range args {
+		switch arg {
+		case "--soft", "--hard":
+			if selectedMode != "" && selectedMode != arg {
+				fatal("--soft 和 --hard 不能同时使用")
+			}
+			selectedMode = arg
+			mode = strings.TrimPrefix(arg, "--")
+		default:
+			if strings.HasPrefix(arg, "-") {
+				fatal("未知选项: %s", arg)
+			}
+			if name != "" {
+				fatal("用法: otk rm [--soft|--hard] [名称]")
+			}
+			name = arg
+		}
+	}
+
 	var dir string
-	switch len(args) {
-	case 0:
+	if name == "" {
 		p, ok := findProject()
 		if !ok {
 			fatal("当前目录不属于任何项目")
 		}
 		dir = p.Dir
-	case 1:
-		dir = resolveRegistry(args[0])
-	default:
-		fatal("用法: otk rm [名称]")
+	} else {
+		dir = resolveRegistry(name)
 	}
+	if !registryContains(dir) {
+		fatal("项目不在项目库中: %s", dir)
+	}
+
+	switch mode {
+	case "soft":
+		p := project{Name: projectNameOf(dir), Dir: dir}
+		if err := removeOTKData(p); err != nil {
+			fatal("无法移除项目 OTK 数据: %v", err)
+		}
+	case "hard":
+		if err := os.RemoveAll(dir); err != nil {
+			fatal("无法删除项目目录 %s: %v", dir, err)
+		}
+	}
+
 	if !registryRemove(dir) {
 		fatal("项目不在项目库中: %s", dir)
 	}
-	fmt.Printf("已从项目库移除 %s（文件保留）\n", filepath.Base(dir))
+	if mode == "hard" {
+		fmt.Printf("已删除项目 %s 及其项目库记录\n", filepath.Base(dir))
+	} else {
+		fmt.Printf("已移除项目 %s 的 OTK 数据及项目库记录（源码和样例保留）\n", filepath.Base(dir))
+	}
+}
+
+func registryContains(dir string) bool {
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return false
+	}
+	for _, registered := range registryRead() {
+		if filepath.Clean(registered) == filepath.Clean(abs) {
+			return true
+		}
+	}
+	return false
+}
+
+func removeOTKData(p project) error {
+	for _, path := range []string{
+		p.metaDir(),
+		filepath.Join(p.Dir, ".stress"),
+	} {
+		if err := os.RemoveAll(path); err != nil {
+			return err
+		}
+	}
+
+	legacyConfig := filepath.Join(p.Dir, filepath.Base(p.Dir)+".ini")
+	if err := removeFileIfExists(legacyConfig); err != nil {
+		return err
+	}
+
+	if p.Name != "" && filepath.Base(p.Name) == p.Name && !strings.ContainsAny(p.Name, `/\\`) {
+		for _, name := range []string{p.Name, "gen", "brute"} {
+			if err := removeFileIfExists(exePathIn(p.Dir, name)); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func removeFileIfExists(path string) error {
+	err := os.Remove(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return err
 }
