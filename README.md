@@ -30,6 +30,7 @@
 * **跨平台时空测量**：运行时间与峰值内存直接来自操作系统接口，不依赖 GNU time 等外部工具。
 * **Diff 引擎**：`-v` 评测时 WA 对比期望与实际输出，RE 显示 stderr 信息。
 * **对拍**：gen.cpp 造数据、brute.cpp 做标答，反例自动保存到 `.stress/`。
+* **远程 OJ**：`otk fetch` 从支持 [otk-remote 协议](PROTOCOL.md)的 OJ 拉题入库，`otk submit` 本地提交、等到 verdict。
 * **脚本可用**：存在非 AC 结果时退出码非零。
 
 
@@ -88,6 +89,8 @@ otk j                         # 编译并评测
 | `otk samples` | 列出样例 |
 | `otk config [项 值]` | 查看/修改配置（项目项：time/memory/version/o2；全局项：editor） |
 | `otk judge (j) [-v]` | 编译并评测全部样例；`-v` 显示报错与 WA 详情 |
+| `otk fetch [url] <id>` | 从远程 OJ 拉取题目与样例（协议见 PROTOCOL.md） |
+| `otk submit (sub) [-q]` | 提交源码到远端评测并等待结果；`-q` 只提交 |
 | `otk run (r)` | 编译并运行 |
 | `otk debug (d)` | gdb 调试 |
 | `otk edit (e)` | 编辑源码（使用全局 editor 配置） |

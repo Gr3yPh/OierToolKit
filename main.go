@@ -61,6 +61,10 @@ var cmdAlias = map[string]string{
 	"cd":      "cd",
 	"refresh": "refresh",
 	"rf":      "refresh",
+	"fetch":   "fetch",
+	"f":       "fetch",
+	"submit":  "submit",
+	"sub":     "submit",
 	"samples": "samples",
 	"config":  "config",
 	"cfg":     "config",
@@ -114,6 +118,10 @@ func main() {
 	case "samples":
 		requireNoArgs(args[1:], "samples")
 		cmdSamples()
+	case "fetch":
+		cmdFetch(args[1:])
+	case "submit":
+		cmdSubmit(args[1:])
 	case "config":
 		cmdConfig(args[1:])
 	case "judge":
@@ -277,6 +285,10 @@ func printUsage(w io.Writer) {
   otk debug | d          gdb 调试
   otk edit | e           编辑源码
   otk stress | ss [N]    对拍
+
+远程 OJ:
+  otk fetch [url] <id>   拉取题目与样例入库（协议见 PROTOCOL.md）
+  otk submit | sub [-q]  提交源码评测并等待结果（-q 只提交）
 
 杂项:
   otk wizard             新手向导，完整体验一遍工作流

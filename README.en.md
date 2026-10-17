@@ -29,6 +29,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
 * **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
 * **Stress Testing**: gen.cpp generates tests, brute.cpp serves as the reference; counter-examples are saved to `.stress/`.
+* **Remote OJ**: `otk fetch` pulls problems and samples from any OJ implementing the [otk-remote protocol](PROTOCOL.md); `otk submit` submits locally and waits for the verdict.
 * **Scripting**: Non-zero exit code when any test is not AC.
 
 ## 🚀 Installation
@@ -85,6 +86,8 @@ Main commands at a glance (`otk help` for the full list):
 | `otk samples` | List samples |
 | `otk config [key value]` | Show/update config (project: time/memory/version/o2; global: editor) |
 | `otk judge (j) [-v]` | Compile and judge all samples; `-v` shows errors and WA details |
+| `otk fetch [url] <id>` | Pull a problem and samples from a remote OJ (see PROTOCOL.md) |
+| `otk submit (sub) [-q]` | Submit the source to remote judging and wait; `-q` submits only |
 | `otk run (r)` | Compile and run |
 | `otk debug (d)` | Debug with gdb |
 | `otk edit (e)` | Open source file (global editor setting) |

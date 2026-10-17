@@ -39,6 +39,12 @@ func cmdConfig(args []string) {
 func showConfig() {
 	globalProps := readIni(globalConfigPath())
 	fmt.Printf("editor=%s\n", propsOr(globalProps, "editor", defaultEditorCommand()))
+	if r := propsOr(globalProps, "remote", ""); r != "" {
+		fmt.Printf("remote=%s\n", r)
+	}
+	if propsOr(globalProps, "remote_token", "") != "" {
+		fmt.Println("remote_token=****")
+	}
 
 	p, ok := findProject()
 	if !ok {
@@ -60,6 +66,9 @@ func showConfig() {
 	if tag := props["tag"]; tag != "" {
 		fmt.Printf("tag=%s\n", tag)
 	}
+	if b := props["remote_base"]; b != "" {
+		fmt.Printf("remote=%s @ %s\n", props["remote_id"], b)
+	}
 }
 
 func setConfig(item, value string) {
@@ -68,6 +77,20 @@ func setConfig(item, value string) {
 		props["editor"] = value
 		writeIni(globalConfigPath(), props)
 		fmt.Printf("editor=%s\n", value)
+		return
+	}
+	if strings.EqualFold(item, "remote") {
+		props := readIni(globalConfigPath())
+		props["remote"] = strings.TrimRight(value, "/")
+		writeIni(globalConfigPath(), props)
+		fmt.Printf("remote=%s\n", props["remote"])
+		return
+	}
+	if strings.EqualFold(item, "remote_token") {
+		props := readIni(globalConfigPath())
+		props["remote_token"] = value
+		writeIni(globalConfigPath(), props)
+		fmt.Println("remote_token=****")
 		return
 	}
 
@@ -106,8 +129,16 @@ func setConfig(item, value string) {
 		}
 		fmt.Printf("o2=%s\n", value)
 
+	case "remote_base":
+		props["remote_base"] = strings.TrimRight(value, "/")
+		fmt.Printf("remote_base=%s\n", props["remote_base"])
+
+	case "remote_id":
+		props["remote_id"] = value
+		fmt.Printf("remote_id=%s\n", value)
+
 	default:
-		fatal("未知配置项 '%s'（可用: time/memory/version/o2）", item)
+		fatal("未知配置项 '%s'（项目: time/memory/version/o2/remote_base/remote_id；全局: editor/remote/remote_token）", item)
 	}
 
 	writeIni(p.configPath(), props)
