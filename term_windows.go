@@ -22,6 +22,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -80,7 +81,8 @@ func enableANSI() bool {
 	return vt != 0
 }
 
-// termDiag 打印控制台探测细节，只读不改，供 otk doctor 排查显示问题。
+// termDiag 打印控制台探测细节供 otk doctor 排查显示问题。VT 试开后会
+// 还原；代码页若能成功切到 65001 则保持不变（这本就是 otk 的期望状态）。
 func termDiag() {
 	var vi osVersionInfoEx
 	vi.size = uint32(unsafe.Sizeof(vi))
@@ -109,12 +111,77 @@ func termDiag() {
 		fmt.Printf("GetConsoleMode 失败: 错误码 %d (%v)\n", uint32(err.(syscall.Errno)), err)
 	} else {
 		fmt.Printf("GetConsoleMode 成功: mode=0x%x\n", mode)
+		// 现场试开 VT 再还原，拿到精确错误码；build>=14393 的系统
+		// 上失败基本可断定控制台处于旧版模式。
+		vt, _, vtErr := procSetConsoleMode.Call(h, uintptr(mode|enableVirtualTerminalProcessing))
+		if vt != 0 {
+			fmt.Println("VT 现场试开: 成功")
+		} else {
+			fmt.Printf("VT 现场试开失败: 错误码 %d (%v)\n", uint32(vtErr.(syscall.Errno)), vtErr)
+		}
+		procSetConsoleMode.Call(h, uintptr(mode)) // 还原，保持只读语义
 	}
 
-	cp, _, _ := procGetConsoleOutputCP.Call()
-	fmt.Printf("输出代码页: %d\n", cp)
+	cp0, _, _ := procGetConsoleOutputCP.Call()
+	fmt.Printf("输出代码页: %d\n", cp0)
+	if r2, _, cpErr := procSetConsoleOutputCP.Call(cpUTF8); r2 == 0 {
+		fmt.Printf("SetConsoleOutputCP(65001) 失败: 错误码 %d (%v)\n", uint32(cpErr.(syscall.Errno)), cpErr)
+	} else {
+		cp1, _, _ := procGetConsoleOutputCP.Call()
+		fmt.Printf("SetConsoleOutputCP(65001) 成功: 代码页 %d -> %d\n", cp0, cp1)
+	}
+
+	// 旧版控制台由 HKCU\Console\ForceV2=0 强制开启，会使 VT 与部分
+	// 现代 API 失效；全局键与 cmd 专用子键都查一遍。
+	if v, ok := regReadDWORD(`Console`, "ForceV2"); ok {
+		fmt.Printf(`HKCU\Console\ForceV2 = %d`, v)
+		if v == 0 {
+			fmt.Println("（0 = 强制旧版控制台，VT 不可用）")
+		} else {
+			fmt.Println()
+		}
+	} else {
+		fmt.Println(`HKCU\Console\ForceV2 未设置`)
+	}
+	sub := "Console\\" + strings.ReplaceAll(os.Getenv("ComSpec"), `\`, `_`)
+	if v, ok := regReadDWORD(sub, "ForceV2"); ok {
+		fmt.Printf(`HKCU\Console\<cmd>\ForceV2 = %d`, v)
+		if v == 0 {
+			fmt.Println("（0 = 强制旧版控制台，VT 不可用）")
+		} else {
+			fmt.Println()
+		}
+	} else {
+		fmt.Printf("HKCU\\Console\\<cmd>\\ForceV2 未设置\n")
+	}
 
 	for _, k := range []string{"WT_SESSION", "TERM", "ANSICON", "ConEmuANSI", "ComSpec"} {
 		fmt.Printf("%s=%q\n", k, os.Getenv(k))
 	}
+}
+
+const keyRead = 0x20019 // KEY_READ
+
+// regReadDWORD 读取 HKCU 下某个注册表项的 DWORD 值。
+func regReadDWORD(subkey, name string) (uint32, bool) {
+	sub, err := syscall.UTF16PtrFromString(subkey)
+	if err != nil {
+		return 0, false
+	}
+	var h syscall.Handle
+	if err := syscall.RegOpenKeyEx(syscall.HKEY_CURRENT_USER, sub, 0, keyRead, &h); err != nil {
+		return 0, false
+	}
+	defer syscall.RegCloseKey(h)
+	nm, err := syscall.UTF16PtrFromString(name)
+	if err != nil {
+		return 0, false
+	}
+	var typ uint32
+	var buf [4]byte
+	n := uint32(len(buf))
+	if err := syscall.RegQueryValueEx(h, nm, nil, &typ, &buf[0], &n); err != nil || typ != 4 /*REG_DWORD*/ || n != 4 {
+		return 0, false
+	}
+	return uint32(buf[0]) | uint32(buf[1])<<8 | uint32(buf[2])<<16 | uint32(buf[3])<<24, true
 }
