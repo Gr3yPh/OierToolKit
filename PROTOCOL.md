@@ -7,7 +7,8 @@ otk-remote 是 OierToolKit 的远程 OJ 互操作协议：**otk 只做客户端*
 ## 通用约定
 
 - 传输：HTTP 或 HTTPS，请求与响应体均为 `application/json; charset=utf-8`
-- 路径前缀：`/api/v1`（不兼容变更时升为 `/api/v2`）
+- 路径前缀：`/otk/v1`（刻意放在 `/otk/` 命名空间下，避免与 OJ 自身的
+  `/api/...` 路由撞车；不兼容变更时升为 `/otk/v2`）
 - 认证：可选。OJ 可要求 `Authorization: Bearer <token>`；客户端用
   `OTK_TOKEN` 环境变量或 `otk config remote_token <token>` 提供
 - 错误：非 2xx 状态码，响应体建议 `{"error": "人类可读原因"}`
@@ -17,7 +18,7 @@ otk-remote 是 OierToolKit 的远程 OJ 互操作协议：**otk 只做客户端*
 ## 1. 获取题目
 
 ```
-GET {base}/api/v1/problems/{id}
+GET {base}/otk/v1/problems/{id}
 ```
 
 响应示例：
@@ -50,7 +51,7 @@ GET {base}/api/v1/problems/{id}
 ## 2. 提交
 
 ```
-POST {base}/api/v1/submissions
+POST {base}/otk/v1/submissions
 Content-Type: application/json
 ```
 
@@ -71,7 +72,7 @@ Content-Type: application/json
 ## 3. 查询提交
 
 ```
-GET {base}/api/v1/submissions/{id}
+GET {base}/otk/v1/submissions/{id}
 ```
 
 响应示例（带测试点明细）：

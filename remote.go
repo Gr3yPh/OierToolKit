@@ -34,7 +34,7 @@ import (
 // otk-remote 协议（规范见 PROTOCOL.md）：OJ 侧实现三个 HTTP 端点，
 // otk 负责拉题与提交。数据结构与端点一一对应，字段只增不减。
 
-const remoteAPIPrefix = "/api/v1"
+const remoteAPIPrefix = "/otk/v1"
 
 var remoteHTTP = &http.Client{Timeout: 15 * time.Second}
 
