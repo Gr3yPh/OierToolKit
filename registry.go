@@ -105,14 +105,21 @@ func registryFind(name string) []string {
 
 // resolveRegistry 根据名称取唯一项目目录，不唯一或不存在则报错退出。
 func resolveRegistry(name string) string {
+	dir := registryFindUnique(name)
+	if _, err := os.Stat(dir); err != nil {
+		fatal("目录不存在: %s", dir)
+	}
+	return dir
+}
+
+// registryFindUnique 按名称在项目库里取唯一目录，只查登记、不问磁盘；
+// rm 要能处理目录已消失的僵尸条目。
+func registryFindUnique(name string) string {
 	hits := registryFind(name)
 	switch len(hits) {
 	case 0:
 		fatal("项目库中没有 '%s'", name)
 	case 1:
-		if _, err := os.Stat(hits[0]); err != nil {
-			fatal("目录不存在: %s", hits[0])
-		}
 		return hits[0]
 	default:
 		fatal("'%s' 匹配多个项目:\n  %s", name, strings.Join(hits, "\n  "))
@@ -210,7 +217,7 @@ func cmdRm(args []string) {
 		}
 		dir = p.Dir
 	} else {
-		dir = resolveRegistry(name)
+		dir = registryFindUnique(name)
 	}
 	if !registryContains(dir) {
 		fatal("项目不在项目库中: %s", dir)
