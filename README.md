@@ -42,9 +42,9 @@
 curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
 ```
 
-```powershell
-# Windows（PowerShell）
-iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex
+```bat
+# Windows（cmd / PowerShell 均可）
+powershell -NoProfile -c "iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex"
 ```
 
 手动安装也可以：从 release 页面下载预编译版放进 PATH；或 clone 本项目 `go build -o otk`。评测需要 `g++`，除此之外零外部依赖。

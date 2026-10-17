@@ -1,5 +1,8 @@
 # OierToolKit 一键安装脚本，Windows（x64 / ARM64）。
 #
+#   powershell -NoProfile -c "iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex"
+#
+# 上面这条 cmd 与 PowerShell 里都能直接粘；在 PowerShell 里也可以简写成
 #   iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex
 #
 # 环境变量：

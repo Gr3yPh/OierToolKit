@@ -40,9 +40,9 @@ One command, auto-detecting platform and architecture:
 curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
 ```
 
-```powershell
-# Windows (PowerShell)
-iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex
+```bat
+# Windows (cmd / PowerShell, both work)
+powershell -NoProfile -c "iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex"
 ```
 
 Or install manually: download a precompiled binary from the release page and put it into your PATH, or clone this project and run `go build -o otk`. Judging needs `g++`; no other external dependencies.
