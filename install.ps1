@@ -93,6 +93,22 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
 
         Write-Host "installed: $(Join-Path $installDir 'otk.exe')"
         & (Join-Path $installDir 'otk.exe') version
+
+        # 当前窗口立即可用。直接在 PowerShell 里跑时改的是用户自己的
+        # 会话；经 powershell -c 嵌套执行时子进程改不了父窗口的环境块
+        # （Windows 进程环境私有），只能给出补救的一行。
+        $env:Path = "$installDir;$env:Path"
+        try {
+            $nested = (Get-CimInstance Win32_Process -Filter "ProcessId = $PID").CommandLine -match 'install\.ps1'
+        } catch {
+            $nested = $true
+        }
+        if ($nested) {
+            Write-Host ('this window (cmd):        set "PATH=%PATH%;{0}"' -f $installDir)
+            Write-Host ("this window (PowerShell): `$env:Path += ';{0}'" -f $installDir)
+        } else {
+            Write-Host 'this session: otk is ready'
+        }
     } finally {
         Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
     }
