@@ -18,6 +18,10 @@
 一个为 Oier 量身定制的轻量级跨平台本地评测姬与题目管理工具。
 ~~叫做OierOperationSimplifier更合理吧。。~~
 
+<p align="center">
+  <img src="demo.png" width="900" alt="OierToolKit 向导与评测演示">
+</p>
+
 
 ## 🌟 特性
 * **git 风格命令行**：一次性命令，执行完即退出；输出可安全重定向（非终端自动关闭颜色）。
@@ -93,7 +97,7 @@ otk j                         # 编译并评测
 
 **Copyright (C) 2026 魇珩Gr3yPh4ntom.**
 
-logo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
+logo.png 与 demo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
