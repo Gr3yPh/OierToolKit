@@ -32,7 +32,7 @@ import (
 )
 
 // otkVersion 用 var 而非 const，便于 release workflow 用 -ldflags "-X" 覆盖。
-var otkVersion = "v2.1.1"
+var otkVersion = "v2.1.2"
 
 var (
 	baseDir string
