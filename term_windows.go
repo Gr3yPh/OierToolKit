@@ -40,7 +40,24 @@ var (
 	procGetConsoleOutputCP = modkernel32.NewProc("GetConsoleOutputCP")
 	procSetConsoleOutputCP = modkernel32.NewProc("SetConsoleOutputCP")
 	procGetFileType        = modkernel32.NewProc("GetFileType")
+	modntdll               = syscall.NewLazyDLL("ntdll.dll")
+	procRtlGetVersion      = modntdll.NewProc("RtlGetVersion")
 )
+
+// osVersionInfoEx 对应 ntdll 的 OSVERSIONINFOEXW。
+type osVersionInfoEx struct {
+	size             uint32
+	major            uint32
+	minor            uint32
+	build            uint32
+	platformID       uint32
+	csd              [128]uint16
+	servicePackMajor uint16
+	servicePackMinor uint16
+	suiteMask        uint16
+	productType      byte
+	reserved         byte
+}
 
 // enableANSI 让 Windows 控制台（含 conhost）能正确显示 ANSI 颜色与 UTF-8
 // 中文，返回控制台是否支持 ANSI。老式控制台（Win7/8 或关闭了 VT 的宿主）
@@ -53,20 +70,24 @@ func enableANSI() bool {
 		// stdout 是重定向或管道，不碰全局代码页。
 		return false
 	}
-	// conhost 默认不解释 ANSI 转义序列，必须由应用显式开启。
-	// 先确认 VT 能开再动代码页：老式控制台切到 UTF-8 反而会让中文更乱。
-	if r, _, _ = procSetConsoleMode.Call(h, uintptr(mode|enableVirtualTerminalProcessing)); r == 0 {
-		return false
-	}
-	// 输出代码页切到 UTF-8，避免 conhost 按 GBK 解释中文。
+	// conhost 默认不解释 ANSI 转义序列，需要应用显式开启 VT；
+	// 老式控制台（Win10 1607 之前或勾了旧版控制台）开不了，此时没有
+	// 颜色，但代码页照切——UTF-8 输出配 GBK 代码页必然乱码。
+	vt, _, _ := procSetConsoleMode.Call(h, uintptr(mode|enableVirtualTerminalProcessing))
 	if cp, _, _ := procGetConsoleOutputCP.Call(); cp != cpUTF8 {
 		procSetConsoleOutputCP.Call(cpUTF8)
 	}
-	return true
+	return vt != 0
 }
 
 // termDiag 打印控制台探测细节，只读不改，供 otk doctor 排查显示问题。
 func termDiag() {
+	var vi osVersionInfoEx
+	vi.size = uint32(unsafe.Sizeof(vi))
+	if r, _, _ := procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi))); r == 0 {
+		fmt.Printf("Windows 版本: %d.%d build %d\n", vi.major, vi.minor, vi.build)
+	}
+
 	h := uintptr(syscall.Handle(os.Stdout.Fd()))
 	ft, _, _ := procGetFileType.Call(h)
 	var ftName string
