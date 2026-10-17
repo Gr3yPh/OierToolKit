@@ -245,6 +245,10 @@ func wizardMatch(input, expect string) bool {
 }
 
 func wizardInteractive() bool {
+	// ANSI 不可用（如未开启 VT 的旧式控制台）时降级为瞬时输出。
+	if !ansiOK {
+		return false
+	}
 	fi, err := os.Stdin.Stat()
 	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
 		return false

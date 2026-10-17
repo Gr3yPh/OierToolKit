@@ -36,6 +36,10 @@ const otkVersion = "v2.1.1"
 var (
 	baseDir string
 
+	// ansiOK 表示控制台能正确解释 ANSI 转义序列。Windows 旧式控制台
+	// (conhost) 需显式开启 VT 处理，失败时关闭颜色并让向导降级。
+	ansiOK bool
+
 	// 颜色仅在 stdout 为终端时启用，保证重定向输出纯净。
 	reset  = ""
 	red    = ""
