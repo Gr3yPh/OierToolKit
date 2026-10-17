@@ -19,6 +19,16 @@
 
 package main
 
+import (
+	"fmt"
+	"os"
+)
+
 // enableANSI 在非 Windows 平台总是可用：终端默认解释 ANSI 转义序列，
 // stdout 为重定向时由调用方的字符设备检查拦下，不会误开颜色。
 func enableANSI() bool { return true }
+
+// termDiag 在非 Windows 平台只打印 TERM 环境变量。
+func termDiag() {
+	fmt.Printf("TERM=%q\n", os.Getenv("TERM"))
+}

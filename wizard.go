@@ -245,10 +245,8 @@ func wizardMatch(input, expect string) bool {
 }
 
 func wizardInteractive() bool {
-	// ANSI 不可用（如未开启 VT 的旧式控制台）时降级为瞬时输出。
-	if !ansiOK {
-		return false
-	}
+	// 交互与否只看 stdin/stdout 是否为终端；ANSI 可用性只影响颜色，
+	// 不能让它决定向导是否等待输入。
 	fi, err := os.Stdin.Stat()
 	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
 		return false

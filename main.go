@@ -75,6 +75,7 @@ var cmdAlias = map[string]string{
 	"ss":      "stress",
 	"show":    "show",
 	"wizard":  "wizard",
+	"doctor":  "doctor",
 	"help":    "help",
 	"h":       "help",
 	"version": "version",
@@ -133,6 +134,8 @@ func main() {
 	case "wizard":
 		requireNoArgs(args[1:], "wizard")
 		cmdWizard()
+	case "doctor":
+		cmdDoctor(args[1:])
 	case "help":
 		printUsage(os.Stdout)
 	case "version":
@@ -272,6 +275,7 @@ func printUsage(w io.Writer) {
 
 杂项:
   otk wizard             新手向导，完整体验一遍工作流
+  otk doctor             诊断终端环境（显示异常时运行并反馈输出）
   otk show w|c           担保 / 许可证
   otk version            版本
   otk help               帮助
