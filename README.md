@@ -26,9 +26,9 @@
 ## 🌟 特性
 * **git 风格命令行**：一次性命令，执行完即退出；输出可安全重定向（非终端自动关闭颜色）。
 * **项目库**：项目可以建在任意目录（`otk init`），统一登记到项目库中管理。
-* **样例即文件**：目录里放成对的 `.in`/`.out` 文件，`otk refresh` 一下即入样例库。
+* **样例即文件**：目录里放成对的 `.in` 与 `.out`（比赛下发的 `.ans` 也认），`otk refresh` 一下即入样例库。
 * **跨平台时空测量**：运行时间与峰值内存直接来自操作系统接口，不依赖 GNU time 等外部工具。
-* **Diff 引擎**：WA 时对比标准输出与你的输出；RE 时显示 stderr 信息。
+* **Diff 引擎**：`-v` 评测时 WA 对比期望与实际输出，RE 显示 stderr 信息。
 * **对拍**：gen.cpp 造数据、brute.cpp 做标答，反例自动保存到 `.stress/`。
 * **脚本可用**：存在非 AC 结果时退出码非零。
 
@@ -76,7 +76,7 @@ otk j                         # 编译并评测
 | `otk refresh (rf)` | 同步样例库（.in/.out 文件对入库） |
 | `otk samples` | 列出样例 |
 | `otk config [项 值]` | 查看/修改配置（项目项：time/memory/version/o2；全局项：editor） |
-| `otk judge (j)` | 编译并评测全部样例 |
+| `otk judge (j) [-v]` | 编译并评测全部样例；`-v` 显示报错与 WA 详情 |
 | `otk run (r)` | 编译并运行 |
 | `otk debug (d)` | gdb 调试 |
 | `otk edit (e)` | 编辑源码（使用全局 editor 配置） |

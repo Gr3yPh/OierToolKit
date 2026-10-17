@@ -99,7 +99,7 @@ func wizardRun() bool {
 	wizardSay("很好，项目已经登记进项目库了。")
 
 	wizardStep("第 2 步 · 样例与代码")
-	wizardSay("样例就是目录里成对的 .in/.out 文件。")
+	wizardSay("样例就是目录里的文件对：.in 配 .out 或 .ans。")
 	wizardSay("我替你放好一组，还写了一个 A+B 的解：")
 	wizardSay("  sample1.in   1 2")
 	wizardSay("  sample1.out  3")
@@ -133,7 +133,7 @@ func wizardRun() bool {
 	if _, ok := wizardInput("otk j"); !ok {
 		return false
 	}
-	cmdJudge()
+	cmdJudge(nil)
 
 	wizardSay("恭喜你 AC 了这道题！")
 	wizardSay("回顾一下：init 建项目、refresh 样例入库、j 评测。")

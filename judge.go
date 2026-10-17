@@ -26,7 +26,19 @@ import (
 	"strings"
 )
 
-func cmdJudge() {
+// cmdJudge 编译并评测全部样例。默认只显示各测试点结果；-v 附带报错
+// 信息（RE 的 stderr）与 WA 的期望/实际对比。
+func cmdJudge(args []string) {
+	verbose := false
+	for _, a := range args {
+		switch a {
+		case "-v", "--verbose":
+			verbose = true
+		default:
+			fatal("用法: otk judge [-v]")
+		}
+	}
+
 	p := requireProject()
 	if !fileExists(p.sourcePath()) {
 		fatal("未找到 %s", p.codeName()+".cpp")
@@ -44,7 +56,7 @@ func cmdJudge() {
 
 	index := readIndex(p)
 	if len(index) == 0 {
-		fatal("无样例（放入 .in/.out 后运行 otk refresh）")
+		fatal("无样例（放入 .in 与 .out/.ans 后运行 otk refresh）")
 	}
 
 	fmt.Printf("评测 %s (%.2fs / %.0fMB)\n", p.codeName(), timeLimit, memLimit)
@@ -57,7 +69,7 @@ func cmdJudge() {
 	allAC := true
 	for _, id := range index {
 		inPath := filepath.Join(p.Dir, id+".in")
-		outPath := filepath.Join(p.Dir, id+".out")
+		outPath := filepath.Join(p.Dir, id+expectedExt(p.Dir, id))
 		if !fileExists(inPath) || !fileExists(outPath) {
 			fmt.Printf("  #%-*s %s缺失%s\n", width, id, yellow, reset)
 			allAC = false
@@ -74,8 +86,10 @@ func cmdJudge() {
 		case res.runErr != nil:
 			fmt.Printf("  #%-*s %sRE%s   %s\n", width, id, red, reset, metrics)
 			allAC = false
-			if s := strings.TrimSpace(res.stderr); s != "" {
-				printIndented(firstLines(s, 6), "      ")
+			if verbose {
+				if s := strings.TrimSpace(res.stderr); s != "" {
+					printIndented(firstLines(s, 6), "      ")
+				}
 			}
 		case res.memOK && res.memMB > memLimit:
 			fmt.Printf("  #%-*s %sMLE%s   %s\n", width, id, red, reset, metrics)
@@ -87,7 +101,9 @@ func cmdJudge() {
 				fmt.Printf("  #%-*s %sAC%s    %s\n", width, id, green, reset, metrics)
 			} else {
 				fmt.Printf("  #%-*s %sWA%s    %s\n", width, id, red, reset, metrics)
-				printDiff(stdOut, userOut)
+				if verbose {
+					printDiff(stdOut, userOut)
+				}
 				allAC = false
 			}
 		}

@@ -117,8 +117,7 @@ func main() {
 	case "config":
 		cmdConfig(args[1:])
 	case "judge":
-		requireNoArgs(args[1:], "judge")
-		cmdJudge()
+		cmdJudge(args[1:])
 	case "run":
 		requireNoArgs(args[1:], "run")
 		cmdRun()
@@ -273,7 +272,7 @@ func printUsage(w io.Writer) {
   otk config <项> <值>   修改配置
 
 运行:
-  otk judge | j          编译并评测
+  otk judge | j [-v]     编译并评测（-v 显示报错与 WA 详情）
   otk run | r            编译并运行
   otk debug | d          gdb 调试
   otk edit | e           编辑源码

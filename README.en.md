@@ -25,9 +25,9 @@ A lightweight cross-platform local judge and problem management tool customized 
 ## 🌟 Features
 * **Git-style Command Line**: One-shot commands that exit when done; output is safe to redirect (colors are disabled off-terminal).
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
-* **Samples Are Just Files**: Drop paired `.in`/`.out` files into the project directory and run `otk refresh` to register them.
+* **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
-* **Diff Engine**: On WA, standard output and your output are compared; on RE, stderr is shown.
+* **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
 * **Stress Testing**: gen.cpp generates tests, brute.cpp serves as the reference; counter-examples are saved to `.stress/`.
 * **Scripting**: Non-zero exit code when any test is not AC.
 
@@ -73,7 +73,7 @@ Main commands at a glance (`otk help` for the full list):
 | `otk refresh (rf)` | Sync the sample database (.in/.out pairs) |
 | `otk samples` | List samples |
 | `otk config [key value]` | Show/update config (project: time/memory/version/o2; global: editor) |
-| `otk judge (j)` | Compile and judge all samples |
+| `otk judge (j) [-v]` | Compile and judge all samples; `-v` shows errors and WA details |
 | `otk run (r)` | Compile and run |
 | `otk debug (d)` | Debug with gdb |
 | `otk edit (e)` | Open source file (global editor setting) |

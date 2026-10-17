@@ -54,12 +54,21 @@ func writeIndex(p project, ids []string) {
 type refreshResult struct {
 	added      []string // 新入库的成对文件
 	removed    []string // 文件消失、移出索引的
-	missingOut []string // 有 .in 缺 .out
-	missingIn  []string // 有 .out 缺 .in
+	missingOut []string // 有 .in 缺期望输出
+	missingIn  []string // 有期望输出缺 .in
 }
 
-// syncSamples 扫描项目目录中的 .in/.out 文件对并同步样例索引。
-// 项目目录里放好文件对，refresh 一下即入数据库。
+// expectedExt 返回样例期望输出的后缀：.ans（比赛下发格式，如洛谷样例包）
+// 优先，其次 .out；两者都不存在时按 .out 报缺失。
+func expectedExt(dir, id string) string {
+	if fileExists(filepath.Join(dir, id+".ans")) {
+		return ".ans"
+	}
+	return ".out"
+}
+
+// syncSamples 扫描项目目录中的样例文件对并同步样例索引。输入固定 .in，
+// 期望输出为 .out 或 .ans，任一即可成对。
 func syncSamples(p project, write bool) refreshResult {
 	var res refreshResult
 	files, _ := os.ReadDir(p.Dir)
@@ -74,8 +83,8 @@ func syncSamples(p project, write bool) refreshResult {
 		switch {
 		case strings.HasSuffix(name, ".in"):
 			inSet[strings.TrimSuffix(name, ".in")] = true
-		case strings.HasSuffix(name, ".out"):
-			outSet[strings.TrimSuffix(name, ".out")] = true
+		case strings.HasSuffix(name, ".out"), strings.HasSuffix(name, ".ans"):
+			outSet[strings.TrimSuffix(name, filepath.Ext(name))] = true
 		}
 	}
 
@@ -132,12 +141,13 @@ func syncSamples(p project, write bool) refreshResult {
 	return res
 }
 
-func printPairWarnings(res refreshResult) {
+// printPairWarnings 提示不成对的文件。p 用于分辨孤立的期望输出是 .out 还是 .ans。
+func printPairWarnings(p project, res refreshResult) {
 	for _, id := range res.missingOut {
-		fmt.Printf("! %s.in 缺少 .out\n", id)
+		fmt.Printf("! %s.in 缺少 .out 或 .ans\n", id)
 	}
 	for _, id := range res.missingIn {
-		fmt.Printf("! %s.out 缺少 .in\n", id)
+		fmt.Printf("! %s 缺少 .in\n", id+expectedExt(p.Dir, id))
 	}
 }
 
@@ -151,7 +161,7 @@ func cmdRefresh() {
 	for _, id := range res.removed {
 		fmt.Printf("%s- #%s%s\n", yellow, id, reset)
 	}
-	printPairWarnings(res)
+	printPairWarnings(p, res)
 }
 
 // cmdSamples 列出样例库。
@@ -159,7 +169,7 @@ func cmdSamples() {
 	p := requireProject()
 	index := readIndex(p)
 	if len(index) == 0 {
-		fmt.Println("（无样例，放入 .in/.out 文件后运行 otk refresh）")
+		fmt.Println("（无样例，放入 .in 与 .out/.ans 后运行 otk refresh）")
 		return
 	}
 	width := 3
@@ -169,7 +179,9 @@ func cmdSamples() {
 		}
 	}
 	for _, id := range index {
-		fmt.Printf("#%-*s in %s  out %s\n", width, id, sizeStr(p.Dir, id, ".in"), sizeStr(p.Dir, id, ".out"))
+		exp := expectedExt(p.Dir, id)
+		fmt.Printf("#%-*s in %s  %s %s\n", width, id,
+			sizeStr(p.Dir, id, ".in"), strings.TrimPrefix(exp, "."), sizeStr(p.Dir, id, exp))
 	}
 }
 

@@ -180,7 +180,7 @@ func cmdInit(args []string) {
 		}
 		fmt.Printf("已登记样例: %s\n", strings.Join(ids, " "))
 	}
-	printPairWarnings(res)
+	printPairWarnings(p, res)
 }
 
 // cmdStatus 输出当前项目状态。
