@@ -32,7 +32,7 @@ import (
 )
 
 // otkVersion 用 var 而非 const，便于 release workflow 用 -ldflags "-X" 覆盖。
-var otkVersion = "v2.2.0"
+var otkVersion = "v2.2.1"
 
 var (
 	baseDir string
@@ -90,7 +90,7 @@ func main() {
 	args := os.Args[1:]
 	if len(args) == 0 {
 		printUsage(os.Stderr)
-		os.Exit(1)
+		otkExit(1)
 	}
 
 	switch resolveCmd(args[0]) {
@@ -143,7 +143,7 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, "%sotk: 未知命令 '%s'%s\n", red, args[0], reset)
 		fmt.Fprintln(os.Stderr, "运行 'otk help' 查看帮助。")
-		os.Exit(1)
+		otkExit(1)
 	}
 }
 
@@ -157,7 +157,7 @@ func resolveCmd(name string) string {
 // fatal 打印错误到 stderr 并以状态码 1 退出。
 func fatal(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, red+format+reset+"\n", a...)
-	os.Exit(1)
+	otkExit(1)
 }
 
 func requireNoArgs(args []string, cmd string) {
@@ -170,12 +170,12 @@ func initBaseDir() {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "无法获取用户主目录")
-		os.Exit(1)
+		otkExit(1)
 	}
 	baseDir = filepath.Join(home, ".otkprofile")
 	if err := os.MkdirAll(baseDir, 0755); err != nil {
 		fmt.Fprintf(os.Stderr, "无法创建目录 %s: %v\n", baseDir, err)
-		os.Exit(1)
+		otkExit(1)
 	}
 }
 

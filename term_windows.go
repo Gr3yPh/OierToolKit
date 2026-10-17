@@ -60,6 +60,9 @@ type osVersionInfoEx struct {
 	reserved         byte
 }
 
+// savedOutputCP 是切到 65001 之前的输出代码页，0 表示没有要还原的。
+var savedOutputCP uint32
+
 // enableANSI 让 Windows 控制台（含 conhost）能正确显示 ANSI 颜色与 UTF-8
 // 中文，返回控制台是否支持 ANSI。老式控制台（Win7/8 或关闭了 VT 的宿主）
 // 上返回 false，调用方应整体关闭颜色，避免把转义码显示成乱码。
@@ -71,18 +74,36 @@ func enableANSI() bool {
 		// stdout 是重定向或管道，不碰全局代码页。
 		return false
 	}
-	// conhost 默认不解释 ANSI 转义序列，需要应用显式开启 VT；
-	// 老式控制台（Win10 1607 之前或勾了旧版控制台）开不了，此时没有
-	// 颜色，但代码页照切——UTF-8 输出配 GBK 代码页必然乱码。
+	// conhost 默认不解释 ANSI 转义序列，需要应用显式开启 VT；老式
+	// 控制台（Win10 1607 之前或勾了旧版控制台）开不了，此时没有颜色，
+	// 但代码页照切——UTF-8 输出配 GBK 代码页必然乱码。原值记下来，
+	// 退出时经 otkExit 还原，不替用户长期改动控制台状态。
 	vt, _, _ := procSetConsoleMode.Call(h, uintptr(mode|enableVirtualTerminalProcessing))
 	if cp, _, _ := procGetConsoleOutputCP.Call(); cp != cpUTF8 {
+		if savedOutputCP == 0 {
+			savedOutputCP = uint32(cp)
+		}
 		procSetConsoleOutputCP.Call(cpUTF8)
 	}
 	return vt != 0
 }
 
+// restoreTerm 把切过的输出代码页还原。
+func restoreTerm() {
+	if savedOutputCP != 0 {
+		procSetConsoleOutputCP.Call(uintptr(savedOutputCP))
+		savedOutputCP = 0
+	}
+}
+
+// otkExit 退出进程前还原控制台状态。所有退出路径都走这里。
+func otkExit(code int) {
+	restoreTerm()
+	os.Exit(code)
+}
+
 // termDiag 打印控制台探测细节供 otk doctor 排查显示问题。VT 试开后会
-// 还原；代码页若能成功切到 65001 则保持不变（这本就是 otk 的期望状态）。
+// 还原；代码页试切 65001，退出时同样经 savedOutputCP 还原。
 func termDiag() {
 	var vi osVersionInfoEx
 	vi.size = uint32(unsafe.Sizeof(vi))
@@ -124,6 +145,9 @@ func termDiag() {
 
 	cp0, _, _ := procGetConsoleOutputCP.Call()
 	fmt.Printf("输出代码页: %d\n", cp0)
+	if cp0 != cpUTF8 && savedOutputCP == 0 {
+		savedOutputCP = uint32(cp0)
+	}
 	if r2, _, cpErr := procSetConsoleOutputCP.Call(cpUTF8); r2 == 0 {
 		fmt.Printf("SetConsoleOutputCP(65001) 失败: 错误码 %d (%v)\n", uint32(cpErr.(syscall.Errno)), cpErr)
 	} else {

@@ -28,6 +28,9 @@ import (
 // stdout 为重定向时由调用方的字符设备检查拦下，不会误开颜色。
 func enableANSI() bool { return true }
 
+// otkExit 非 Windows 平台没有要还原的控制台状态。
+func otkExit(code int) { os.Exit(code) }
+
 // termDiag 在非 Windows 平台只打印 TERM 环境变量。
 func termDiag() {
 	fmt.Printf("TERM=%q\n", os.Getenv("TERM"))

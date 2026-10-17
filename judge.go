@@ -47,7 +47,7 @@ func cmdJudge(args []string) {
 
 	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	if !compileProject(p.sourcePath(), p.exePath(), props) {
-		os.Exit(1)
+		otkExit(1)
 	}
 	fmt.Println(green + "ok" + reset)
 
@@ -110,7 +110,7 @@ func cmdJudge(args []string) {
 	}
 
 	if !allAC {
-		os.Exit(1)
+		otkExit(1)
 	}
 }
 
@@ -123,7 +123,7 @@ func cmdRun() {
 
 	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	if !compileProject(p.sourcePath(), p.exePath(), props) {
-		os.Exit(1)
+		otkExit(1)
 	}
 	fmt.Println(green + "ok" + reset)
 
@@ -151,7 +151,7 @@ func cmdDebug() {
 	if err := cmd.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%s启动 gdb 失败: %v%s\n", red, err, reset)
 		fmt.Fprintln(os.Stderr, yellow+"提示: 请确保 gdb 已安装并在 PATH 中"+reset)
-		os.Exit(1)
+		otkExit(1)
 	}
 }
 

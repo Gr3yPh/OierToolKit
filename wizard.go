@@ -64,7 +64,7 @@ func cmdWizard() {
 		fmt.Println()
 		cleanup()
 		fmt.Println("演示现场已清理。")
-		os.Exit(130)
+		otkExit(130)
 	}()
 
 	oldWd, err := os.Getwd()

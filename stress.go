@@ -57,21 +57,21 @@ func cmdStress(args []string) {
 	fmt.Print("编译 gen.cpp ... ")
 	genExe := exePathIn(p.Dir, "gen")
 	if !compileProject(genCpp, genExe, noOpt) {
-		os.Exit(1)
+		otkExit(1)
 	}
 	fmt.Println(green + "ok" + reset)
 
 	fmt.Print("编译 brute.cpp ... ")
 	bruteExe := exePathIn(p.Dir, "brute")
 	if !compileProject(bruteCpp, bruteExe, noOpt) {
-		os.Exit(1)
+		otkExit(1)
 	}
 	fmt.Println(green + "ok" + reset)
 
 	fmt.Printf("编译 %s ... ", p.codeName()+".cpp")
 	projExe := p.exePath()
 	if !compileProject(projCpp, projExe, props) {
-		os.Exit(1)
+		otkExit(1)
 	}
 	fmt.Println(green + "ok" + reset)
 
@@ -91,7 +91,7 @@ func cmdStress(args []string) {
 		case <-sigChan:
 			fmt.Println("\n" + yellow + "对拍被中断" + reset)
 			cleanupStressFiles(genExe, bruteExe, projExe)
-			os.Exit(130)
+			otkExit(130)
 		default:
 		}
 
@@ -126,7 +126,7 @@ func cmdStress(args []string) {
 			fmt.Printf("  已保存测试数据至 %s\n", stressDir)
 			printDiff(expectedOut, userOut)
 			cleanupStressFiles(genExe, bruteExe, projExe)
-			os.Exit(1)
+			otkExit(1)
 		}
 		passed++
 		fmt.Printf("\r  %d/%d", i, count)
@@ -138,7 +138,7 @@ func cmdStress(args []string) {
 		fmt.Printf("%s全部通过 (%d/%d)%s\n", green, count, count, reset)
 	} else {
 		fmt.Printf("%s%d/%d 通过%s\n", yellow, passed, count, reset)
-		os.Exit(1)
+		otkExit(1)
 	}
 }
 

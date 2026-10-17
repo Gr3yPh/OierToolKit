@@ -20,7 +20,7 @@
     switch ($raw) {
         'AMD64' { $arch = 'amd64' }
         'ARM64' { $arch = 'amd64' }   # 暂无 Windows arm64 构建，经 x64 模拟层运行
-        default { throw "otk-install: 不支持的架构 $raw" }
+        default { throw "otk-install: unsupported architecture $raw" }
     }
     $asset = "otk-windows-$arch.exe.zip"
 
@@ -46,7 +46,7 @@
                 break
             } catch {}
         }
-        if (-not $ok) { throw "otk-install: 下载失败 $asset" }
+        if (-not $ok) { throw "otk-install: download failed: $asset" }
 
         Expand-Archive -Path $zip -DestinationPath $tmp -Force
 
@@ -54,7 +54,7 @@
         $src = Join-Path $tmp "otk-windows-$arch.exe"
         if (-not (Test-Path $src)) {
             $found = Get-ChildItem -Path $tmp -Filter '*.exe' | Select-Object -First 1
-            if (-not $found) { throw 'otk-install: 归档里没找到 otk.exe' }
+            if (-not $found) { throw 'otk-install: otk.exe not found in archive' }
             $src = $found.FullName
         }
 
@@ -65,7 +65,7 @@
 
         # --- 确保安装目录在用户 PATH 里（保留注册表值类型） ---
         $reg = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
-        if ($null -eq $reg) { throw 'otk-install: 无法写入用户环境变量' }
+        if ($null -eq $reg) { throw 'otk-install: cannot open user environment (HKCU\Environment)' }
         try {
             $old = [string]$reg.GetValue('Path', '')
             $kind = $reg.GetValueKind('Path')
@@ -87,11 +87,11 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
                 $r = [UIntPtr]::Zero
                 [void][Otk.Env]::SendMessageTimeout([IntPtr]0xffff, 0x1a, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r)
             } catch {}
-            Write-Host "已把 $installDir 加入用户 PATH"
+            Write-Host "added $installDir to user PATH (new terminals pick it up)"
         }
         $reg.Close()
 
-        Write-Host "已安装 → $(Join-Path $installDir 'otk.exe')"
+        Write-Host "installed: $(Join-Path $installDir 'otk.exe')"
         & (Join-Path $installDir 'otk.exe') version
     } finally {
         Remove-Item -Path $tmp -Recurse -Force -ErrorAction SilentlyContinue
