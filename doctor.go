@@ -55,7 +55,7 @@ func cmdDoctor(args []string) {
 	termDiag()
 
 	fmt.Printf("ansiOK=%v wizardInteractive=%v\n", ansiOK, wizardInteractive())
-	if !ansiOK {
+	if !ansiOK && runtime.GOOS == "windows" {
 		fmt.Println("（颜色关闭时中文仍乱码说明问题不在 ANSI，见上面代码页）")
 	}
 }

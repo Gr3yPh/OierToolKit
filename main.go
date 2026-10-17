@@ -31,7 +31,8 @@ import (
 	"runtime"
 )
 
-const otkVersion = "v2.1.1"
+// otkVersion 用 var 而非 const，便于 release workflow 用 -ldflags "-X" 覆盖。
+var otkVersion = "v2.1.1"
 
 var (
 	baseDir string
@@ -182,6 +183,11 @@ func initBaseDir() {
 func initColors() {
 	fi, err := os.Stdout.Stat()
 	if err != nil || fi.Mode()&os.ModeCharDevice == 0 {
+		return
+	}
+	ansiOK = enableANSI()
+	if !ansiOK {
+		// 老式控制台开不了 VT：不打颜色码，宁可没颜色也不要乱码。
 		return
 	}
 	reset = "\u001B[0m"
