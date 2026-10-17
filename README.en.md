@@ -32,9 +32,20 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **Scripting**: Non-zero exit code when any test is not AC.
 
 ## 🚀 Installation
-1. Clone this project and make sure `g++` is installed (no other external dependencies).
-2. Run `go build -o otk` and put the binary into your PATH
-3. Alternatively, download precompiled binaries from the release page
+
+One command, auto-detecting platform and architecture:
+
+```bash
+# Linux / macOS
+curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
+```
+
+```powershell
+# Windows (PowerShell)
+iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex
+```
+
+Or install manually: download a precompiled binary from the release page and put it into your PATH, or clone this project and run `go build -o otk`. Judging needs `g++`; no other external dependencies.
 
 ## 📖 Quick Start
 

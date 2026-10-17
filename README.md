@@ -34,9 +34,20 @@
 
 
 ## 🚀 安装
-1. clone 本项目，装好 `g++`（除此之外零外部依赖）。
-2. `go build -o otk`，二进制放进 PATH 即可。
-3. 也可以从 release 页面下载预编译版。
+
+一条命令安装（自动匹配平台与架构）：
+
+```bash
+# Linux / macOS
+curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
+```
+
+```powershell
+# Windows（PowerShell）
+iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex
+```
+
+手动安装也可以：从 release 页面下载预编译版放进 PATH；或 clone 本项目 `go build -o otk`。评测需要 `g++`，除此之外零外部依赖。
 
 
 ## 📖 快速上手
