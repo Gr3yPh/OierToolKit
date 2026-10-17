@@ -62,8 +62,20 @@ type remoteSubmissionID struct {
 }
 
 type remoteVerdict struct {
-	ID       string `json:"id"`
+	ID       string            `json:"id"`
+	Verdict  string            `json:"verdict"`
+	Score    int               `json:"score"`
+	MaxScore int               `json:"max_score"`
+	TimeMS   int64             `json:"time_ms"`
+	MemoryKB int64             `json:"memory_kb"`
+	Detail   string            `json:"detail"`
+	Points   []remoteTestPoint `json:"test_points"`
+}
+
+type remoteTestPoint struct {
+	Index    int    `json:"index"`
 	Verdict  string `json:"verdict"`
+	Score    int    `json:"score"`
 	TimeMS   int64  `json:"time_ms"`
 	MemoryKB int64  `json:"memory_kb"`
 	Detail   string `json:"detail"`
@@ -246,15 +258,20 @@ func cmdSubmit(args []string) {
 			}
 			continue
 		}
+		// 总体 verdict（AC 绿字其余红字）：计分 OJ 附总分，随后逐测试点明细。
 		color := red
 		if verd == "AC" {
 			color = green
 		}
 		fmt.Printf("%s%s%s", color, verd, reset)
+		if v.MaxScore > 0 || v.Score > 0 {
+			fmt.Printf("  %d/%d分", v.Score, v.MaxScore)
+		}
 		if v.TimeMS > 0 || v.MemoryKB > 0 {
 			fmt.Printf("  %dms %dKB", v.TimeMS, v.MemoryKB)
 		}
 		fmt.Println()
+		printRemotePoints(v.Points, v.MaxScore > 0)
 		if s := strings.TrimSpace(v.Detail); s != "" {
 			printIndented(firstLines(s, 12), "  ")
 		}
@@ -262,5 +279,30 @@ func cmdSubmit(args []string) {
 			otkExit(1)
 		}
 		return
+	}
+}
+
+// printRemotePoints 逐行打印测试点明细，行首 #i 风格与本地 judge 一致。
+func printRemotePoints(points []remoteTestPoint, scored bool) {
+	width := 1
+	for _, t := range points {
+		if n := len(strconv.Itoa(t.Index)); n > width {
+			width = n
+		}
+	}
+	for _, t := range points {
+		verd := strings.ToUpper(strings.TrimSpace(t.Verdict))
+		color := red
+		if verd == "AC" {
+			color = green
+		}
+		fmt.Printf("  #%-*s %s%-4s%s %dms %dKB", width, strconv.Itoa(t.Index), color, verd, reset, t.TimeMS, t.MemoryKB)
+		if scored {
+			fmt.Printf("  %d分", t.Score)
+		}
+		fmt.Println()
+		if s := strings.TrimSpace(t.Detail); s != "" {
+			printIndented(firstLines(s, 6), "    ")
+		}
 	}
 }

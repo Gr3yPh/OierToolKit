@@ -74,17 +74,58 @@ Content-Type: application/json
 GET {base}/api/v1/submissions/{id}
 ```
 
-响应示例：
+响应示例（带测试点明细）：
 
 ```json
 {
   "id": "42",
-  "verdict": "AC",
-  "time_ms": 12,
+  "verdict": "WA",
+  "score": 60,
+  "max_score": 100,
+  "time_ms": 112,
   "memory_kb": 1024,
-  "detail": ""
+  "detail": "",
+  "test_points": [
+    { "index": 1, "verdict": "AC", "score": 30, "time_ms": 12, "memory_kb": 980, "detail": "" },
+    { "index": 2, "verdict": "AC", "score": 30, "time_ms": 11, "memory_kb": 960, "detail": "" },
+    { "index": 3, "verdict": "WA", "score": 0,  "time_ms": 8,  "memory_kb": 900,
+      "detail": "第 3 组数据:\n  期望 8\n  实际 7" }
+  ]
 }
 ```
+
+### 汇总字段
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| id | string | 提交号 |
+| verdict | string | 总体 verdict（取值见下）；Pending / Judging 时其余字段可省略 |
+| score | int | 本题得分；非计分 OJ 省略或填 0 |
+| max_score | int | 本题满分；大于 0 时客户端按计分模式展示（如 `WA 60/100`） |
+| time_ms | int | 建议填所有测试点耗时的最大值 |
+| memory_kb | int | 建议填峰值内存 |
+| detail | string | 总体补充信息；CE 时放编译器输出 |
+| test_points | array | 测试点明细，按 index 升序；未出完时可只含已完成的点 |
+
+### 测试点字段
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| index | int | 测试点序号，从 1 起 |
+| verdict | string | 该点 verdict；该点未出结果时也可为 Pending / Judging |
+| score | int | 该点得分 |
+| time_ms | int | 该点运行时间 |
+| memory_kb | int | 该点峰值内存 |
+| detail | string | 该点补充信息（WA 对比、RE 信息等），客户端会缩进展示 |
+
+### 汇总规则
+
+- 总体 verdict 由服务端汇总：任一测试点非 AC 则总体非 AC；测试点未出齐时
+  总体为 Pending / Judging，客户端继续轮询
+- 各 verdict 数量（如 `AC 8/10`）由客户端从 `test_points` 推导，协议不重复
+  提供
+- `test_points` 整体省略时（如 CE 发生在编译阶段、或 OJ 不提供明细），
+  行为与旧版协议一致：只展示总体 verdict、分数与 detail
 
 verdict 取值（大小写不敏感，客户端按大写比较）：
 
@@ -99,11 +140,8 @@ verdict 取值（大小写不敏感，客户端按大写比较）：
 | CE | 编译错误（detail 放编译器输出） |
 | SE | 服务端内部错误 |
 
-- `time_ms` / `memory_kb`：终态时建议给出
-- `detail`：人类可读的补充信息（WA 对比、CE 输出等），客户端会缩进展示
-  前若干行
-
-客户端默认每 2 秒轮询、120 秒超时；`otk submit -q` 只提交不轮询。
+客户端默认每 2 秒轮询到总体终态，随后展示逐测试点明细与总分；
+`otk submit -q` 只提交不轮询。
 
 ## 服务端注意事项
 
