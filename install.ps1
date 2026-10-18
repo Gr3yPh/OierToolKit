@@ -22,7 +22,7 @@
         'ARM64' { $arch = 'amd64' }   # 暂无 Windows arm64 构建，经 x64 模拟层运行
         default { throw "otk-install: unsupported architecture $raw" }
     }
-    $asset = "otk-windows-$arch.exe.zip"
+    $asset = "otk-windows-$arch.zip"
 
     # --- 下载（镜像优先，失败自动回退 GitHub） ---
     switch ($env:OTK_SOURCE) {
@@ -50,10 +50,9 @@
 
         Expand-Archive -Path $zip -DestinationPath $tmp -Force
 
-        # 归档内是 otk-windows-<arch>.exe，安装为 otk.exe。
-        # 兜底查找时要排除 otk-gui.exe：那份是 windows 子系统的图形版，
-        # 拿它充当命令行程式会看不到任何输出。
-        $src = Join-Path $tmp "otk-windows-$arch.exe"
+        # 归档内是 otk.exe（命令行版）；兜底查找时要排除 otk-gui.exe：
+        # 那份是 windows 子系统的图形版，拿它充当命令行程式会看不到任何输出。
+        $src = Join-Path $tmp 'otk.exe'
         if (-not (Test-Path $src)) {
             $found = Get-ChildItem -Path $tmp -Filter '*.exe' |
                 Where-Object { $_.Name -ne 'otk-gui.exe' } |

@@ -32,33 +32,22 @@ jobs:
           # GUI（Fyne）需要 cgo，不能交叉编译，每个平台用原生 runner
           - os: linux
             arch: amd64
-            ext: ''
-            target: otk-linux-amd64
             runner: ubuntu-latest
           - os: linux
             arch: arm64
-            ext: ''
-            target: otk-linux-arm64
             runner: ubuntu-24.04-arm
           - os: windows
             arch: amd64
-            ext: .exe
-            target: otk-windows-amd64.exe
             runner: windows-latest
           # macos-13（Intel runner）已退役，amd64 版改在 Apple Silicon 上
           # 用 clang -arch x86_64 交叉编译（SDK 自带 x86_64 切片）
           - os: darwin
             arch: amd64
-            ext: ''
-            target: otk-darwin-amd64
             runner: macos-latest
             cc: 'clang -arch x86_64'
           - os: darwin
             arch: arm64
-            ext: ''
-            target: otk-darwin-arm64
             runner: macos-latest
-            cc: ''
 
     steps:
       - name: Checkout code
@@ -95,8 +84,8 @@ jobs:
           # darwin/amd64 在 arm64 runner 上交叉编译；空值时 go 用默认编译器
           CC: ${{ matrix.cc }}
         run: |
-          go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o ${{ matrix.target }} .
-          cp ${{ matrix.target }} otk-gui
+          go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o otk .
+          cp otk otk-gui
 
       # Windows 要编两份，因为子系统是构建期决定的：
       #   - 命令行版必须是 console 子系统，否则双击后敲不了命令、输出也没处去；
@@ -113,35 +102,36 @@ jobs:
         run: |
           VER='${{ github.ref_name }}'
           go build -ldflags="-s -w -H windowsgui -X main.otkVersion=${VER}" -o otk-gui.exe .
-          go build -ldflags="-s -w -X main.otkVersion=${VER}" -o ${{ matrix.target }} .
+          go build -ldflags="-s -w -X main.otkVersion=${VER}" -o otk.exe .
 
+      # 压缩包名不带 exe 双后缀（otk-windows-amd64.zip / otk-linux-amd64.tar.gz），
+      # 包内统一只有 otk(.exe) 与 otk-gui(.exe) 两个文件。
       - name: Package (Linux/macOS)
         if: matrix.os != 'windows'
         run: |
-          chmod +x ${{ matrix.target }} otk-gui
-          # 压缩包里只有 otk 与 otk-gui 两个文件，与 Windows 的 zip 保持一致
-          tar -czf ${{ matrix.target }}.tar.gz ${{ matrix.target }} otk-gui
+          chmod +x otk otk-gui
+          tar -czf ${{ matrix.os }}-${{ matrix.arch }}.tar.gz otk otk-gui
 
       - name: Package (Windows)
         if: matrix.os == 'windows'
         shell: pwsh
         run: |
           # windows runner 没有 zip 命令，用 PowerShell 自带的 Compress-Archive
-          Compress-Archive -Path '${{ matrix.target }}','otk-gui.exe' -DestinationPath '${{ matrix.target }}.zip' -Force
+          Compress-Archive -Path 'otk.exe','otk-gui.exe' -DestinationPath '${{ matrix.os }}-${{ matrix.arch }}.zip' -Force
 
       - name: Upload artifact (non-Windows)
         if: matrix.os != 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}.tar.gz
-          path: ${{ matrix.target }}.tar.gz
+          name: ${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          path: ${{ matrix.os }}-${{ matrix.arch }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}.zip
-          path: ${{ matrix.target }}.zip
+          name: ${{ matrix.os }}-${{ matrix.arch }}.zip
+          path: ${{ matrix.os }}-${{ matrix.arch }}.zip
 
   release:
     name: Create Release
@@ -200,6 +190,8 @@ jobs:
       always() &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && needs.release.result == 'success'))
+    # fork 上没有镜像站的 secrets，同步失败不算发布失败
+    continue-on-error: true
     runs-on: ubuntu-latest
     env:
       REPO: ${{ github.repository }}

@@ -60,8 +60,8 @@ done
 
 # --- 解包 ---
 tar -xzf "$tmp/$asset" -C "$tmp"
-src="$tmp/otk-$platform-$arch"
-[ -f "$src" ] || die "归档里没找到 otk-$platform-$arch"
+src="$tmp/otk"
+[ -f "$src" ] || die "归档里没找到 otk"
 chmod +x "$src"
 
 # --- 安装 ---
@@ -89,9 +89,12 @@ fi
 
 echo "已安装 $("$install_dir/otk" version) → $install_dir/otk"
 
-# --- GUI 入口：同一份二进制复制成 otk-gui，启动时按文件名进图形界面 ---
+# --- GUI 入口：发行包里的 otk-gui 是单独编出的图形版入口（按文件名进 GUI）；
+# 老包没有它时退回复制一份主程序，功能等价，只是要用 otk gui 命令打开。
 # 有的系统 /usr/local/bin 需要 sudo 才能写，这里失败不算安装失败。
-if cp "$src" "$install_dir/otk-gui" 2>/dev/null || sudo cp "$src" "$install_dir/otk-gui" 2>/dev/null; then
+gui_src="$tmp/otk-gui"
+[ -f "$gui_src" ] || gui_src="$src"
+if cp "$gui_src" "$install_dir/otk-gui" 2>/dev/null || sudo cp "$gui_src" "$install_dir/otk-gui" 2>/dev/null; then
     chmod +x "$install_dir/otk-gui" 2>/dev/null || sudo chmod +x "$install_dir/otk-gui" 2>/dev/null
     echo "图形界面入口: $install_dir/otk-gui（也可以在设置里创建桌面快捷方式）"
 else
