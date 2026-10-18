@@ -118,8 +118,9 @@ jobs:
       - name: Package (Linux/macOS)
         if: matrix.os != 'windows'
         run: |
-          chmod +x ${{ matrix.target }}
-          tar -czf ${{ matrix.target }}.tar.gz ${{ matrix.target }}
+          chmod +x ${{ matrix.target }} otk-gui
+          # 压缩包里只有 otk 与 otk-gui 两个文件，与 Windows 的 zip 保持一致
+          tar -czf ${{ matrix.target }}.tar.gz ${{ matrix.target }} otk-gui
 
       - name: Package (Windows)
         if: matrix.os == 'windows'
