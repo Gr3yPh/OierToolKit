@@ -110,28 +110,28 @@ jobs:
         if: matrix.os != 'windows'
         run: |
           chmod +x otk otk-gui
-          tar -czf ${{ matrix.os }}-${{ matrix.arch }}.tar.gz otk otk-gui
+          tar -czf otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz otk otk-gui
 
       - name: Package (Windows)
         if: matrix.os == 'windows'
         shell: pwsh
         run: |
           # windows runner 没有 zip 命令，用 PowerShell 自带的 Compress-Archive
-          Compress-Archive -Path 'otk.exe','otk-gui.exe' -DestinationPath '${{ matrix.os }}-${{ matrix.arch }}.zip' -Force
+          Compress-Archive -Path 'otk.exe','otk-gui.exe' -DestinationPath 'otk-${{ matrix.os }}-${{ matrix.arch }}.zip' -Force
 
       - name: Upload artifact (non-Windows)
         if: matrix.os != 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}.tar.gz
-          path: ${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          name: otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          path: otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}-${{ matrix.arch }}.zip
-          path: ${{ matrix.os }}-${{ matrix.arch }}.zip
+          name: otk-${{ matrix.os }}-${{ matrix.arch }}.zip
+          path: otk-${{ matrix.os }}-${{ matrix.arch }}.zip
 
   release:
     name: Create Release
