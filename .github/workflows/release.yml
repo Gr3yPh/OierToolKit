@@ -123,8 +123,10 @@ jobs:
 
       - name: Package (Windows)
         if: matrix.os == 'windows'
+        shell: pwsh
         run: |
-          zip ${{ matrix.target }}.zip ${{ matrix.target }} otk-gui.exe
+          # windows runner 没有 zip 命令，用 PowerShell 自带的 Compress-Archive
+          Compress-Archive -Path '${{ matrix.target }}','otk-gui.exe' -DestinationPath '${{ matrix.target }}.zip' -Force
 
       - name: Upload artifact (non-Windows)
         if: matrix.os != 'windows'
