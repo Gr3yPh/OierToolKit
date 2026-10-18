@@ -45,16 +45,20 @@ jobs:
             ext: .exe
             target: otk-windows-amd64.exe
             runner: windows-latest
+          # macos-13（Intel runner）已退役，amd64 版改在 Apple Silicon 上
+          # 用 clang -arch x86_64 交叉编译（SDK 自带 x86_64 切片）
           - os: darwin
             arch: amd64
             ext: ''
             target: otk-darwin-amd64
-            runner: macos-13
+            runner: macos-latest
+            cc: 'clang -arch x86_64'
           - os: darwin
             arch: arm64
             ext: ''
             target: otk-darwin-arm64
             runner: macos-latest
+            cc: ''
 
     steps:
       - name: Checkout code
@@ -88,6 +92,8 @@ jobs:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
           CGO_ENABLED: '1'
+          # darwin/amd64 在 arm64 runner 上交叉编译；空值时 go 用默认编译器
+          CC: ${{ matrix.cc }}
         run: |
           go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o ${{ matrix.target }} .
           cp ${{ matrix.target }} otk-gui
