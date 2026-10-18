@@ -147,6 +147,9 @@ jobs:
     if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    # 新仓库的 GITHUB_TOKEN 默认只读，创建 Release 与传附件需要 contents:write
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
