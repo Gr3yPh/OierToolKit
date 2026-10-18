@@ -26,6 +26,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -134,28 +135,40 @@ func remoteCall(method, rawURL, token string, body, out any) {
 	}
 }
 
-// cmdFetch 从支持 otk-remote 协议的 OJ 拉取题目：时限内存进项目配置，
-// 样例落盘入库，并记下远端地址与题号供 submit 使用。
-func cmdFetch(args []string) {
+// cmdClone 像 git clone 一样把题目克隆到 <域名首段>-<题号> 目录：新建目录、
+// 初始化项目、样例落盘入库，并记下远端地址与题号供 submit 使用。
+func cmdClone(args []string) {
 	var base, id string
 	switch len(args) {
 	case 1:
 		id = args[0]
 		base = propsOr(readIni(globalConfigPath()), "remote", "")
 		if base == "" {
-			fatal("未配置远程地址：otk config remote <地址>，或直接 otk fetch <地址> <题号>")
+			fatal("未配置远程地址：otk config remote <地址>，或直接 otk clone <地址> <题号>")
 		}
 	case 2:
 		base, id = args[0], args[1]
 	default:
-		fatal("用法: otk fetch [<地址>] <题号>")
+		fatal("用法: otk clone [<地址>] <题号>")
 	}
 	base = strings.TrimRight(base, "/")
+	dirName := cloneDirName(base, id)
 
+	if _, err := os.Stat(dirName); err == nil {
+		fatal("目录 %s 已存在", dirName)
+	}
+
+	// 网络拿到题目后才建目录，请求失败不留残骸。
 	var prob remoteProblem
 	remoteCall("GET", base+remoteAPIPrefix+"/problems/"+url.PathEscape(id), remoteToken(), nil, &prob)
 	if prob.ID == "" {
 		prob.ID = id
+	}
+	if err := os.Mkdir(dirName, 0755); err != nil {
+		fatal("创建目录失败: %v", err)
+	}
+	if err := os.Chdir(dirName); err != nil {
+		fatal("进入目录失败: %v", err)
 	}
 
 	fmt.Printf("题目 %s", prob.ID)
@@ -174,11 +187,8 @@ func cmdFetch(args []string) {
 		fmt.Println(strings.Join(parts, "  "))
 	}
 
-	p, ok := findProject()
-	if !ok {
-		cmdInit([]string{prob.ID})
-		p = requireProject()
-	}
+	cmdInit([]string{dirName})
+	p := requireProject()
 	props := p.cfg()
 	if prob.TimeLimitMS > 0 {
 		props["time_limit"] = strconv.FormatFloat(float64(prob.TimeLimitMS)/1000, 'f', 2, 64)
@@ -196,6 +206,20 @@ func cmdFetch(args []string) {
 	}
 	fmt.Printf("样例 %d 组，远端 %s\n", len(prob.Samples), base)
 	cmdRefresh()
+}
+
+// cloneNameRe 收拢克隆目录名里不安全的字符（路径分隔符、Windows 保留字符等）。
+var cloneNameRe = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
+
+// cloneDirName 从题目地址取域名首段，与题号拼成克隆目录名（xxxoj.ac + 123 →
+// xxxoj-123）。地址不含协议头时直接报错，避免后续请求构造失败得莫名其妙。
+func cloneDirName(base, id string) string {
+	u, err := url.Parse(base)
+	if err != nil || u.Hostname() == "" {
+		fatal("地址无效（需含协议头，如 https://xxxoj.ac）: %s", base)
+	}
+	seg := strings.Split(u.Hostname(), ".")[0]
+	return cloneNameRe.ReplaceAllString(seg+"-"+id, "-")
 }
 
 // cmdSubmit 把当前项目源码提交到远端评测。默认每 2 秒轮询到终态
@@ -218,7 +242,7 @@ func cmdSubmit(args []string) {
 	props := p.cfg()
 	base := strings.TrimRight(props["remote_base"], "/")
 	if base == "" {
-		fatal("该项目未配置远端（otk fetch 建的项目会自动配置；也可 otk config remote_base <地址> 与 otk config remote_id <题号>）")
+		fatal("该项目未配置远端（otk clone 建的项目会自动配置；也可 otk config remote_base <地址> 与 otk config remote_id <题号>）")
 	}
 	probID := props["remote_id"]
 	if probID == "" {

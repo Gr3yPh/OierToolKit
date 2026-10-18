@@ -61,8 +61,7 @@ var cmdAlias = map[string]string{
 	"cd":      "cd",
 	"refresh": "refresh",
 	"rf":      "refresh",
-	"fetch":   "fetch",
-	"f":       "fetch",
+	"clone":   "clone",
 	"submit":  "submit",
 	"sub":     "submit",
 	"samples": "samples",
@@ -118,8 +117,8 @@ func main() {
 	case "samples":
 		requireNoArgs(args[1:], "samples")
 		cmdSamples()
-	case "fetch":
-		cmdFetch(args[1:])
+	case "clone":
+		cmdClone(args[1:])
 	case "submit":
 		cmdSubmit(args[1:])
 	case "config":
@@ -287,7 +286,7 @@ func printUsage(w io.Writer) {
   otk stress | ss [N]    对拍
 
 远程 OJ:
-  otk fetch [url] <id>   拉取题目与样例入库（协议见 PROTOCOL.md）
+  otk clone [url] <id>   克隆题目到 <oj>-<题号> 目录并初始化（协议见 PROTOCOL.md）
   otk submit | sub [-q]  提交源码评测并等待结果（-q 只提交）
 
 杂项:
