@@ -25,6 +25,8 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ${{ matrix.runner }}
     strategy:
+      # 一个平台失败不要取消其余平台，日志能一次看全
+      fail-fast: false
       matrix:
         include:
           # GUI（Fyne）需要 cgo，不能交叉编译，每个平台用原生 runner
@@ -69,7 +71,9 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y gcc libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev libxkbcommon-dev xorg-dev
+          # Fyne 的 glfw 在 Linux 上同时编 X11 与 Wayland 两个后端，
+          # 缺 libwayland-dev 会报 wayland-client-core.h: No such file or directory。
+          sudo apt-get install -y gcc libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev libxkbcommon-dev xorg-dev libwayland-dev
 
       - name: Generate Windows resources (icon + version info)
         if: runner.os == 'Windows'
