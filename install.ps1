@@ -50,10 +50,14 @@
 
         Expand-Archive -Path $zip -DestinationPath $tmp -Force
 
-        # 归档内是 otk-windows-<arch>.exe，安装为 otk.exe
+        # 归档内是 otk-windows-<arch>.exe，安装为 otk.exe。
+        # 兜底查找时要排除 otk-gui.exe：那份是 windows 子系统的图形版，
+        # 拿它充当命令行程式会看不到任何输出。
         $src = Join-Path $tmp "otk-windows-$arch.exe"
         if (-not (Test-Path $src)) {
-            $found = Get-ChildItem -Path $tmp -Filter '*.exe' | Select-Object -First 1
+            $found = Get-ChildItem -Path $tmp -Filter '*.exe' |
+                Where-Object { $_.Name -ne 'otk-gui.exe' } |
+                Select-Object -First 1
             if (-not $found) { throw 'otk-install: otk.exe not found in archive' }
             $src = $found.FullName
         }
@@ -93,6 +97,19 @@ public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wP
 
         Write-Host "installed: $(Join-Path $installDir 'otk.exe')"
         & (Join-Path $installDir 'otk.exe') version
+
+        # --- GUI 入口 ---
+        # 发行包里的 otk-gui.exe 是单独编的（windows 子系统，双击不会先弹黑框），
+        # 优先用它；老版本只有单个 exe 时才退回复制一份——那种副本与命令行版
+        # 子系统相同，双击会闪一下控制台，但功能不受影响。
+        $guiSrc = Join-Path $tmp 'otk-gui.exe'
+        if (-not (Test-Path $guiSrc)) { $guiSrc = $src }
+        try {
+            Copy-Item -Path $guiSrc -Destination (Join-Path $installDir 'otk-gui.exe') -Force
+            Write-Host "gui: $(Join-Path $installDir 'otk-gui.exe')  (双击即可，或在设置里创建桌面快捷方式)"
+        } catch {
+            Write-Host 'warn: could not create otk-gui.exe; use "otk gui" instead'
+        }
 
         # 当前窗口立即可用。直接在 PowerShell 里跑时改的是用户自己的
         # 会话；经 powershell -c 嵌套执行时子进程改不了父窗口的环境块

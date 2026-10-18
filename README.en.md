@@ -23,13 +23,15 @@ A lightweight cross-platform local judge and problem management tool customized 
 </p>
 
 ## 🌟 Features
-* **Git-style Command Line**: One-shot commands that exit when done; output is safe to redirect (colors are disabled off-terminal).
+* **GUI and CLI in One Binary**: one binary, two entry points — `otk` (CLI) and `otk-gui` (native GUI on Windows / macOS / Linux, full feature parity), so they never get in each other's way. The GUI starts maximized (title bar and window buttons kept; F11 toggles; switchable in Settings). CLI output is safe to redirect (colors are disabled off-terminal).
+* **Desktop Shortcut**: the GUI asks once on first launch whether to create a desktop shortcut, and you can create or remove it from Settings at any time.
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
 * **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
 * **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
 * **Stress Testing**: gen.cpp generates tests, brute.cpp serves as the reference; counter-examples are saved to `.stress/`.
 * **Remote OJ**: `otk clone` clones problems and samples from any OJ implementing the [otk-remote protocol](PROTOCOL.md) into a fresh project directory; `otk submit` submits locally and waits for the verdict.
+* **Mock Contests**: `otk contest` imports a whole contest folder (multi-problem, multi-contestant), judges in parallel with subtask scoring (`all` / `any` / `sum`), and exports a standalone HTML leaderboard.
 * **Scripting**: Non-zero exit code when any test is not AC.
 
 ## 🚀 Installation
@@ -46,7 +48,9 @@ curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
 powershell -NoProfile -c "iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex"
 ```
 
-Or install manually: download a precompiled binary from the release page and put it into your PATH, or clone this project and run `go build -o otk`. Judging needs `g++`; no other external dependencies.
+Or install manually: download a precompiled binary from the release page and put it into your PATH, or clone this project and run `go build -o otk`. Judging needs `g++`; the GUI is built on Fyne, so building the GUI from source requires cgo and platform graphics dev packages (on Linux: `libgl1-mesa-dev xorg-dev libxkbcommon-dev`, etc.). Precompiled binaries work out of the box.
+
+On Windows the two entry points must be built separately: `scripts/build-windows.sh` produces `otk.exe` as a console-subsystem binary (so it can print to a terminal) and `otk-gui.exe` as a windows-subsystem binary (so double-clicking it does not flash a console window). The subsystem is fixed at link time, which is why the release archive ships two executables. Both get their icon and version info from `resource_windows_amd64.syso`, so they look identical in Explorer.
 
 ## 📖 Quick Start
 
@@ -86,13 +90,55 @@ Main commands at a glance (`otk help` for the full list):
 | `otk samples` | List samples |
 | `otk config [key value]` | Show/update config (project: time/memory/version/o2; global: editor) |
 | `otk judge (j) [-v]` | Compile and judge all samples; `-v` shows errors and WA details |
-| `otk clone [url] <id>` | Clone a problem and samples into a new `<oj>-<id>` project dir (see PROTOCOL.md) |
+| `otk clone [url] <id>` | Add a problem from a website: clones it and samples into a new `<oj>-<id>` project dir (see PROTOCOL.md) |
 | `otk submit (sub) [-q]` | Submit the source to remote judging and wait; `-q` submits only |
 | `otk run (r)` | Compile and run |
 | `otk debug (d)` | Debug with gdb |
 | `otk edit (e)` | Open source file (global editor setting) |
 | `otk stress (ss) [N]` | Stress-test for N rounds (default 100) |
 | `otk wizard` | Guided tour for first-time users |
+| `otk gui` | Open the graphical interface (projects, samples, judging, stress testing, submit in one place); installers also create an `otk-gui` entry |
+| `otk contest add/judge/rank/rm` | Mock contests: import, parallel judging, leaderboard and HTML export |
+
+## 🏆 Mock Contests
+
+`otk contest` judges a whole contest at once: multiple problems, multiple contestants, subtask-based scoring, and a final leaderboard.
+
+**Upload directory layout** (test data and contestant sources, import the whole folder):
+
+```
+some-contest/
+├── data/
+│   ├── aplusb/
+│   │   ├── 1.in  1.ans      # test case: .in + .ans (.out also accepted)
+│   │   └── 2.in  2.ans
+│   └── maxsub/
+│       └── ...
+└── source/
+    ├── alice/
+    │   ├── aplusb.cpp       # <contestant>/<problem>.cpp
+    │   └── maxsub.cpp
+    └── bob/
+        └── aplusb.cpp
+```
+
+```bash
+otk contest add ~/Downloads/some-contest   # import (folder name becomes contest name; -n to override)
+otk contest judge                          # parallel compile + judge (NumCPU-1, capped at 8)
+otk contest rank                           # leaderboard in the terminal
+otk contest rank -w rank.html              # export a full leaderboard page with per-problem matrix
+otk contest rm <id>                        # delete a contest
+```
+
+**Subtasks** are configured in `contest.json` inside the contest folder, or edited directly in the GUI's "Problems" tab (changes are written back automatically):
+
+| Mode | Meaning |
+|---|---|
+| `all` | Bundled: every test in the subtask must pass to earn its points |
+| `any` | Any: a single passing test earns the full subtask score |
+| `sum` | Proportional: score scales with the fraction of tests passed |
+
+**GUI**: open the interface, then "Contests" in the left sidebar → pick a contest. The workspace has four tabs: Leaderboard (HTML export), Problems (visual editing of problems, subtasks and test scores), Contestants & Submissions (add sources, rename, remove), and Judge Log (live progress plus per-submission details). Progress is a single percentage line, so it never squeezes the sidebar.
 
 ## ✳️ Global Configuration
 Global configuration and the project registry are stored in `~/.otkprofile`. Set the editor command with `otk config editor "emacs -nw %s"`; `%s` is replaced with the current project's source path. The default is `vim %s` (`notepad %s` on Windows).

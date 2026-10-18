@@ -88,3 +88,12 @@ else
 fi
 
 echo "已安装 $("$install_dir/otk" version) → $install_dir/otk"
+
+# --- GUI 入口：同一份二进制复制成 otk-gui，启动时按文件名进图形界面 ---
+# 有的系统 /usr/local/bin 需要 sudo 才能写，这里失败不算安装失败。
+if cp "$src" "$install_dir/otk-gui" 2>/dev/null || sudo cp "$src" "$install_dir/otk-gui" 2>/dev/null; then
+    chmod +x "$install_dir/otk-gui" 2>/dev/null || sudo chmod +x "$install_dir/otk-gui" 2>/dev/null
+    echo "图形界面入口: $install_dir/otk-gui（也可以在设置里创建桌面快捷方式）"
+else
+    echo "提示: 图形界面可用 otk gui 打开；创建 otk-gui 副本失败（权限不足）"
+fi

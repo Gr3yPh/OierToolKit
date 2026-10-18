@@ -23,30 +23,36 @@ jobs:
   build:
     name: Build for ${{ matrix.os }}_${{ matrix.arch }}
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       matrix:
         include:
+          # GUI（Fyne）需要 cgo，不能交叉编译，每个平台用原生 runner
           - os: linux
             arch: amd64
             ext: ''
             target: otk-linux-amd64
+            runner: ubuntu-latest
           - os: linux
             arch: arm64
             ext: ''
             target: otk-linux-arm64
+            runner: ubuntu-24.04-arm
           - os: windows
             arch: amd64
             ext: .exe
             target: otk-windows-amd64.exe
+            runner: windows-latest
           - os: darwin
             arch: amd64
             ext: ''
             target: otk-darwin-amd64
+            runner: macos-13
           - os: darwin
             arch: arm64
             ext: ''
             target: otk-darwin-arm64
+            runner: macos-latest
 
     steps:
       - name: Checkout code
@@ -59,12 +65,45 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Build binary
+      - name: Install GUI dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y gcc libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev libxkbcommon-dev xorg-dev
+
+      - name: Generate Windows resources (icon + version info)
+        if: runner.os == 'Windows'
+        run: |
+          # 从 versioninfo.json 生成 .syso；go build 会自动链接它，
+          # 这样 exe 在资源管理器里才有图标与文件属性。
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest -o resource_windows_amd64.syso versioninfo.json
+
+      - name: Build binary (Linux/macOS)
+        if: matrix.os != 'windows'
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '1'
         run: |
           go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o ${{ matrix.target }} .
+          cp ${{ matrix.target }} otk-gui
+
+      # Windows 要编两份，因为子系统是构建期决定的：
+      #   - 命令行版必须是 console 子系统，否则双击后敲不了命令、输出也没处去；
+      #   - 图形版必须是 windows 子系统，否则双击会先弹一个黑框。
+      # 两份都带上 resource_windows_amd64.syso（图标 + 版本信息）：它的 .rsrc
+      # 段不会覆盖 -H windowsgui，实测 Subsystem 与资源段都正确。
+      - name: Build binaries (Windows)
+        if: matrix.os == 'windows'
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '1'
+        shell: bash
+        run: |
+          VER='${{ github.ref_name }}'
+          go build -ldflags="-s -w -H windowsgui -X main.otkVersion=${VER}" -o otk-gui.exe .
+          go build -ldflags="-s -w -X main.otkVersion=${VER}" -o ${{ matrix.target }} .
 
       - name: Package (Linux/macOS)
         if: matrix.os != 'windows'
@@ -75,7 +114,7 @@ jobs:
       - name: Package (Windows)
         if: matrix.os == 'windows'
         run: |
-          zip ${{ matrix.target }}.zip ${{ matrix.target }}
+          zip ${{ matrix.target }}.zip ${{ matrix.target }} otk-gui.exe
 
       - name: Upload artifact (non-Windows)
         if: matrix.os != 'windows'

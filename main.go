@@ -32,7 +32,7 @@ import (
 )
 
 // otkVersion 用 var 而非 const，便于 release workflow 用 -ldflags "-X" 覆盖。
-var otkVersion = "v2.4.0"
+var otkVersion = "v2.5.0"
 
 var (
 	baseDir string
@@ -77,6 +77,9 @@ var cmdAlias = map[string]string{
 	"e":       "edit",
 	"stress":  "stress",
 	"ss":      "stress",
+	"contest": "contest",
+	"ct":      "contest",
+	"gui":     "gui",
 	"show":    "show",
 	"wizard":  "wizard",
 	"doctor":  "doctor",
@@ -91,6 +94,13 @@ func main() {
 	initColors()
 
 	args := os.Args[1:]
+	// 以 otk-gui 之名启动时直接进图形界面，忽略命令行参数：
+	// 双击快捷键/桌面图标时可能带上文件路径之类的杂项。
+	// 这一份二进制编成了 windows 子系统，系统不会给它分配控制台。
+	if isGuiBinary() {
+		cmdGui()
+		return
+	}
 	if len(args) == 0 {
 		printUsage(os.Stderr)
 		otkExit(1)
@@ -136,6 +146,13 @@ func main() {
 		cmdEdit()
 	case "stress":
 		cmdStress(args[1:])
+	case "contest":
+		cmdContest(args[1:])
+	case "gui":
+		// 显式敲 otk gui：没控制台也不影响使用，界面正常弹出。
+		// 若 stdout 重定向到文件，Fyne 的日志仍会写进去。
+		requireNoArgs(args[1:], "gui")
+		cmdGui()
 	case "show":
 		cmdShow(args[1:])
 	case "wizard":
@@ -286,10 +303,17 @@ func printUsage(w io.Writer) {
   otk stress | ss [N]    对拍
 
 远程 OJ:
-  otk clone [url] <id>   克隆题目到 <oj>-<题号> 目录并初始化（协议见 PROTOCOL.md）
+  otk clone [url] <id>   从网站添加题目到 <oj>-<题号> 目录并初始化（协议见 PROTOCOL.md）
   otk submit | sub [-q]  提交源码评测并等待结果（-q 只提交）
 
+模拟赛:
+  otk contest | ct add <目录> [名称]   导入一整场模拟赛（data/ + source/）
+  otk contest ls                       列出已导入的比赛
+  otk contest judge [名称]             评测整场比赛并生成榜单
+  otk contest rank [名称] [-w 文件]    查看榜单，-w 导出 HTML
+
 杂项:
+  otk gui                打开图形界面（安装脚本也会生成 otk-gui 入口，双击即进 GUI）
   otk wizard             新手向导，完整体验一遍工作流
   otk doctor             诊断终端环境（显示异常时运行并反馈输出）
   otk show w|c           担保 / 许可证

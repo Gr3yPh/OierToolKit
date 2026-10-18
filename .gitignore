@@ -1,5 +1,35 @@
+# ---- 编译产物与临时文件 ----
 *.class
+*.jar
 *.out
 .time.tmp
 tmp_build/
-*.jar
+
+# Windows 资源文件（由 versioninfo.json 经 goversioninfo 生成，见 release.yml）
+*.syso
+
+# ---- 本地编译产物 ----
+/otk
+/otk.exe
+/otk-gui
+/otk-gui.exe
+/OierToolKit
+/OierToolKit.exe
+/dist/
+
+# 快捷方式导出到程序目录的图标（首次创建 .lnk 时从内嵌资源写出）
+/otk.ico
+
+# ---- 测试源码与测试遗留 ----
+*_test.go
+/contests/
+
+# ---- 临时截图 ----
+# 用路径前缀精确匹配：./shot.png 会被忽略，而 assets/ 与仓库自带的
+# logo.png、demo.png 不受影响（以 / 开头的规则只匹配仓库根目录）。
+/shot.png
+/shot.bmp
+/*.bmp
+
+# ---- AI 助手工作目录 ----
+/.workbuddy/

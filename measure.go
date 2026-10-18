@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -30,7 +31,8 @@ type runResult struct {
 	memMB    float64 // 峰值常驻内存（MB），来自操作系统原生接口
 	memOK    bool    // 内存测量是否可用
 	timedOut bool    // 是否因超时被强制终止
-	runErr   error   // 进程退出错误（timedOut 时为被杀死的错误）
+	aborted  bool    // 是否因调用方请求停止而被强制终止
+	runErr   error   // 进程退出错误（timedOut/aborted 时为被杀死的错误）
 	stdout   string
 	stderr   string
 }
@@ -41,6 +43,13 @@ type memProbeFunc func() (float64, bool)
 // runMeasured 在给定时间限制下运行程序，测量墙钟时间与峰值内存。
 // 不依赖任何外部工具：计时用 Go 标准库，内存读取见各平台的 startMemProbe。
 func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResult {
+	return runMeasuredStopped(exePath, inPath, workDir, timeLimitSec, nil)
+}
+
+// runMeasuredStopped 与 runMeasured 相同，但额外接受一个停止信号：
+// 一旦 stopped 返回 true，立即杀死被测进程并返回 aborted=true 的结果。
+// 用于评测中途取消，避免只能等当前测试点跑完才响应。
+func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, stopped func() bool) runResult {
 	cmd := exec.Command(exePath)
 	cmd.Dir = workDir
 	if inPath != "" {
@@ -51,7 +60,7 @@ func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResul
 		defer f.Close()
 		cmd.Stdin = f
 	}
-	var outBuf, errBuf strings.Builder
+	var outBuf, errBuf syncBuffer
 	cmd.Stdout = &outBuf
 	cmd.Stderr = &errBuf
 
@@ -64,15 +73,60 @@ func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResul
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
+	// 停止信号轮询：进程一旦被取消就立刻杀掉，不必等满时限。
+	var cancelWatch chan struct{}
+	var cancelOnce sync.Once
+	watchDone := make(chan struct{})
+	if stopped != nil {
+		cancelWatch = make(chan struct{})
+		go func() {
+			ticker := time.NewTicker(50 * time.Millisecond)
+			defer ticker.Stop()
+			for {
+				select {
+				case <-watchDone:
+					return
+				case <-ticker.C:
+					if stopped() {
+						cancelOnce.Do(func() { close(cancelWatch) })
+						return
+					}
+				}
+			}
+		}()
+	}
+	stopWatch := func() {
+		if cancelWatch != nil {
+			close(watchDone)
+		}
+	}
+	defer stopWatch()
+
 	start := time.Now()
 	var waitErr error
 	timedOut := false
+	aborted := false
+
+	limit := time.Duration(timeLimitSec * float64(time.Second))
+	// 时限与取消信号二选一，谁先到就杀进程。
+	timer := time.NewTimer(limit)
+	defer timer.Stop()
+
+	var cancelCh <-chan struct{}
+	if cancelWatch != nil {
+		cancelCh = cancelWatch
+	}
+
 	select {
 	case waitErr = <-done:
-	case <-time.After(time.Duration(timeLimitSec * float64(time.Second))):
+	case <-timer.C:
 		timedOut = true
 		_ = cmd.Process.Kill()
-		waitErr = <-done // 回收子进程，避免僵尸
+		waitErr = <-done
+	case <-cancelCh:
+		aborted = true
+		_ = cmd.Process.Kill()
+		waitErr = <-done
 	}
 	wallMS := time.Since(start).Milliseconds()
 
@@ -82,8 +136,28 @@ func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResul
 		memMB:    memMB,
 		memOK:    memOK,
 		timedOut: timedOut,
+		aborted:  aborted,
 		runErr:   waitErr,
 		stdout:   outBuf.String(),
 		stderr:   errBuf.String(),
 	}
+}
+
+// syncBuffer 是带锁的字符串缓冲：Wait 返回后可能仍有子进程的
+// 输出协程在写，读之前需要保证不并发。
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf strings.Builder
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
 }
