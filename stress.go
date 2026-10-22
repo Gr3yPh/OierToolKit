@@ -243,6 +243,7 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 func execCmdCapture(exePath, inputStr, workDir string, stopped func() bool) (string, bool, error) {
 	cmd := exec.Command(exePath)
 	cmd.Dir = workDir
+	hideProcWindow(cmd)
 	if inputStr != "" {
 		cmd.Stdin = strings.NewReader(inputStr)
 	}

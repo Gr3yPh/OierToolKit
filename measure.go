@@ -52,6 +52,7 @@ func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResul
 func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, stopped func() bool) runResult {
 	cmd := exec.Command(exePath)
 	cmd.Dir = workDir
+	hideProcWindow(cmd)
 	if inPath != "" {
 		f, err := os.Open(inPath)
 		if err != nil {

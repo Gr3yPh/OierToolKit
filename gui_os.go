@@ -71,6 +71,7 @@ func launchEditor(p project) error {
 
 	cmd := exec.Command(parts[0], parts[1:]...)
 	cmd.Dir = p.Dir
+	hideProcWindow(cmd) // 防止控制台类编辑器闪黑框；GUI 编辑器窗口不受影响
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("打开编辑器 %s 失败: %v（可在设置里改成自己的编辑器）", parts[0], err)
 	}

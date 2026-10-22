@@ -421,6 +421,7 @@ func compileProjectStopped(srcPath, exePath string, props map[string]string, sto
 	args = append(args, srcPath, "-o", exePath, "-g")
 
 	cmd := exec.Command("g++", args...)
+	hideProcWindow(cmd)
 	var buf syncBuffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
@@ -466,6 +467,7 @@ func compileProject(srcPath, exePath string, props map[string]string) bool {
 	args = append(args, srcPath, "-o", exePath, "-g")
 
 	cmd := exec.Command("g++", args...)
+	hideProcWindow(cmd)
 	var errBuf strings.Builder
 	cmd.Stderr = &errBuf
 	if err := cmd.Run(); err != nil {
