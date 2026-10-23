@@ -20,10 +20,20 @@ package main
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 )
+
+// fileIO 描述文件读写式题目的输入输出文件名（相对程序运行目录）。
+// nil 或 In 为空表示标准输入输出。
+type fileIO struct {
+	In  string // 程序读取的输入文件名，如 "apple.in"
+	Out string // 程序写出的答案文件名，如 "apple.out"
+}
+
+func (f *fileIO) enabled() bool { return f != nil && f.In != "" }
 
 // runResult 是一次受测运行的结果。
 type runResult struct {
@@ -43,17 +53,35 @@ type memProbeFunc func() (float64, bool)
 // runMeasured 在给定时间限制下运行程序，测量墙钟时间与峰值内存。
 // 不依赖任何外部工具：计时用 Go 标准库，内存读取见各平台的 startMemProbe。
 func runMeasured(exePath, inPath, workDir string, timeLimitSec float64) runResult {
-	return runMeasuredStopped(exePath, inPath, workDir, timeLimitSec, nil)
+	return runMeasuredStopped(exePath, inPath, workDir, timeLimitSec, nil, nil)
 }
 
 // runMeasuredStopped 与 runMeasured 相同，但额外接受一个停止信号：
 // 一旦 stopped 返回 true，立即杀死被测进程并返回 aborted=true 的结果。
 // 用于评测中途取消，避免只能等当前测试点跑完才响应。
-func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, stopped func() bool) runResult {
+//
+// fio 非 nil 时按文件读写方式运行：把 inPath 复制为运行目录下的 fio.In，
+// 结束后把 fio.Out 的内容作为 stdout 返回（文件不存在视为空输出）。
+// 程序在一个独享的临时目录里运行——并发评测多个测试点时互不踩踏，
+// 也避免在项目目录里留下中间文件。
+func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, stopped func() bool, fio *fileIO) runResult {
+	runDir := workDir
+	if fio.enabled() {
+		tmp, err := os.MkdirTemp(workDir, ".otk-io-")
+		if err != nil {
+			return runResult{runErr: err}
+		}
+		defer os.RemoveAll(tmp)
+		if err := copyFile(inPath, filepath.Join(tmp, fio.In)); err != nil {
+			return runResult{runErr: err}
+		}
+		runDir = tmp
+	}
+
 	cmd := exec.Command(exePath)
-	cmd.Dir = workDir
+	cmd.Dir = runDir
 	hideProcWindow(cmd)
-	if inPath != "" {
+	if inPath != "" && !fio.enabled() {
 		f, err := os.Open(inPath)
 		if err != nil {
 			return runResult{runErr: err}
@@ -132,6 +160,20 @@ func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, s
 	wallMS := time.Since(start).Milliseconds()
 
 	memMB, memOK := probe()
+
+	stdout := outBuf.String()
+	stderr := errBuf.String()
+	if fio.enabled() {
+		// 答案在文件里：读 fio.Out 作为程序输出；没写出来视为空输出，
+		// 会在比较阶段得到 WA（评测语义上这比报错更有用）。
+		data, err := os.ReadFile(filepath.Join(runDir, fio.Out))
+		if err == nil {
+			stdout = string(data)
+		} else if fio.Out != "" {
+			stderr += "\n[otk] 程序未写出 " + fio.Out
+		}
+	}
+
 	return runResult{
 		wallMS:   wallMS,
 		memMB:    memMB,
@@ -139,8 +181,8 @@ func runMeasuredStopped(exePath, inPath, workDir string, timeLimitSec float64, s
 		timedOut: timedOut,
 		aborted:  aborted,
 		runErr:   waitErr,
-		stdout:   outBuf.String(),
-		stderr:   errBuf.String(),
+		stdout:   stdout,
+		stderr:   stderr,
 	}
 }
 

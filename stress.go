@@ -154,6 +154,7 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 	}
 
 	props := p.cfg()
+	projFIO := fileIOFromProps(props, p.codeName()) // 文件读写题：仅项目程序走文件，gen/brute 仍用标准输入输出
 	noOpt := map[string]string{"version": "c++17", "o2": "0"}
 
 	genCpp := filepath.Join(p.Dir, "gen.cpp")
@@ -195,7 +196,7 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 		}
 		emit(stressEvent{Stage: stressRound, Round: i, Total: count})
 
-		inputData, abort, err := execCmdCapture(genExe, "", p.Dir, stopped)
+		inputData, abort, err := execCmdCapture(genExe, "", p.Dir, stopped, nil)
 		if abort {
 			res.Stopped = true
 			return res, nil
@@ -203,7 +204,7 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 		if err != nil {
 			return res, fmt.Errorf("第 %d 轮: gen 运行时错误 (RE)", i)
 		}
-		bruteOut, abort, err := execCmdCapture(bruteExe, inputData, p.Dir, stopped)
+		bruteOut, abort, err := execCmdCapture(bruteExe, inputData, p.Dir, stopped, nil)
 		if abort {
 			res.Stopped = true
 			return res, nil
@@ -213,7 +214,7 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 		}
 		expectedOut := normalizeOutput(bruteOut)
 
-		projOut, abort, err := execCmdCapture(projExe, inputData, p.Dir, stopped)
+		projOut, abort, err := execCmdCapture(projExe, inputData, p.Dir, stopped, projFIO)
 		if abort {
 			res.Stopped = true
 			return res, nil
@@ -239,12 +240,27 @@ func runStress(p project, count int, emit func(stressEvent), stopped func() bool
 }
 
 // execCmdCapture 以 inputStr 为标准输入运行程序，返回其标准输出。
+// fio 非 nil 时改为文件读写方式：inputStr 写入运行目录下的 fio.In，
+// 程序结束后读 fio.Out 作为输出。运行独享临时目录，可安全并发。
 // stopped 返回 true 时立即杀掉进程，并把 abort 置为 true。
-func execCmdCapture(exePath, inputStr, workDir string, stopped func() bool) (string, bool, error) {
+func execCmdCapture(exePath, inputStr, workDir string, stopped func() bool, fio *fileIO) (string, bool, error) {
+	runDir := workDir
+	if fio.enabled() {
+		tmp, err := os.MkdirTemp(workDir, ".otk-io-")
+		if err != nil {
+			return "", false, err
+		}
+		defer os.RemoveAll(tmp)
+		if err := os.WriteFile(filepath.Join(tmp, fio.In), []byte(inputStr), 0644); err != nil {
+			return "", false, err
+		}
+		runDir = tmp
+	}
+
 	cmd := exec.Command(exePath)
-	cmd.Dir = workDir
+	cmd.Dir = runDir
 	hideProcWindow(cmd)
-	if inputStr != "" {
+	if inputStr != "" && !fio.enabled() {
 		cmd.Stdin = strings.NewReader(inputStr)
 	}
 	var outBuf syncBuffer
@@ -256,21 +272,32 @@ func execCmdCapture(exePath, inputStr, workDir string, stopped func() bool) (str
 	done := make(chan error, 1)
 	go func() { done <- cmd.Wait() }()
 
+	read := func() string {
+		if !fio.enabled() {
+			return outBuf.String()
+		}
+		data, err := os.ReadFile(filepath.Join(runDir, fio.Out))
+		if err != nil {
+			return ""
+		}
+		return string(data)
+	}
+
 	if stopped == nil {
 		err := <-done
-		return outBuf.String(), false, err
+		return read(), false, err
 	}
 	ticker := time.NewTicker(50 * time.Millisecond)
 	defer ticker.Stop()
 	for {
 		select {
 		case err := <-done:
-			return outBuf.String(), false, err
+			return read(), false, err
 		case <-ticker.C:
 			if stopped() {
 				_ = cmd.Process.Kill()
 				<-done
-				return outBuf.String(), true, nil
+				return read(), true, nil
 			}
 		}
 	}

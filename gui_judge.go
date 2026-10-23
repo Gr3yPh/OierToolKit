@@ -196,6 +196,7 @@ func (j *judgePage) run() {
 			Threads:   threads,
 			TimeLimit: limit,
 			MemLimit:  memCap,
+			FileIO:    fileIOFromProps(p.cfg(), p.codeName()),
 		}
 		total := len(index)
 

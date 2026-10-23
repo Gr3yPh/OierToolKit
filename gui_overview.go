@@ -44,6 +44,9 @@ type overviewPage struct {
 	langSel *widget.Select
 	o2      *widget.Check
 	threads *widget.Entry
+	ioFile  *widget.Check
+	ioIn    *widget.Entry
+	ioOut   *widget.Entry
 	note    *widget.Label
 
 	loading bool
@@ -74,6 +77,15 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o.threads = widget.NewEntry()
 	o.threads.SetPlaceHolder("0")
 	o.threads.OnChanged = func(string) { o.markDirty() }
+
+	// 文件读写题：勾选后程序从文件读入、向文件写出。
+	o.ioFile = widget.NewCheck("文件读写题（freopen）", func(bool) { o.markDirty() })
+	o.ioIn = widget.NewEntry()
+	o.ioIn.SetPlaceHolder("缺省 " + o.pg.p.codeName() + ".in")
+	o.ioOut = widget.NewEntry()
+	o.ioOut.SetPlaceHolder("缺省 " + o.pg.p.codeName() + ".out")
+	o.ioIn.OnChanged = func(string) { o.markDirty() }
+	o.ioOut.OnChanged = func(string) { o.markDirty() }
 
 	o.note = caption("修改后点“保存配置”生效。")
 	o.note.Alignment = fyne.TextAlignLeading
@@ -113,6 +125,9 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 		widget.NewFormItem("语言标准", o.langSel),
 		widget.NewFormItem("优化", o.o2),
 		widget.NewFormItem("并发线程", o.threads),
+		widget.NewFormItem("输入输出", o.ioFile),
+		widget.NewFormItem("输入文件名", o.ioIn),
+		widget.NewFormItem("输出文件名", o.ioOut),
 	)
 
 	body := container.NewVBox(
@@ -171,6 +186,11 @@ func (o *overviewPage) reload() {
 	o.langSel.SetSelected(version)
 	o.o2.SetChecked(propsOr(props, "o2", "1") == "1")
 	o.threads.SetText(propsOr(props, "threads", "0"))
+	o.ioFile.SetChecked(propsOr(props, "io_mode", "") == "file")
+	o.ioIn.SetText(props["io_in"])
+	o.ioOut.SetText(props["io_out"])
+	o.ioIn.SetPlaceHolder("缺省 " + p.codeName() + ".in")
+	o.ioOut.SetPlaceHolder("缺省 " + p.codeName() + ".out")
 
 	if base := props["remote_base"]; base != "" {
 		o.remote.SetText(fmt.Sprintf("题目 %s @ %s", props["remote_id"], base))
@@ -224,6 +244,22 @@ func (o *overviewPage) save() {
 	if _, err := setProjectConfig(p, "threads", threadText); err != nil {
 		o.pg.g.showError(err)
 		return
+	}
+
+	// 文件读写配置：文件名留空表示用 <源码名>.in/.out 缺省。
+	ioMode := "std"
+	if o.ioFile.Checked {
+		ioMode = "file"
+	}
+	for _, s := range [][2]string{
+		{"io", ioMode},
+		{"io_in", strings.TrimSpace(o.ioIn.Text)},
+		{"io_out", strings.TrimSpace(o.ioOut.Text)},
+	} {
+		if _, err := setProjectConfig(p, s[0], s[1]); err != nil {
+			o.pg.g.showError(err)
+			return
+		}
 	}
 
 	o.reload()

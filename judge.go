@@ -89,6 +89,23 @@ func judgeLimits(props map[string]string) (float64, float64) {
 	return floatProp(props, "time_limit", 1.00), floatProp(props, "memory_limit", 125.0)
 }
 
+// fileIOFromProps 依据项目配置构造文件读写设置；未启用文件模式返回 nil。
+// io_in/io_out 缺省时用源码名：codeName.in / codeName.out。
+func fileIOFromProps(props map[string]string, codeName string) *fileIO {
+	if strings.ToLower(strings.TrimSpace(propsOr(props, "io_mode", ""))) != "file" {
+		return nil
+	}
+	in := strings.TrimSpace(props["io_in"])
+	if in == "" {
+		in = codeName + ".in"
+	}
+	out := strings.TrimSpace(props["io_out"])
+	if out == "" {
+		out = codeName + ".out"
+	}
+	return &fileIO{In: in, Out: out}
+}
+
 // judgeThreads 解析并发测试点数：默认按 CPU 核心数（上限 8），
 // threads=1 时串行。
 func judgeThreads(props map[string]string) int {
@@ -113,6 +130,8 @@ type judgeJob struct {
 	Threads   int
 	TimeLimit float64
 	MemLimit  float64
+	// FileIO 非 nil 时按文件读写题评测；nil 表示标准输入输出。
+	FileIO *fileIO
 	// Stopped 可为 nil；返回 true 时正在运行的测试点会被立即杀掉并丢弃结果。
 	Stopped func() bool
 }
@@ -216,7 +235,7 @@ func evalSamples(job judgeJob, emit func(pointResult), stopped func() bool) judg
 // 是否因调用方请求停止而被中断（此时结果不可用）。
 func runJudgePoint(job judgeJob, task pointJob) (pointResult, bool) {
 	pt := pointResult{ID: task.id}
-	res := runMeasuredStopped(job.ExePath, task.in, job.Dir, job.TimeLimit, job.Stopped)
+	res := runMeasuredStopped(job.ExePath, task.in, job.Dir, job.TimeLimit, job.Stopped, job.FileIO)
 	if res.aborted {
 		return pt, true
 	}
@@ -291,6 +310,7 @@ func cmdJudge(args []string) {
 		Threads:   threads,
 		TimeLimit: timeLimit,
 		MemLimit:  memLimit,
+		FileIO:    fileIOFromProps(props, p.codeName()),
 	}
 	var mu sync.Mutex // 并发回调下保证每行输出完整
 	rep := evalSamples(job, func(pt pointResult) {

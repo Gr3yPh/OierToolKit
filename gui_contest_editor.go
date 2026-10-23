@@ -196,6 +196,25 @@ func (e *contestEditor) showProblem() {
 		}
 	}
 
+	// 文件读写题：程序从文件读入、向文件写出（freopen）。
+	ioChk := widget.NewCheck("文件读写题", nil)
+	ioChk.SetChecked(prob.IOFile)
+	ioChk.OnChanged = func(v bool) {
+		p.updateProblem(e.selected, func(pr *contestProblem) { pr.IOFile = v })
+	}
+	ioIn := widget.NewEntry()
+	ioIn.SetText(prob.IOIn)
+	ioIn.SetPlaceHolder(prob.Name + ".in")
+	ioIn.OnChanged = func(v string) {
+		p.updateProblem(e.selected, func(pr *contestProblem) { pr.IOIn = strings.TrimSpace(v) })
+	}
+	ioOut := widget.NewEntry()
+	ioOut.SetText(prob.IOOut)
+	ioOut.SetPlaceHolder(prob.Name + ".out")
+	ioOut.OnChanged = func(v string) {
+		p.updateProblem(e.selected, func(pr *contestProblem) { pr.IOOut = strings.TrimSpace(v) })
+	}
+
 	e.buildSubtasks(prob)
 	e.buildTests(prob)
 	e.refreshSummary()
@@ -206,6 +225,7 @@ func (e *contestEditor) showProblem() {
 			widget.NewFormItem("显示标题", titleIn),
 			widget.NewFormItem("时限（秒）", timeIn),
 			widget.NewFormItem("内存（MB）", memIn),
+			widget.NewFormItem("输入输出", container.NewVBox(ioChk, ioIn, ioOut)),
 		),
 		e.scoreSum,
 		widget.NewSeparator(),

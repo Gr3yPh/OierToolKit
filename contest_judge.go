@@ -262,6 +262,21 @@ func judgeSubmission(c contest, prob contestProblem, src contestSource, buildDir
 
 	verdicts := map[string]testOutcome{}
 	dataDir := c.problemsDir(prob.Name)
+
+	// 文件读写题：输入复制为 <题目>.in（或自定义名），从输出文件读答案。
+	var fio *fileIO
+	if prob.IOFile {
+		inName := strings.TrimSpace(prob.IOIn)
+		if inName == "" {
+			inName = prob.Name + ".in"
+		}
+		outName := strings.TrimSpace(prob.IOOut)
+		if outName == "" {
+			outName = prob.Name + ".out"
+		}
+		fio = &fileIO{In: inName, Out: outName}
+	}
+
 	for _, t := range prob.Tests {
 		if stopped != nil && stopped() {
 			return out, true
@@ -281,7 +296,7 @@ func judgeSubmission(c contest, prob contestProblem, src contestSource, buildDir
 		if t.TimeMS > 0 {
 			limit = float64(t.TimeMS) / 1000.0
 		}
-		run := runMeasuredStopped(exe, inPath, c.Dir, limit, stopped)
+		run := runMeasuredStopped(exe, inPath, c.Dir, limit, stopped, fio)
 		if run.aborted {
 			return out, true
 		}

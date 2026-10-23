@@ -63,6 +63,11 @@ func showConfig() {
 		propsOr(props, "memory_limit", "125"),
 		propsOr(props, "version", "c++17"),
 		o2)
+	if propsOr(props, "io_mode", "") == "file" {
+		fmt.Printf("io=file in=%s out=%s\n",
+			propsOr(props, "io_in", "（<源码名>.in）"),
+			propsOr(props, "io_out", "（<源码名>.out）"))
+	}
 	if tag := props["tag"]; tag != "" {
 		fmt.Printf("tag=%s\n", tag)
 	}
@@ -174,6 +179,34 @@ func setProjectConfig(p project, item, value string) (string, error) {
 			msg = fmt.Sprintf("threads=%d", n)
 		}
 
+	case "io":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "file":
+			props["io_mode"] = "file"
+			msg = "io=file（文件读写，freopen）"
+		case "std", "stdio", "stdin", "stdout", "":
+			props["io_mode"] = ""
+			msg = "io=stdio（标准输入输出）"
+		default:
+			return "", fmt.Errorf("io 必须是 std/file")
+		}
+
+	case "io_in":
+		props["io_in"] = strings.TrimSpace(value)
+		if props["io_in"] == "" {
+			msg = "io_in=（缺省用 <源码名>.in）"
+		} else {
+			msg = "io_in=" + props["io_in"]
+		}
+
+	case "io_out":
+		props["io_out"] = strings.TrimSpace(value)
+		if props["io_out"] == "" {
+			msg = "io_out=（缺省用 <源码名>.out）"
+		} else {
+			msg = "io_out=" + props["io_out"]
+		}
+
 	case "remote_base":
 		props["remote_base"] = strings.TrimRight(value, "/")
 		msg = fmt.Sprintf("remote_base=%s", props["remote_base"])
@@ -183,7 +216,7 @@ func setProjectConfig(p project, item, value string) (string, error) {
 		msg = fmt.Sprintf("remote_id=%s", value)
 
 	default:
-		return "", fmt.Errorf("未知配置项 '%s'（项目: time/memory/version/o2/threads/remote_base/remote_id；全局: editor/remote/remote_token）", item)
+		return "", fmt.Errorf("未知配置项 '%s'（项目: time/memory/version/o2/threads/io/io_in/io_out/remote_base/remote_id；全局: editor/remote/remote_token）", item)
 	}
 
 	writeIni(p.configPath(), props)
