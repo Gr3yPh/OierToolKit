@@ -24,13 +24,15 @@
 
 
 ## 🌟 特性
-* **git 风格命令行**：一次性命令，执行完即退出；输出可安全重定向（非终端自动关闭颜色）。
+* **图形界面与命令行双形态**：同一份二进制有两个入口 —— `otk`（命令行）与 `otk-gui`（图形界面），互不干扰；启动时默认最大化（保留标题栏与最小化/最大化/关闭按钮，F11 切换，设置里可改为窗口化）。命令行输出可安全重定向（非终端自动关闭颜色）。
+* **桌面快捷方式**：GUI 首次启动会询问是否在桌面创建快捷方式，之后也可以在「设置」里随时创建或删除。
 * **项目库**：项目可以建在任意目录（`otk init`），统一登记到项目库中管理。
 * **样例即文件**：目录里放成对的 `.in` 与 `.out`（比赛下发的 `.ans` 也认），`otk refresh` 一下即入样例库。
 * **跨平台时空测量**：运行时间与峰值内存直接来自操作系统接口，不依赖 GNU time 等外部工具。
 * **Diff 引擎**：`-v` 评测时 WA 对比期望与实际输出，RE 显示 stderr 信息。
 * **对拍**：gen.cpp 造数据、brute.cpp 做标答，反例自动保存到 `.stress/`。
 * **远程 OJ**：`otk clone` 从支持 [otk-remote 协议](PROTOCOL.md)的 OJ 克隆题目到独立目录，`otk submit` 本地提交、等到 verdict。
+* **模拟赛**：`otk contest` 整目录导入比赛（多题多选手），并发评测 + subtask 捆绑给分（`all` / `any` / `sum`），一键导出独立 HTML 榜单。
 * **脚本可用**：存在非 AC 结果时退出码非零。
 
 
@@ -48,7 +50,9 @@ curl -fsSL https://otk.gr3yph4ntom.cn/install.sh | bash
 powershell -NoProfile -c "iwr -UseBasicParsing https://otk.gr3yph4ntom.cn/install.ps1 | iex"
 ```
 
-手动安装也可以：从 release 页面下载预编译版放进 PATH；或 clone 本项目 `go build -o otk`。评测需要 `g++`，除此之外零外部依赖。
+手动安装也可以：从 release 页面下载预编译版放进 PATH；或 clone 本项目 `go build -o otk`。评测需要 `g++`；GUI 基于 Fyne，从源码编译 GUI 需要 cgo 与各平台图形开发库（Linux 需 `libgl1-mesa-dev xorg-dev libxkbcommon-dev` 等），预编译版则开箱即用。
+
+Windows 上两个入口要分别编译：`scripts/build-windows.sh` 会把 `otk.exe` 编成 console 子系统（能敲命令）、`otk-gui.exe` 编成 windows 子系统（双击不弹黑框）。子系统的选择发生在链接期，同一份二进制没法在启动时切换，所以发行包里是两份 exe；两份都带 `resource_windows_amd64.syso` 提供的图标与版本信息，所以在资源管理器里看起来完全一样。
 
 
 ## 📖 快速上手
@@ -89,13 +93,55 @@ otk j                         # 编译并评测
 | `otk samples` | 列出样例 |
 | `otk config [项 值]` | 查看/修改配置（项目项：time/memory/version/o2；全局项：editor） |
 | `otk judge (j) [-v]` | 编译并评测全部样例；`-v` 显示报错与 WA 详情 |
-| `otk clone [url] <id>` | 克隆题目与样例到 `<oj>-<题号>` 目录并初始化（协议见 PROTOCOL.md） |
+| `otk clone [url] <id>` | 从网站添加题目：题目与样例到 `<oj>-<题号>` 目录并初始化（协议见 PROTOCOL.md） |
 | `otk submit (sub) [-q]` | 提交源码到远端评测并等待结果；`-q` 只提交 |
 | `otk run (r)` | 编译并运行 |
 | `otk debug (d)` | gdb 调试 |
 | `otk edit (e)` | 编辑源码（使用全局 editor 配置） |
 | `otk stress (ss) [N]` | 对拍 N 轮（默认 100） |
 | `otk wizard` | 新手向导，跟着引导走一遍工作流 |
+| `otk gui` | 打开图形界面（项目库、样例、评测、对拍、提交一站搞定）；安装脚本还会生成 `otk-gui` 入口，双击即进 GUI |
+| `otk contest add/judge/rank/rm` | 模拟赛：导入比赛、并发评测、查看与导出榜单 |
+
+## 🏆 模拟赛
+
+`otk contest` 用来一次性评测一整场比赛：多道题、多位选手、subtask 捆绑给分，最后出榜单。
+
+**上传目录结构**（题目数据与选手源码各一份，整目录导入即可）：
+
+```
+某次模拟赛/
+├── data/
+│   ├── aplusb/
+│   │   ├── 1.in  1.ans      # 测试点：.in + .ans（也认 .out）
+│   │   └── 2.in  2.ans
+│   └── maxsub/
+│       └── ...
+└── source/
+    ├── 张三/
+    │   ├── aplusb.cpp       # 选手名/题目名.cpp
+    │   └── maxsub.cpp
+    └── 李四/
+        └── aplusb.cpp
+```
+
+```bash
+otk contest add ~/Downloads/某次模拟赛     # 导入（目录名即比赛名，可用 -n 指定）
+otk contest judge                          # 并发编译 + 评测（默认 NumCPU-1，上限 8）
+otk contest rank                           # 终端里看榜单
+otk contest rank -w rank.html              # 导出完整榜单页（含每题明细矩阵）
+otk contest rm <id>                        # 删除比赛
+```
+
+**subtask** 在比赛目录的 `contest.json` 里配置，也可以在 GUI 的「题目配置」页直接改（改完自动写回）：
+
+| 模式 | 含义 |
+|---|---|
+| `all` | 捆绑测试：该子任务下所有测试点都通过才给分 |
+| `any` | 任意通过：只要有一个测试点通过就给满该子任务分 |
+| `sum` | 按比例给分：通过多少个点就给多少比例的分 |
+
+**GUI**：打开图形界面，左侧点「模拟赛」进入比赛列表，工作台分四个标签页 —— 榜单（可导出 HTML）、题目配置（可视化增删题目/子任务/测试点分值）、选手与提交（补交源码、改名、删除）、评测日志（实时进度与每份提交的详细结果）。评测进度只显示一行百分比，不会挤压侧边栏。
 
 ## ✳️ 全局配置
 全局配置和项目库固定存放在 `~/.otkprofile`。使用 `otk config editor "emacs -nw %s"` 设置编辑器命令，`%s` 会替换为当前项目的源码路径；默认使用 `vim %s`（Windows 使用 `notepad %s`）。

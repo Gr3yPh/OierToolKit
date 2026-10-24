@@ -121,17 +121,41 @@ func cmdInit(args []string) {
 	if len(args) == 1 {
 		name = args[0]
 	}
+
+	p, res, created, err := initProjectAt(cwd, name)
+	if err != nil {
+		fatal("%v", err)
+	}
+
+	if created {
+		fmt.Printf("已初始化项目 %s%s%s (%s)\n", cyan, p.Name, reset, p.Dir)
+	} else {
+		fmt.Printf("项目 %s%s%s 已初始化\n", cyan, p.Name, reset)
+	}
+	if len(res.added) > 0 {
+		ids := make([]string, 0, len(res.added))
+		for _, id := range res.added {
+			ids = append(ids, "#"+id)
+		}
+		fmt.Printf("已登记样例: %s\n", strings.Join(ids, " "))
+	}
+	printPairWarnings(p, res)
+}
+
+// initProjectAt 在 dir 里初始化项目（创建 .otk/config、源码文件、登记项目
+// 库并同步样例）。created 表示配置是否为本次新建。不打印、不退出。
+func initProjectAt(dir, name string) (project, refreshResult, bool, error) {
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
-		fatal("非法的项目名称: %s", name)
+		return project{}, refreshResult{}, false, fmt.Errorf("非法的项目名称: %s", name)
 	}
 
 	created := false
-	cfgPath := filepath.Join(cwd, ".otk", "config")
+	cfgPath := filepath.Join(dir, ".otk", "config")
 	oldLabel := readIni(cfgPath)["name"] // 现有项目的旧标签，用于源码文件名迁移
 	if !fileExists(cfgPath) {
 		// 旧版布局迁移：<名称>.ini → .otk/config
 		props := map[string]string{}
-		legacy := filepath.Join(cwd, name+".ini")
+		legacy := filepath.Join(dir, name+".ini")
 		if fileExists(legacy) {
 			props = readIni(legacy)
 			oldLabel = props["name"]
@@ -148,39 +172,29 @@ func cmdInit(args []string) {
 		created = true
 	}
 
-	base := filepath.Base(cwd)
-	src := filepath.Join(cwd, base+".cpp")
+	base := filepath.Base(dir)
+	src := filepath.Join(dir, base+".cpp")
 	// 旧版本以项目名作源码文件名，旧标签与目录名不同时自动改名迁移。
 	if !fileExists(src) && oldLabel != "" && oldLabel != base && !strings.ContainsAny(oldLabel, `/\`) {
-		if fileExists(filepath.Join(cwd, oldLabel+".cpp")) {
-			_ = os.Rename(filepath.Join(cwd, oldLabel+".cpp"), src)
+		if fileExists(filepath.Join(dir, oldLabel+".cpp")) {
+			_ = os.Rename(filepath.Join(dir, oldLabel+".cpp"), src)
 		}
 	}
 	if !fileExists(src) {
 		tmpl := "#include<iostream>\nusing namespace std;\n\nint main(){\n    \n    return 0;\n}\n"
 		if err := os.WriteFile(src, []byte(tmpl), 0644); err != nil {
-			fatal("无法创建源码文件: %v", err)
+			return project{}, refreshResult{}, created, fmt.Errorf("无法创建源码文件: %v", err)
 		}
 	}
 
-	registryAdd(cwd)
+	registryAdd(dir)
 
-	p := project{Name: name, Dir: cwd}
+	p := project{Name: projectNameOf(dir), Dir: dir}
+	if p.Name == "" {
+		p.Name = name
+	}
 	res := syncSamples(p, true)
-
-	if created {
-		fmt.Printf("已初始化项目 %s%s%s (%s)\n", cyan, name, reset, cwd)
-	} else {
-		fmt.Printf("项目 %s%s%s 已初始化\n", cyan, name, reset)
-	}
-	if len(res.added) > 0 {
-		ids := make([]string, 0, len(res.added))
-		for _, id := range res.added {
-			ids = append(ids, "#"+id)
-		}
-		fmt.Printf("已登记样例: %s\n", strings.Join(ids, " "))
-	}
-	printPairWarnings(p, res)
+	return p, res, created, nil
 }
 
 // cmdStatus 输出当前项目状态。

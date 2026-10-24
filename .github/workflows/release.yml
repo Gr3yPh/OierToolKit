@@ -23,30 +23,31 @@ jobs:
   build:
     name: Build for ${{ matrix.os }}_${{ matrix.arch }}
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
+      # 一个平台失败不要取消其余平台，日志能一次看全
+      fail-fast: false
       matrix:
         include:
+          # GUI（Fyne）需要 cgo，不能交叉编译，每个平台用原生 runner
           - os: linux
             arch: amd64
-            ext: ''
-            target: otk-linux-amd64
+            runner: ubuntu-latest
           - os: linux
             arch: arm64
-            ext: ''
-            target: otk-linux-arm64
+            runner: ubuntu-24.04-arm
           - os: windows
             arch: amd64
-            ext: .exe
-            target: otk-windows-amd64.exe
+            runner: windows-latest
+          # macos-13（Intel runner）已退役，amd64 版改在 Apple Silicon 上
+          # 用 clang -arch x86_64 交叉编译（SDK 自带 x86_64 切片）
           - os: darwin
             arch: amd64
-            ext: ''
-            target: otk-darwin-amd64
+            runner: macos-latest
+            cc: 'clang -arch x86_64'
           - os: darwin
             arch: arm64
-            ext: ''
-            target: otk-darwin-arm64
+            runner: macos-latest
 
     steps:
       - name: Checkout code
@@ -59,43 +60,87 @@ jobs:
         with:
           go-version: 'stable'
 
-      - name: Build binary
+      - name: Install GUI dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          # Fyne 的 glfw 在 Linux 上同时编 X11 与 Wayland 两个后端，
+          # 缺 libwayland-dev 会报 wayland-client-core.h: No such file or directory。
+          sudo apt-get install -y gcc libgl1-mesa-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxxf86vm-dev libxkbcommon-dev xorg-dev libwayland-dev
+
+      - name: Generate Windows resources (icon + version info)
+        if: runner.os == 'Windows'
+        run: |
+          # 从 versioninfo.json 生成 .syso；go build 会自动链接它，
+          # 这样 exe 在资源管理器里才有图标与文件属性。
+          go run github.com/josephspurrier/goversioninfo/cmd/goversioninfo@latest -o resource_windows_amd64.syso versioninfo.json
+
+      - name: Build binary (Linux/macOS)
+        if: matrix.os != 'windows'
         env:
           GOOS: ${{ matrix.os }}
           GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '1'
+          # darwin/amd64 在 arm64 runner 上交叉编译；空值时 go 用默认编译器
+          CC: ${{ matrix.cc }}
         run: |
-          go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o ${{ matrix.target }} .
+          go build -ldflags="-s -w -X main.otkVersion=${{ github.ref_name }}" -o otk .
+          cp otk otk-gui
 
+      # Windows 要编两份，因为子系统是构建期决定的：
+      #   - 命令行版必须是 console 子系统，否则双击后敲不了命令、输出也没处去；
+      #   - 图形版必须是 windows 子系统，否则双击会先弹一个黑框。
+      # 两份都带上 resource_windows_amd64.syso（图标 + 版本信息）：它的 .rsrc
+      # 段不会覆盖 -H windowsgui，实测 Subsystem 与资源段都正确。
+      - name: Build binaries (Windows)
+        if: matrix.os == 'windows'
+        env:
+          GOOS: ${{ matrix.os }}
+          GOARCH: ${{ matrix.arch }}
+          CGO_ENABLED: '1'
+        shell: bash
+        run: |
+          VER='${{ github.ref_name }}'
+          go build -ldflags="-s -w -H windowsgui -X main.otkVersion=${VER}" -o otk-gui.exe .
+          go build -ldflags="-s -w -X main.otkVersion=${VER}" -o otk.exe .
+
+      # 压缩包名不带 exe 双后缀（otk-windows-amd64.zip / otk-linux-amd64.tar.gz），
+      # 包内统一只有 otk(.exe) 与 otk-gui(.exe) 两个文件。
       - name: Package (Linux/macOS)
         if: matrix.os != 'windows'
         run: |
-          chmod +x ${{ matrix.target }}
-          tar -czf ${{ matrix.target }}.tar.gz ${{ matrix.target }}
+          chmod +x otk otk-gui
+          tar -czf otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz otk otk-gui
 
       - name: Package (Windows)
         if: matrix.os == 'windows'
+        shell: pwsh
         run: |
-          zip ${{ matrix.target }}.zip ${{ matrix.target }}
+          # windows runner 没有 zip 命令，用 PowerShell 自带的 Compress-Archive
+          Compress-Archive -Path 'otk.exe','otk-gui.exe' -DestinationPath 'otk-${{ matrix.os }}-${{ matrix.arch }}.zip' -Force
 
       - name: Upload artifact (non-Windows)
         if: matrix.os != 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}.tar.gz
-          path: ${{ matrix.target }}.tar.gz
+          name: otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+          path: otk-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
 
       - name: Upload artifact (Windows)
         if: matrix.os == 'windows'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.target }}.zip
-          path: ${{ matrix.target }}.zip
+          name: otk-${{ matrix.os }}-${{ matrix.arch }}.zip
+          path: otk-${{ matrix.os }}-${{ matrix.arch }}.zip
 
   release:
     name: Create Release
     if: github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    # 新仓库的 GITHUB_TOKEN 默认只读，创建 Release 与传附件需要 contents:write
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout code
@@ -145,6 +190,8 @@ jobs:
       always() &&
       (github.event_name == 'workflow_dispatch' ||
        (github.event_name == 'push' && needs.release.result == 'success'))
+    # fork 上没有镜像站的 secrets，同步失败不算发布失败
+    continue-on-error: true
     runs-on: ubuntu-latest
     env:
       REPO: ${{ github.repository }}

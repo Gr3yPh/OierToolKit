@@ -197,3 +197,82 @@ func readFile(path string) string {
 	b, _ := os.ReadFile(path)
 	return string(b)
 }
+
+// widest 返回样例编号的最大宽度，用于 CLI 输出对齐（至少 min 列）。
+func widest(ids []string, min int) int {
+	w := min
+	for _, id := range ids {
+		if len(id) > w {
+			w = len(id)
+		}
+	}
+	return w
+}
+
+// sampleFilePath 返回样例输入/输出文件路径。
+func sampleFilePath(p project, id, kind string) string {
+	if kind == "out" {
+		return filepath.Join(p.Dir, id+expectedExt(p.Dir, id))
+	}
+	return filepath.Join(p.Dir, id+".in")
+}
+
+// readSample 读取一组样例的输入与期望输出。
+func readSample(p project, id string) (input, output string, err error) {
+	inPath := sampleFilePath(p, id, "in")
+	outPath := sampleFilePath(p, id, "out")
+	in, err := os.ReadFile(inPath)
+	if err != nil {
+		return "", "", fmt.Errorf("读取 %s.in 失败: %v", id, err)
+	}
+	out, err := os.ReadFile(outPath)
+	if err != nil {
+		return "", "", fmt.Errorf("读取样例输出失败: %v", err)
+	}
+	return string(in), string(out), nil
+}
+
+// writeSample 写入一组样例并登记到索引。output 沿用已有的 .ans/.out 后缀。
+func writeSample(p project, id, input, output string) error {
+	id = strings.TrimSpace(id)
+	if id == "" || id == "." || id == ".." || strings.ContainsAny(id, `/\`) {
+		return fmt.Errorf("非法的样例编号: %q", id)
+	}
+
+	ext := ".out"
+	if fileExists(filepath.Join(p.Dir, id+".ans")) {
+		ext = ".ans"
+	}
+	if err := os.WriteFile(filepath.Join(p.Dir, id+".in"), []byte(input), 0644); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(p.Dir, id+ext), []byte(output), 0644); err != nil {
+		return err
+	}
+
+	index := readIndex(p)
+	for _, have := range index {
+		if have == id {
+			return nil
+		}
+	}
+	writeIndex(p, append(index, id))
+	return nil
+}
+
+// deleteSample 删除一组样例的全部文件并从样例库移除。
+func deleteSample(p project, id string) error {
+	for _, name := range []string{id + ".in", id + ".out", id + ".ans"} {
+		if err := removeFileIfExists(filepath.Join(p.Dir, name)); err != nil {
+			return err
+		}
+	}
+	var kept []string
+	for _, have := range readIndex(p) {
+		if have != id {
+			kept = append(kept, have)
+		}
+	}
+	writeIndex(p, kept)
+	return nil
+}
