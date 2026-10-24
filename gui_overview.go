@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
@@ -49,7 +51,8 @@ type overviewPage struct {
 	ioOut   *widget.Entry
 	note    *widget.Label
 
-	loading bool
+	loading     bool
+	savePending atomic.Bool // 自动保存去抖：连续修改只落一次盘
 }
 
 var languageOptions = []string{"c++11", "c++14", "c++17", "c++20", "c++23"}
@@ -87,10 +90,9 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o.ioIn.OnChanged = func(string) { o.markDirty() }
 	o.ioOut.OnChanged = func(string) { o.markDirty() }
 
-	o.note = caption("修改后点“保存配置”生效。")
+	o.note = caption("配置修改后自动保存，无需手动操作。")
 	o.note.Alignment = fyne.TextAlignLeading
 
-	saveBtn := widget.NewButtonWithIcon("保存配置", theme.DocumentSaveIcon(), o.save)
 	refreshBtn := widget.NewButtonWithIcon("同步样例", theme.ViewRefreshIcon(), o.refreshSamples)
 	openBtn := widget.NewButtonWithIcon("打开目录", theme.FolderOpenIcon(), func() {
 		if err := openPath(pg.p.Dir); err != nil {
@@ -135,7 +137,7 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 		widget.NewSeparator(),
 		section("评测配置"),
 		form,
-		container.NewHBox(saveBtn, o.note),
+		container.NewHBox(o.note),
 		widget.NewSeparator(),
 		section("远端"),
 		o.remote,
@@ -152,14 +154,6 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o.content = container.NewVScroll(container.NewPadded(body))
 	o.reload()
 	return o
-}
-
-// markDirty 提示配置尚未保存。
-func (o *overviewPage) markDirty() {
-	if o.loading {
-		return
-	}
-	o.note.SetText("配置已修改，记得保存。")
 }
 
 // reload 从项目配置重新填充控件。
@@ -197,73 +191,70 @@ func (o *overviewPage) reload() {
 	} else {
 		o.remote.SetText("未配置远端。可用“从网站添加题目”自动写入，或手动填写地址与题号。")
 	}
-	o.note.SetText("修改后点“保存配置”生效。")
+	o.note.SetText("配置修改后自动保存。")
 }
 
-// save 校验并写入项目配置。
-func (o *overviewPage) save() {
+// markDirty 由各控件回调调用：去抖后自动落盘（与模拟赛配置一致）。
+func (o *overviewPage) markDirty() {
+	if o.loading {
+		return
+	}
+	if o.savePending.CompareAndSwap(false, true) {
+		time.AfterFunc(400*time.Millisecond, func() {
+			o.savePending.Store(false)
+			o.autoSave()
+		})
+	}
+	o.note.SetText("配置修改中，稍后自动保存 …")
+}
+
+// autoSave 静默落盘：与 save 相同的字段，但单个字段无效时跳过该项
+// （输入到一半的数字等），不弹错误框、不重载控件，不打断输入。
+func (o *overviewPage) autoSave() {
+	if o.loading {
+		return
+	}
 	p := o.pg.p
-	timeText := strings.TrimSpace(o.timeIn.Text)
-	memText := strings.TrimSpace(o.memIn.Text)
-
-	if _, err := strconv.ParseFloat(timeText, 64); err != nil {
-		o.pg.g.showError(fmt.Errorf("时限必须是数字，例如 1.00"))
-		return
-	}
-	if _, err := strconv.ParseFloat(memText, 64); err != nil {
-		o.pg.g.showError(fmt.Errorf("内存必须是数字，例如 125"))
-		return
+	write := func(item, value string) {
+		_, _ = setProjectConfig(p, item, value)
 	}
 
-	o2 := "off"
+	if t := strings.TrimSpace(o.timeIn.Text); t != "" {
+		if _, err := strconv.ParseFloat(t, 64); err == nil {
+			write("time", t)
+		}
+	}
+	if m := strings.TrimSpace(o.memIn.Text); m != "" {
+		if _, err := strconv.ParseFloat(m, 64); err == nil {
+			write("memory", m)
+		}
+	}
+	if o.langSel.Selected != "" {
+		write("version", o.langSel.Selected)
+	}
 	if o.o2.Checked {
-		o2 = "on"
+		write("o2", "on")
+	} else {
+		write("o2", "off")
 	}
 	threadText := strings.TrimSpace(o.threads.Text)
 	if threadText == "" {
 		threadText = "0"
 	}
-	if n, err := strconv.Atoi(threadText); err != nil || n < 0 {
-		o.pg.g.showError(fmt.Errorf("并发线程必须是非负整数（0 表示自动）"))
-		return
-	}
-
-	settings := [][2]string{
-		{"time", timeText},
-		{"memory", memText},
-		{"version", o.langSel.Selected},
-		{"o2", o2},
-	}
-	for _, s := range settings {
-		if _, err := setProjectConfig(p, s[0], s[1]); err != nil {
-			o.pg.g.showError(err)
-			return
-		}
-	}
-	// threads 走单独入口：0 表示自动，需要绕过"正整数"校验。
-	if _, err := setProjectConfig(p, "threads", threadText); err != nil {
-		o.pg.g.showError(err)
-		return
+	if n, err := strconv.Atoi(threadText); err == nil && n >= 0 {
+		write("threads", threadText)
 	}
 
 	// 文件读写配置：文件名留空表示用 <源码名>.in/.out 缺省。
-	ioMode := "std"
 	if o.ioFile.Checked {
-		ioMode = "file"
+		write("io", "file")
+	} else {
+		write("io", "std")
 	}
-	for _, s := range [][2]string{
-		{"io", ioMode},
-		{"io_in", strings.TrimSpace(o.ioIn.Text)},
-		{"io_out", strings.TrimSpace(o.ioOut.Text)},
-	} {
-		if _, err := setProjectConfig(p, s[0], s[1]); err != nil {
-			o.pg.g.showError(err)
-			return
-		}
-	}
+	write("io_in", strings.TrimSpace(o.ioIn.Text))
+	write("io_out", strings.TrimSpace(o.ioOut.Text))
 
-	o.reload()
-	o.pg.g.setStatus("配置已保存")
+	o.note.SetText("配置已自动保存")
 }
 
 // refreshSamples 扫描项目目录，把成对的 .in/.out(.ans) 同步进样例库。
