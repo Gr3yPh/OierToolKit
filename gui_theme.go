@@ -190,17 +190,17 @@ func (t *otkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) co
 		return pickColor(dark, colorMissingDark, colorMissing)
 	case theme.ColorNameHover:
 		// 必须是半透明叠加层：Fyne 的按钮 hover 是把它 blend 到按钮底色上
-		// （蓝色主按钮 = 主色 × hover），不透明色会把底色整个盖掉，
-		// 表现为主按钮一悬停就变成一块灰。
+		// （蓝色主按钮 = 主色 × hover），不透明色会把底色整个盖掉。
+		// 用品牌蓝的浅色版：白底上呈现浅蓝高亮，蓝按钮上是轻微提亮。
 		if dark {
-			return color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0x12}
+			return color.NRGBA{R: 0x6A, G: 0x9B, B: 0xFF, A: 0x22}
 		}
-		return color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x0D}
+		return color.NRGBA{R: 0x5B, G: 0x8D, B: 0xF2, A: 0x26}
 	case theme.ColorNamePressed:
 		if dark {
-			return color.NRGBA{R: 0xFF, G: 0xFF, B: 0xFF, A: 0x2E}
+			return color.NRGBA{R: 0x6A, G: 0x9B, B: 0xFF, A: 0x44}
 		}
-		return color.NRGBA{R: 0x00, G: 0x00, B: 0x00, A: 0x1F}
+		return color.NRGBA{R: 0x5B, G: 0x8D, B: 0xF2, A: 0x40}
 	}
 	return t.base.Color(name, variant)
 }
