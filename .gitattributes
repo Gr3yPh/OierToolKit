@@ -1,0 +1,5 @@
+# shell 脚本必须是 LF：CRLF 会让 WSL/Linux 里报
+# "bad interpreter: /usr/bin/env bash^M"，而 core.autocrlf=true 的 Windows
+# 检出会默认把文本文件转成 CRLF，所以这里显式钉死。
+*.sh text eol=lf
+*.py text eol=lf

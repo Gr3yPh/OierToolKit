@@ -108,13 +108,19 @@ func startMemProbe(cmd *exec.Cmd) memProbeFunc {
 
 // readVmHWM 读取 /proc/<pid>/status 里的 VmHWM 行（峰值常驻内存，单位 kB）。
 // 进程已退出时文件不存在，返回 false。
-func readVmHWM(path string) (int64, bool) {
+func readVmHWM(path string) (int64, bool) { return readStatusKB(path, "VmHWM:") }
+
+// readVmPeak 读取 /proc/<pid>/status 里的 VmPeak 行（峰值虚拟地址空间，单位 kB）。
+// 内存硬限制用 RLIMIT_AS，卡的就是虚拟地址空间，所以判定"顶到上限"要读这一项。
+func readVmPeak(path string) (int64, bool) { return readStatusKB(path, "VmPeak:") }
+
+func readStatusKB(path, field string) (int64, bool) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return 0, false
 	}
 	for _, line := range strings.Split(string(data), "\n") {
-		if !strings.HasPrefix(line, "VmHWM:") {
+		if !strings.HasPrefix(line, field) {
 			continue
 		}
 		fields := strings.Fields(line)

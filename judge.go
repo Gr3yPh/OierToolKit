@@ -235,6 +235,26 @@ func evalSamples(job judgeJob, emit func(pointResult), stopped func() bool) judg
 	return rep
 }
 
+// memAllocFailed 判断这次崩溃是不是"要不到内存"造成的。
+//
+// 内存硬限制是按**单次申请的大小**生效的，不只看总量：vector 扩容、一次性
+// new 一大块这类写法，要的是一块比剩余空间更大的连续内存，于是驻留内存
+// 才六七十 MB（限额 125MB）就失败了——峰值采样根本到不了上限，"顶到上限"
+// 这条判据失效。这种情况下 stderr 里有明确证据：libstdc++ 未捕获 bad_alloc
+// 会打印 terminate called after throwing an instance of 'std::bad_alloc'。
+func memAllocFailed(stderr string, memLimitMB float64) bool {
+	if memLimitMB <= 0 || stderr == "" {
+		return false
+	}
+	s := strings.ToLower(stderr)
+	for _, pat := range []string{"bad_alloc", "cannot allocate memory", "out of memory"} {
+		if strings.Contains(s, pat) {
+			return true
+		}
+	}
+	return false
+}
+
 // runJudgePoint 运行单个测试点并给出判定。第二个返回值表示本次运行
 // 是否因调用方请求停止而被中断（此时结果不可用）。
 func runJudgePoint(job judgeJob, task pointJob) (pointResult, bool) {
@@ -251,6 +271,10 @@ func runJudgePoint(job judgeJob, task pointJob) (pointResult, bool) {
 	case res.runErr != nil && res.memLimitHit:
 		// Windows 硬限制下超内存的程序大概率是分配失败崩掉的，
 		// 先于 RE 判 MLE（细节仍是 stderr，便于排查）。
+		pt.Verdict = verdictMLE
+		pt.Detail = strings.TrimSpace(res.stderr)
+	case res.runErr != nil && memAllocFailed(res.stderr, job.MemLimit):
+		// 见 memAllocFailed 的说明：按申请大小失败的情形峰值到不了上限。
 		pt.Verdict = verdictMLE
 		pt.Detail = strings.TrimSpace(res.stderr)
 	case res.runErr != nil:

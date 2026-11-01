@@ -13,6 +13,8 @@ tmp_build/
 /otk.exe
 /otk-gui
 /otk-gui.exe
+/otk-linux
+/otk-gui-linux
 /OierToolKit
 /OierToolKit.exe
 /dist/
