@@ -51,6 +51,22 @@ type runResult struct {
 // memProbeFunc 在目标进程结束（Wait 返回）后读取其峰值内存（MB）。
 type memProbeFunc func() (float64, bool)
 
+// maxrssToMB 把 getrusage 的 ru_maxrss 换算成 MB。
+//
+// 这个字段的单位在各系统之间并不统一，只有 macOS 用字节：Apple 的文档、
+// GNU time 的 configure 探测（*bsd*|linux*|gnu* 按 kb，macos*|darwin* 按
+// bytes），以及 FreeBSD 15 / NetBSD 10 / OpenBSD 7.8 上的实测，结论都是
+// 「除 macOS 外一律 KB」——FreeBSD 自己的 getrusage(2) 手册也写的是
+// "the maximum resident set size utilized (in kilobytes)"。
+//
+// Linux 不走这条路径（见 measure_linux.go 里改用 VmHWM 的原因）。
+func maxrssToMB(goos string, maxrss int64) float64 {
+	if goos == "darwin" {
+		return float64(maxrss) / (1024.0 * 1024.0)
+	}
+	return float64(maxrss) / 1024.0
+}
+
 // runMeasured 在给定时间限制下运行程序，测量墙钟时间与峰值内存。
 // 不依赖任何外部工具：计时用 Go 标准库，内存读取见各平台的 startMemProbe。
 // memLimitMB > 0 时施加内存硬上限（Windows 用 Job Object，Linux 用 RLIMIT_AS；

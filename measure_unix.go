@@ -40,12 +40,7 @@ func startMemProbe(cmd *exec.Cmd) memProbeFunc {
 		if !ok || ru == nil {
 			return 0, false
 		}
-		v := int64(ru.Maxrss)
-		switch runtime.GOOS {
-		case "darwin", "freebsd", "dragonfly":
-			// 这几家的 ru_maxrss 单位是字节；Linux/NetBSD/OpenBSD 是 KB。
-			v /= 1024
-		}
-		return float64(v) / 1024.0, true
+		// 单位因系统而异，交给 maxrssToMB 处理（见 measure.go）。
+		return maxrssToMB(runtime.GOOS, int64(ru.Maxrss)), true
 	}
 }
