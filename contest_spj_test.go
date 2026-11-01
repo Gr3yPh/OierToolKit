@@ -47,7 +47,7 @@ int main(int argc, char** argv){
 	}
 
 	// 选手程序把 a+b 后面多打一个空格：普通比对会 WA，checker 应给 AC。
-	srcDir := filepath.Join(c.sourceDir(), "张三")
+	srcDir := filepath.Join(c.sourceDir(), testPlayerA)
 	writeText(t, filepath.Join(srcDir, "aplusb.cpp"),
 		"#include <cstdio>\nint main(){ printf(\"3 \"); return 0; }")
 
@@ -57,7 +57,7 @@ int main(int argc, char** argv){
 	}
 	var out problemResult
 	for _, r := range res.Results {
-		if r.Player == "张三" && r.Problem == "aplusb" {
+		if r.Player == testPlayerA && r.Problem == "aplusb" {
 			out = r
 		}
 	}
@@ -79,7 +79,7 @@ int main(int argc, char** argv){
 		t.Fatalf("judgeContest: %v", err)
 	}
 	for _, r := range res.Results {
-		if r.Player == "张三" && r.Problem == "aplusb" {
+		if r.Player == testPlayerA && r.Problem == "aplusb" {
 			if r.Tests[0].Verdict != verdictWA {
 				t.Fatalf("错误答案期望 WA，实际 %s", r.Tests[0].Verdict)
 			}
@@ -91,7 +91,7 @@ int main(int argc, char** argv){
 
 	// 未开 SPJ 的 sortarr 不受影响，仍按普通比对（源码 return 0，无输出 → WA）。
 	for _, r := range res.Results {
-		if r.Player == "李四" && r.Problem == "sortarr" && r.Tests[0].Verdict != verdictWA {
+		if r.Player == testPlayerB && r.Problem == "sortarr" && r.Tests[0].Verdict != verdictWA {
 			t.Fatalf("未开 SPJ 的题目期望 WA，实际 %s", r.Tests[0].Verdict)
 		}
 	}
