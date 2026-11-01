@@ -23,7 +23,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -71,7 +73,11 @@ type contestPage struct {
 	cancel  atomic.Bool
 	// savePending 用于合并连续输入产生的写盘请求。
 	savePending atomic.Bool
-	warns       []string
+	// saveTimer 是那个待触发的去抖定时器，flushSave / 页面销毁要能取消它，
+	// 否则比赛已被删除（或测试已结束）时它还会醒来写一次盘并报错。
+	saveMu    sync.Mutex
+	saveTimer *time.Timer
+	warns     []string
 }
 
 func newContestPage(g *guiApp, c contest) *contestPage {

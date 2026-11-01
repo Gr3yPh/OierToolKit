@@ -8,9 +8,24 @@ import (
 	"time"
 )
 
+// 测试用的选手名。必须是纯 ASCII：CI 的英文 Windows 上 gcc 无法写入
+// 含中文的路径（详见 setupContest 的说明）。
+const (
+	testPlayerA = "alice"
+	testPlayerB = "bob"
+)
+
 // 搭建一场最小可用的比赛：2 道题、2 位选手、若干提交。
+//
+// 目录名与选手名一律用 ASCII：CI 的英文 Windows runner 上 gcc/ld 走 ANSI
+// 接口，路径里一旦有非当前代码页的字符（中文），就会变成 '?' 并报
+// "cannot open output file ...: Invalid argument"，整场评测算编译失败。
+// 中文命名本身由 TestContestChineseNamesRoundTrip 覆盖（不经过编译器）。
 func setupContest(t *testing.T) contest {
 	t.Helper()
+	// 比赛会落到 baseDir/contests 下，必须指到临时目录，否则测试会在
+	// 仓库根目录堆一堆比赛目录。
+	useTempBaseDir(t)
 	root := t.TempDir()
 	data := filepath.Join(root, "data")
 	src := filepath.Join(root, "source")
@@ -24,7 +39,7 @@ func setupContest(t *testing.T) contest {
 			os.WriteFile(filepath.Join(dir, id+".ans"), []byte("3\n"), 0644)
 		}
 	}
-	for _, pl := range []string{"张三", "李四"} {
+	for _, pl := range []string{testPlayerA, testPlayerB} {
 		dir := filepath.Join(src, pl)
 		os.MkdirAll(dir, 0755)
 		for _, p := range []string{"aplusb", "sortarr"} {
@@ -32,7 +47,7 @@ func setupContest(t *testing.T) contest {
 		}
 	}
 	// 比赛目录名来自比赛名，测试之间必须唯一。
-	name := fmt.Sprintf("测试赛-%d", time.Now().UnixNano())
+	name := fmt.Sprintf("contest-%d", time.Now().UnixNano())
 	c, err := importContest(root, name)
 	if err != nil {
 		t.Fatalf("importContest: %v", err)
@@ -195,5 +210,37 @@ func TestSplitIDs(t *testing.T) {
 		if got := len(splitIDs(in)); got != want {
 			t.Fatalf("splitIDs(%q) = %d 个，期望 %d", in, got, want)
 		}
+	}
+}
+
+// TestContestChineseNamesRoundTrip 覆盖中文比赛名 / 中文选手名的导入与落盘。
+//
+// 这里刻意不经过编译器：英文 Windows 上 gcc 走 ANSI 接口，含中文的路径会被
+// 替换成 '?' 而无法写入，所以「中文名 + 编译评测」只在中文 Windows / Linux
+// 上成立（见 setupContest 的说明）。命名、目录推导、配置读写这些与平台无关
+// 的部分仍然要保证正确。
+func TestContestChineseNamesRoundTrip(t *testing.T) {
+	useTempBaseDir(t)
+	const name = "测试赛-中文"
+	c, err := importContest(makeUploadDir(t), name)
+	if err != nil {
+		t.Fatalf("importContest: %v", err)
+	}
+	if c.Cfg.Name != name {
+		t.Fatalf("比赛名应为 %q，实际 %q", name, c.Cfg.Name)
+	}
+	if base := filepath.Base(c.Dir); base != name {
+		t.Fatalf("目录名应从比赛名派生，实际 %q", base)
+	}
+	if !fileExists(filepath.Join(c.sourceDir(), "张三", "aplusb.cpp")) {
+		t.Fatal("中文选手目录下的源码应被完整复制")
+	}
+	// 重新读盘，确认中文名在 contest.json 里往返无损。
+	got, err := loadContest(c.Dir)
+	if err != nil {
+		t.Fatalf("loadContest: %v", err)
+	}
+	if got.Cfg.Name != name || len(got.Cfg.Players) != 1 || got.Cfg.Players[0].Name != "张三" {
+		t.Fatalf("读回的比赛信息不对: name=%q players=%+v", got.Cfg.Name, got.Cfg.Players)
 	}
 }

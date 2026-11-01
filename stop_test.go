@@ -100,13 +100,16 @@ func TestJudgeContestStop(t *testing.T) {
 		t.Skip("没有 g++，跳过")
 	}
 	dir := t.TempDir()
+	useTempBaseDir(t)
 	writeText(t, filepath.Join(dir, "data/p1/1.in"), "1 2\n")
 	writeText(t, filepath.Join(dir, "data/p1/1.ans"), "3\n")
 	writeText(t, filepath.Join(dir, "source/A/p1.cpp"), `#include <cstdio>
 int main(){int a,b;scanf("%d %d",&a,&b);printf("%d\n",a+b);}`)
 	writeText(t, filepath.Join(dir, "source/B/p1.cpp"), `int main(){volatile long long i=0;for(;;)i++;}`)
 
-	c, err := importContest(dir, fmt.Sprintf("停止测试-%d", time.Now().UnixNano()))
+	// 比赛名必须 ASCII：英文 Windows 上 gcc/ld 走 ANSI 接口，中文路径会被
+	// 替换成 '?'，编译产物写不出来（详见 setupContest 的说明）。
+	c, err := importContest(dir, fmt.Sprintf("stop-%d", time.Now().UnixNano()))
 	if err != nil {
 		t.Fatalf("importContest: %v", err)
 	}

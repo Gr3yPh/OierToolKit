@@ -638,27 +638,46 @@ func (p *contestPage) removeSubtask(probIdx, subIdx int) {
 // setStatus/showError 这些 UI 操作，必须切回 UI 线程，否则和输入回调竞争。
 func (p *contestPage) scheduleSave() {
 	if p.savePending.CompareAndSwap(false, true) {
-		time.AfterFunc(300*time.Millisecond, func() {
+		p.saveMu.Lock()
+		p.saveTimer = time.AfterFunc(300*time.Millisecond, func() {
 			ui(func() {
 				p.savePending.Store(false)
 				p.persist()
 			})
 		})
+		p.saveMu.Unlock()
 	}
 	if p.g != nil {
 		p.g.setStatus(tr("配置修改中，稍后自动保存 ..."))
 	}
 }
 
+// stopSaveTimer 取消尚未触发的去抖写盘。返回取消前是否真的有一次待执行。
+func (p *contestPage) stopSaveTimer() bool {
+	p.saveMu.Lock()
+	if p.saveTimer != nil {
+		p.saveTimer.Stop()
+		p.saveTimer = nil
+	}
+	p.saveMu.Unlock()
+	return p.savePending.Swap(false)
+}
+
 // flushSave 立即执行尚未落盘的修改（切页、开始评测、单元测试用）。
 func (p *contestPage) flushSave() {
-	if p.savePending.Swap(false) {
+	if p.stopSaveTimer() {
 		p.persist()
 	}
 }
 
 // persist 把当前配置写回 contest.json。
 func (p *contestPage) persist() {
+	// 比赛目录可能已经被删掉了：用户在侧栏删了比赛、或者测试跑完清理了
+	// 临时目录，而 300ms 的去抖定时器这时才醒来。此时写盘只会得到
+	// "The system cannot find the path specified"，弹出来纯属噪音。
+	if p.c.Dir == "" || !dirExists(p.c.Dir) {
+		return
+	}
 	if err := p.c.save(); err != nil {
 		if p.g != nil {
 			p.g.showError(fmt.Errorf(tr("保存配置失败：%v"), err))
