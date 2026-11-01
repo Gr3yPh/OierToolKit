@@ -1,10 +1,26 @@
 package main
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
 )
+
+// crashDir 建一个临时目录，清理失败不算测试失败。
+//
+// 这里跑的都是会被内存上限掐死、或者自己 crash 的程序，Windows 会把刚结束的
+// 进程镜像多按住一会儿（WER/杀软都可能短暂持有），t.TempDir 的自动清理于是
+// 报 "Access is denied" 并把测试判红——与被测逻辑无关。
+func crashDir(t *testing.T) string {
+	t.Helper()
+	dir, err := os.MkdirTemp("", "otk-memtest-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(dir) })
+	return dir
+}
 
 // TestMemoryHardLimit 验证内存硬限制：程序一口气分配远超限额的内存时
 // 应判 MLE 而不是把机器内存吃穿（Windows Job Object；其它平台跳过）。
@@ -12,7 +28,7 @@ func TestMemoryHardLimit(t *testing.T) {
 	if _, err := exec.LookPath("g++"); err != nil {
 		t.Skip("没有 g++，跳过")
 	}
-	dir := t.TempDir()
+	dir := crashDir(t)
 	src := filepath.Join(dir, "hog.cpp")
 	writeText(t, src, `#include <cstdio>
 #include <cstring>
@@ -57,7 +73,7 @@ func TestMemoryLimitHangsAtCap(t *testing.T) {
 	if _, err := exec.LookPath("g++"); err != nil {
 		t.Skip("没有 g++，跳过")
 	}
-	dir := t.TempDir()
+	dir := crashDir(t)
 	src := filepath.Join(dir, "spin.cpp")
 	writeText(t, src, `#include <cstring>
 int main(){

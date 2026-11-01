@@ -82,8 +82,22 @@ type jobObjectExtendedLimitInfo struct {
 // memLimiter 控制一个被测进程的内存上限；nil 表示不限制。
 type memLimiter struct {
 	handle     syscall.Handle
-	limitBytes uintptr
+	limitBytes uintptr // 题目内存限额（判定基准）
+	capBytes   uintptr // 实际下发给 Job 的上限
 }
+
+// Job 上限比题目限额留一段余量，判定线落在余量里。与 Linux 侧同一套口径
+// （见 memlimit_linux.go 的说明）。
+//
+// 为什么不把 Job 上限设成限额本身：装载器、CRT 堆本身要占几 MB，Job 记的是
+// 提交内存的绝对值，所以"限额 125MB"的程序在 124MB 就会分配失败；而失败的
+// 那次申请不计入 PeakProcessMemoryUsed，于是峰值仍停在一两 MB——既判不出
+// MLE，还因为 mingw 的 abort 不刷 stderr 而只剩一个光秃秃的 RE。
+// 实测：124MB 的程序判 RE（峰值 1.94MB），122MB 的程序反倒被判 MLE。
+const (
+	jobMemSlackBytes = 8 << 20 // 上限放宽量
+	jobMemGuardBytes = 2 << 20 // 判定线：峰值达到 限额+2MB 才算顶到上限
+)
 
 // newMemLimiter 创建 Job Object；memMB <= 0 返回 nil（不限制）。
 func newMemLimiter(memMB float64) *memLimiter {
@@ -94,13 +108,15 @@ func newMemLimiter(memMB float64) *memLimiter {
 	if h == 0 {
 		return nil
 	}
+	limitBytes := uintptr(memMB * 1024 * 1024)
 	m := &memLimiter{
 		handle:     syscall.Handle(h),
-		limitBytes: uintptr(memMB * 1024 * 1024),
+		limitBytes: limitBytes,
+		capBytes:   limitBytes + jobMemSlackBytes,
 	}
 	info := jobObjectExtendedLimitInfo{}
 	info.BasicLimitInformation.LimitFlags = jobObjectLimitProcessMemory | jobObjectLimitKillOnJobClose
-	info.ProcessMemoryLimit = m.limitBytes
+	info.ProcessMemoryLimit = m.capBytes
 	r, _, _ := procSetInformationJobObject.Call(
 		h, jobObjectExtendedLimitInfoClass,
 		uintptr(unsafe.Pointer(&info)), unsafe.Sizeof(info))
@@ -143,9 +159,14 @@ func (m *memLimiter) peakMB() (float64, bool) {
 	return float64(info.PeakProcessMemoryUsed) / (1024 * 1024), true
 }
 
-// hit 判断硬限制是否生效过。注意：导致分配失败的那次申请并不会计入
-// 峰值（提交失败就回滚了），所以峰值通常停在"限额 - 最后一块分配"，
-// 这里留 1MB 容差兜住小额分配的场景。
+// hit 判断硬限制是否生效过。
+//
+// 上限比限额宽 8MB，所以"峰值够到限额 + 2MB"才算真的顶到上限：这样既不会
+// 把只是接近限额的程序误判成 MLE，也能认出"分配失败但峰值没涨"之前的那
+// 一小段（真正撞墙的程序峰值一定会越过余量）。
+//
+// 一次性申请超过上限的程序仍然认不出来（那次申请失败、不计入峰值），
+// 这类还是 RE——与 Linux 侧同一个已知边界。
 func (m *memLimiter) hit() bool {
 	if m == nil || m.handle == 0 {
 		return false
@@ -159,8 +180,7 @@ func (m *memLimiter) hit() bool {
 	if r == 0 {
 		return false
 	}
-	const margin = 1 << 20
-	return info.PeakProcessMemoryUsed+margin >= m.limitBytes
+	return info.PeakProcessMemoryUsed >= m.limitBytes+jobMemGuardBytes
 }
 
 // close 关闭 Job 句柄。KILL_ON_JOB_CLOSE 会把还活着的子进程树杀掉，
