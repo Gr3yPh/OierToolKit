@@ -48,3 +48,49 @@ int main(){
 			pt.Verdict, pt.MemMB, pt.Detail)
 	}
 }
+
+// TestMemoryLimitHangsAtCap 验证「顶到内存上限后不退出」的程序判 MLE 而不是 TLE。
+//
+// 把 bad_alloc 咽下去再空转是很常见的写法：它确实碰到了内存上限，只是没
+// 立刻退出。以前先判超时，于是这种程序显示 TLE，让人去查算法复杂度——查反了方向。
+func TestMemoryLimitHangsAtCap(t *testing.T) {
+	if _, err := exec.LookPath("g++"); err != nil {
+		t.Skip("没有 g++，跳过")
+	}
+	dir := t.TempDir()
+	src := filepath.Join(dir, "spin.cpp")
+	writeText(t, src, `#include <cstring>
+int main(){
+    try {
+        // 1MB 一块吃到上限
+        for (int i = 0; i < 1024; i++) {
+            char *p = new char[1 << 20];
+            memset(p, 1, 1 << 20);
+        }
+    } catch (...) {
+        // 吃掉 bad_alloc 后继续空转：内存到顶但进程不退出
+        for (volatile long long i = 0;; i++) {}
+    }
+    return 0;
+}`)
+	exe := exePathIn(dir, "spin")
+	mustCompile(t, src, exe)
+
+	writeText(t, filepath.Join(dir, "1.in"), "\n")
+	writeText(t, filepath.Join(dir, "1.out"), "done\n")
+
+	job := judgeJob{
+		ExePath:   exe,
+		Dir:       dir,
+		Index:     []string{"1"},
+		Threads:   1,
+		TimeLimit: 2,
+		MemLimit:  128,
+	}
+	rep := evalSamples(job, nil, nil)
+	pt := rep.Points[0]
+	if pt.Verdict != verdictMLE {
+		t.Fatalf("顶到内存上限后空转期望 MLE，实际 %s（mem=%.0fMB detail=%q）",
+			pt.Verdict, pt.MemMB, pt.Detail)
+	}
+}

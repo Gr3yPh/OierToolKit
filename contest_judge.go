@@ -345,12 +345,14 @@ func judgeSubmission(c contest, prob contestProblem, src contestSource, buildDir
 			memCap = t.MemMB
 		}
 		switch {
+		case run.memLimitHit:
+			// 顶到内存硬上限的程序不一定会立刻退出：把 bad_alloc 咽下去继续
+			// 空转、或者被系统挂住时的表现都是"跑到超时"。这种情形不能判成
+			// TLE（用户会去查算法复杂度），按 MLE 报更接近事实。与 judge.go 一致。
+			to.Verdict = verdictMLE
+			to.Message = strings.TrimSpace(run.stderr)
 		case run.timedOut:
 			to.Verdict = verdictTLE
-		case run.runErr != nil && run.memLimitHit:
-			// Windows 的内存硬限制通常以进程崩溃收场，光看 runErr 会把
-			// MLE 误判成 RE（与本地评测 judge.go 的判定保持一致）。
-			to.Verdict = verdictMLE
 		case run.runErr != nil && memAllocFailed(run.stderr, memCap):
 			// 按申请大小失败（vector 扩容、一次性申请大块）峰值到不了上限，
 			// 从 stderr 的 bad_alloc 认领，同样与 judge.go 一致。

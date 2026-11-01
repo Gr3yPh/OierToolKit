@@ -266,13 +266,15 @@ func runJudgePoint(job judgeJob, task pointJob) (pointResult, bool) {
 	pt.WallMS, pt.MemMB, pt.MemOK = res.wallMS, res.memMB, res.memOK
 
 	switch {
-	case res.timedOut:
-		pt.Verdict = verdictTLE
-	case res.runErr != nil && res.memLimitHit:
-		// Windows 硬限制下超内存的程序大概率是分配失败崩掉的，
-		// 先于 RE 判 MLE（细节仍是 stderr，便于排查）。
+	case res.memLimitHit:
+		// 顶到内存硬上限：程序可能当场崩掉，也可能被卡在"分配失败→重试"
+		// 的死循环里一直跑到超时（把 bad_alloc 咽下去再空转的写法很常见）。
+		// 后者原先会被超时抢走判成 TLE，用户看到的是"太慢"，实际问题却是
+		// 超内存。既然上限确实被碰过，就按 MLE 算。
 		pt.Verdict = verdictMLE
 		pt.Detail = strings.TrimSpace(res.stderr)
+	case res.timedOut:
+		pt.Verdict = verdictTLE
 	case res.runErr != nil && memAllocFailed(res.stderr, job.MemLimit):
 		// 见 memAllocFailed 的说明：按申请大小失败的情形峰值到不了上限。
 		pt.Verdict = verdictMLE
@@ -280,7 +282,7 @@ func runJudgePoint(job judgeJob, task pointJob) (pointResult, bool) {
 	case res.runErr != nil:
 		pt.Verdict = verdictRE
 		pt.Detail = strings.TrimSpace(res.stderr)
-	case res.memLimitHit || (res.memOK && res.memMB > job.MemLimit):
+	case res.memOK && res.memMB > job.MemLimit:
 		pt.Verdict = verdictMLE
 	default:
 		expected := normalizeOutput(readFile(task.out))
