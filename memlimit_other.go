@@ -15,14 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with OierToolKit.  If not, see <https://www.gnu.org/licenses/>.
 
-//go:build !windows
+//go:build !windows && !linux
 
 package main
 
 import "os/exec"
 
-// 非 Windows 平台暂不做内存硬限制（需要 cgo 包裹 setrlimit，
-// 复杂度高收益低），维持"事后测量再判 MLE"的行为。
+// 除 Windows（Job Object）与 Linux（RLIMIT_AS）之外的平台不做内存硬限制，
+// 维持"事后测量再判 MLE"的行为。
 
 // memLimiter 在不支持硬限制的平台上是空实现。
 type memLimiter struct{}

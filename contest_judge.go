@@ -351,6 +351,10 @@ func judgeSubmission(c contest, prob contestProblem, src contestSource, buildDir
 			// Windows 的内存硬限制通常以进程崩溃收场，光看 runErr 会把
 			// MLE 误判成 RE（与本地评测 judge.go 的判定保持一致）。
 			to.Verdict = verdictMLE
+		case run.runErr != nil && memAllocFailed(run.stderr, memCap):
+			// 按申请大小失败（vector 扩容、一次性申请大块）峰值到不了上限，
+			// 从 stderr 的 bad_alloc 认领，同样与 judge.go 一致。
+			to.Verdict = verdictMLE
 		case run.runErr != nil:
 			to.Verdict = verdictRE
 			to.Message = strings.TrimSpace(run.stderr)

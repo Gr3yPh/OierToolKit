@@ -643,5 +643,12 @@ func (g *guiApp) showError(err error) {
 	if err == nil {
 		return
 	}
+	// 没有窗口时（单元测试、启动早期）Fyne 弹对话框会在测量文本时崩掉，
+	// 这种情况只记日志。触发场景之一：比赛配置的自动保存定时器在窗口
+	// 销毁之后才落地，写盘失败又要报错。
+	if g.win == nil {
+		fmt.Fprintln(os.Stderr, tr("错误："), err)
+		return
+	}
 	dialog.ShowError(err, g.win)
 }
