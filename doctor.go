@@ -34,20 +34,20 @@ func cmdDoctor(args []string) {
 		name string
 		f    *os.File
 	}{{"stdin", os.Stdin}, {"stdout", os.Stdout}, {"stderr", os.Stderr}} {
-		kind := "未知"
+		kind := tr("未知")
 		if fi, err := s.f.Stat(); err == nil {
 			switch {
 			case fi.Mode()&os.ModeCharDevice != 0:
-				kind = "字符设备"
+				kind = tr("字符设备")
 			case fi.Mode()&os.ModeNamedPipe != 0:
-				kind = "管道"
+				kind = tr("管道")
 			case fi.Mode().IsRegular():
-				kind = "普通文件"
+				kind = tr("普通文件")
 			default:
 				kind = fi.Mode().String()
 			}
 		} else {
-			kind = fmt.Sprintf("stat 失败: %v", err)
+			kind = fmt.Sprintf(tr("stat 失败: %v"), err)
 		}
 		fmt.Printf("%s: %s\n", s.name, kind)
 	}
@@ -56,6 +56,6 @@ func cmdDoctor(args []string) {
 
 	fmt.Printf("ansiOK=%v wizardInteractive=%v\n", ansiOK, wizardInteractive())
 	if !ansiOK && runtime.GOOS == "windows" {
-		fmt.Println("（颜色关闭时中文仍乱码说明问题不在 ANSI，见上面代码页）")
+		fmt.Println(tr("（颜色关闭时中文仍乱码说明问题不在 ANSI，见上面代码页）"))
 	}
 }

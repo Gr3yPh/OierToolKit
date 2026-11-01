@@ -108,7 +108,7 @@ func termDiag() {
 	var vi osVersionInfoEx
 	vi.size = uint32(unsafe.Sizeof(vi))
 	if r, _, _ := procRtlGetVersion.Call(uintptr(unsafe.Pointer(&vi))); r == 0 {
-		fmt.Printf("Windows 版本: %d.%d build %d\n", vi.major, vi.minor, vi.build)
+		fmt.Printf(tr("Windows 版本: %d.%d build %d\n"), vi.major, vi.minor, vi.build)
 	}
 
 	h := uintptr(syscall.Handle(os.Stdout.Fd()))
@@ -116,43 +116,43 @@ func termDiag() {
 	var ftName string
 	switch ft {
 	case fileTypeChar:
-		ftName = "字符设备"
+		ftName = tr("字符设备")
 	case fileTypePipe:
-		ftName = "管道"
+		ftName = tr("管道")
 	case 0x0001:
-		ftName = "磁盘文件"
+		ftName = tr("磁盘文件")
 	default:
 		ftName = fmt.Sprintf("0x%x", ft)
 	}
-	fmt.Printf("stdout 句柄类型: %s\n", ftName)
+	fmt.Printf(tr("stdout 句柄类型: %s\n"), ftName)
 
 	var mode uint32
 	r, _, err := procGetConsoleMode.Call(h, uintptr(unsafe.Pointer(&mode)))
 	if r == 0 {
-		fmt.Printf("GetConsoleMode 失败: 错误码 %d (%v)\n", uint32(err.(syscall.Errno)), err)
+		fmt.Printf(tr("GetConsoleMode 失败: 错误码 %d (%v)\n"), uint32(err.(syscall.Errno)), err)
 	} else {
-		fmt.Printf("GetConsoleMode 成功: mode=0x%x\n", mode)
+		fmt.Printf(tr("GetConsoleMode 成功: mode=0x%x\n"), mode)
 		// 现场试开 VT 再还原，拿到精确错误码；build>=14393 的系统
 		// 上失败基本可断定控制台处于旧版模式。
 		vt, _, vtErr := procSetConsoleMode.Call(h, uintptr(mode|enableVirtualTerminalProcessing))
 		if vt != 0 {
-			fmt.Println("VT 现场试开: 成功")
+			fmt.Println(tr("VT 现场试开: 成功"))
 		} else {
-			fmt.Printf("VT 现场试开失败: 错误码 %d (%v)\n", uint32(vtErr.(syscall.Errno)), vtErr)
+			fmt.Printf(tr("VT 现场试开失败: 错误码 %d (%v)\n"), uint32(vtErr.(syscall.Errno)), vtErr)
 		}
 		procSetConsoleMode.Call(h, uintptr(mode)) // 还原，保持只读语义
 	}
 
 	cp0, _, _ := procGetConsoleOutputCP.Call()
-	fmt.Printf("输出代码页: %d\n", cp0)
+	fmt.Printf(tr("输出代码页: %d\n"), cp0)
 	if cp0 != cpUTF8 && savedOutputCP == 0 {
 		savedOutputCP = uint32(cp0)
 	}
 	if r2, _, cpErr := procSetConsoleOutputCP.Call(cpUTF8); r2 == 0 {
-		fmt.Printf("SetConsoleOutputCP(65001) 失败: 错误码 %d (%v)\n", uint32(cpErr.(syscall.Errno)), cpErr)
+		fmt.Printf(tr("SetConsoleOutputCP(65001) 失败: 错误码 %d (%v)\n"), uint32(cpErr.(syscall.Errno)), cpErr)
 	} else {
 		cp1, _, _ := procGetConsoleOutputCP.Call()
-		fmt.Printf("SetConsoleOutputCP(65001) 成功: 代码页 %d -> %d\n", cp0, cp1)
+		fmt.Printf(tr("SetConsoleOutputCP(65001) 成功: 代码页 %d -> %d\n"), cp0, cp1)
 	}
 
 	// 旧版控制台由 HKCU\Console\ForceV2=0 强制开启，会使 VT 与部分
@@ -160,23 +160,23 @@ func termDiag() {
 	if v, ok := regReadDWORD(`Console`, "ForceV2"); ok {
 		fmt.Printf(`HKCU\Console\ForceV2 = %d`, v)
 		if v == 0 {
-			fmt.Println("（0 = 强制旧版控制台，VT 不可用）")
+			fmt.Println(tr("（0 = 强制旧版控制台，VT 不可用）"))
 		} else {
 			fmt.Println()
 		}
 	} else {
-		fmt.Println(`HKCU\Console\ForceV2 未设置`)
+		fmt.Println(tr(`HKCU\Console\ForceV2 未设置`))
 	}
 	sub := "Console\\" + strings.ReplaceAll(os.Getenv("ComSpec"), `\`, `_`)
 	if v, ok := regReadDWORD(sub, "ForceV2"); ok {
-		fmt.Printf(`HKCU\Console\<cmd>\ForceV2 = %d`, v)
+		fmt.Printf(tr(`HKCU\Console\<cmd>\ForceV2 = %d`), v)
 		if v == 0 {
-			fmt.Println("（0 = 强制旧版控制台，VT 不可用）")
+			fmt.Println(tr("（0 = 强制旧版控制台，VT 不可用）"))
 		} else {
 			fmt.Println()
 		}
 	} else {
-		fmt.Printf("HKCU\\Console\\<cmd>\\ForceV2 未设置\n")
+		fmt.Printf("%s", tr("HKCU\\Console\\<cmd>\\ForceV2 未设置\n"))
 	}
 
 	for _, k := range []string{"WT_SESSION", "TERM", "ANSICON", "ConEmuANSI", "ComSpec"} {

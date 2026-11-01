@@ -58,7 +58,7 @@ func registryWrite(paths []string) {
 func registryAdd(dir string) bool {
 	abs, err := filepath.Abs(dir)
 	if err != nil {
-		fatal("无法解析路径: %v", err)
+		fatal(tr("无法解析路径: %v"), err)
 	}
 	paths := registryRead()
 	for _, p := range paths {
@@ -107,7 +107,7 @@ func registryFind(name string) []string {
 func resolveRegistry(name string) string {
 	dir := registryFindUnique(name)
 	if _, err := os.Stat(dir); err != nil {
-		fatal("目录不存在: %s", dir)
+		fatal(tr("目录不存在: %s"), dir)
 	}
 	return dir
 }
@@ -118,11 +118,11 @@ func registryFindUnique(name string) string {
 	hits := registryFind(name)
 	switch len(hits) {
 	case 0:
-		fatal("项目库中没有 '%s'", name)
+		fatal(tr("项目库中没有 '%s'"), name)
 	case 1:
 		return hits[0]
 	default:
-		fatal("'%s' 匹配多个项目:\n  %s", name, strings.Join(hits, "\n  "))
+		fatal(tr("'%s' 匹配多个项目:\n  %s"), name, strings.Join(hits, "\n  "))
 	}
 	return ""
 }
@@ -131,7 +131,7 @@ func registryFindUnique(name string) string {
 func cmdLs() {
 	paths := registryRead()
 	if len(paths) == 0 {
-		fmt.Println("（项目库为空，用 'otk init' 创建项目）")
+		fmt.Println(tr("（项目库为空，用 'otk init' 创建项目）"))
 		return
 	}
 	width := 0
@@ -145,23 +145,23 @@ func cmdLs() {
 		name := filepath.Base(dir)
 		pad := strings.Repeat(" ", width-len(name))
 		if _, err := os.Stat(dir); err != nil {
-			fmt.Printf("  %s%s%s%s  %s缺失%s\n", yellow, name, reset, pad, yellow, reset)
+			fmt.Printf(tr("  %s%s%s%s  %s缺失%s\n"), yellow, name, reset, pad, yellow, reset)
 			continue
 		}
 		fmt.Printf("  %s%s%s%s  %s\n", cyan, name, reset, pad, dir)
 		alive++
 	}
-	fmt.Printf("共 %d 个项目\n", alive)
+	fmt.Printf(tr("共 %d 个项目\n"), alive)
 }
 
 // cmdSearch 按正则搜索项目（匹配名称、路径与标签）。
 func cmdSearch(args []string) {
 	if len(args) != 1 {
-		fatal("用法: otk se <正则>")
+		fatal(tr("用法: otk se <正则>"))
 	}
 	re, err := regexp.Compile(args[0])
 	if err != nil {
-		fatal("正则表达式无效: %v", err)
+		fatal(tr("正则表达式无效: %v"), err)
 	}
 	count := 0
 	for _, dir := range registryRead() {
@@ -181,7 +181,7 @@ func cmdSearch(args []string) {
 		count++
 	}
 	if count == 0 {
-		fmt.Println("无匹配项目")
+		fmt.Println(tr("无匹配项目"))
 	}
 }
 
@@ -194,16 +194,16 @@ func cmdRm(args []string) {
 		switch arg {
 		case "--soft", "--hard":
 			if selectedMode != "" && selectedMode != arg {
-				fatal("--soft 和 --hard 不能同时使用")
+				fatal(tr("--soft 和 --hard 不能同时使用"))
 			}
 			selectedMode = arg
 			mode = strings.TrimPrefix(arg, "--")
 		default:
 			if strings.HasPrefix(arg, "-") {
-				fatal("未知选项: %s", arg)
+				fatal(tr("未知选项: %s"), arg)
 			}
 			if name != "" {
-				fatal("用法: otk rm [--soft|--hard] [名称]")
+				fatal(tr("用法: otk rm [--soft|--hard] [名称]"))
 			}
 			name = arg
 		}
@@ -213,35 +213,35 @@ func cmdRm(args []string) {
 	if name == "" {
 		p, ok := findProject()
 		if !ok {
-			fatal("当前目录不属于任何项目")
+			fatal(tr("当前目录不属于任何项目"))
 		}
 		dir = p.Dir
 	} else {
 		dir = registryFindUnique(name)
 	}
 	if !registryContains(dir) {
-		fatal("项目不在项目库中: %s", dir)
+		fatal(tr("项目不在项目库中: %s"), dir)
 	}
 
 	switch mode {
 	case "soft":
 		p := project{Name: projectNameOf(dir), Dir: dir}
 		if err := removeOTKData(p); err != nil {
-			fatal("无法移除项目 OTK 数据: %v", err)
+			fatal(tr("无法移除项目 OTK 数据: %v"), err)
 		}
 	case "hard":
 		if err := os.RemoveAll(dir); err != nil {
-			fatal("无法删除项目目录 %s: %v", dir, err)
+			fatal(tr("无法删除项目目录 %s: %v"), dir, err)
 		}
 	}
 
 	if !registryRemove(dir) {
-		fatal("项目不在项目库中: %s", dir)
+		fatal(tr("项目不在项目库中: %s"), dir)
 	}
 	if mode == "hard" {
-		fmt.Printf("已删除项目 %s 及其项目库记录\n", filepath.Base(dir))
+		fmt.Printf(tr("已删除项目 %s 及其项目库记录\n"), filepath.Base(dir))
 	} else {
-		fmt.Printf("已移除项目 %s 的 OTK 数据及项目库记录（源码和样例保留）\n", filepath.Base(dir))
+		fmt.Printf(tr("已移除项目 %s 的 OTK 数据及项目库记录（源码和样例保留）\n"), filepath.Base(dir))
 	}
 }
 

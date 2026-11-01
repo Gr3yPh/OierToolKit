@@ -36,7 +36,7 @@ var wizardLive bool
 // 走完 init → refresh → judge 流程，结束后自动清理。
 func cmdWizard() {
 	if _, err := exec.LookPath("g++"); err != nil {
-		fatal("未找到 g++，wizard 需要编译 C++ 代码")
+		fatal(tr("未找到 g++，wizard 需要编译 C++ 代码"))
 	}
 
 	wizardLive = wizardInteractive()
@@ -44,11 +44,11 @@ func cmdWizard() {
 	// 父目录放临时垃圾，demo 子目录才是项目根（目录名即代码文件名）。
 	root, err := os.MkdirTemp("", "otk-wizard-")
 	if err != nil {
-		fatal("无法创建临时目录: %v", err)
+		fatal(tr("无法创建临时目录: %v"), err)
 	}
 	dir := filepath.Join(root, "demo")
 	if err := os.Mkdir(dir, 0755); err != nil {
-		fatal("无法创建演示目录: %v", err)
+		fatal(tr("无法创建演示目录: %v"), err)
 	}
 	cleanup := func() {
 		registryRemove(dir)
@@ -63,82 +63,82 @@ func cmdWizard() {
 		<-sig
 		fmt.Println()
 		cleanup()
-		fmt.Println("演示现场已清理。")
+		fmt.Println(tr("演示现场已清理。"))
 		otkExit(130)
 	}()
 
 	oldWd, err := os.Getwd()
 	if err != nil {
-		fatal("无法获取当前目录: %v", err)
+		fatal(tr("无法获取当前目录: %v"), err)
 	}
 	if err := os.Chdir(dir); err != nil {
-		fatal("无法进入临时目录: %v", err)
+		fatal(tr("无法进入临时目录: %v"), err)
 	}
 	defer os.Chdir(oldWd)
 
 	if !wizardRun() {
 		fmt.Println()
-		wizardSay("已退出向导。")
+		wizardSay(tr("已退出向导。"))
 		return
 	}
 	fmt.Println()
-	wizardSay("otk cd <名称> 可跳到项目库中的项目，otk help 查看全部命令。")
-	wizardSay("如果觉得好用，一定要返回来给个 star！ https://github.com/Gr3yPh/OierToolKit")
+	wizardSay(tr("otk cd <名称> 可跳到项目库中的项目，otk help 查看全部命令。"))
+	wizardSay(tr("如果觉得好用，一定要返回来给个 star！ https://github.com/Gr3yPh/OierToolKit"))
 }
 
 func wizardRun() bool {
-	wizardSay("你好，我是 otk 向导。带你花两分钟，亲手走一遍完整流程。")
+	wizardSay(tr("你好，我是 otk 向导。带你花两分钟，亲手走一遍完整流程。"))
 
-	wizardStep("第 1 步 · 建项目")
-	wizardSay("做题先要有个放代码和样例的目录，题目目录我已经替你建好了。")
-	wizardSay("接下来每一步的命令都要你自己亲手输。先初始化：")
+	wizardStep(tr("第 1 步 · 建项目"))
+	wizardSay(tr("做题先要有个放代码和样例的目录，题目目录我已经替你建好了。"))
+	wizardSay(tr("接下来每一步的命令都要你自己亲手输。先初始化："))
 	if _, ok := wizardInput("otk init demo"); !ok {
 		return false
 	}
 	cmdInit([]string{"demo"})
-	wizardSay("很好，项目已经登记进项目库了。")
+	wizardSay(tr("很好，项目已经登记进项目库了。"))
 
-	wizardStep("第 2 步 · 样例与代码")
-	wizardSay("样例就是目录里的文件对：.in 配 .out 或 .ans。")
-	wizardSay("我替你放好一组，还写了一个 A+B 的解：")
+	wizardStep(tr("第 2 步 · 样例与代码"))
+	wizardSay(tr("样例就是目录里的文件对：.in 配 .out 或 .ans。"))
+	wizardSay(tr("我替你放好一组，还写了一个 A+B 的解："))
 	wizardSay("  sample1.in   1 2")
 	wizardSay("  sample1.out  3")
 	p := project{Name: "demo", Dir: wizardWd()}
 	wizardWriteFile(filepath.Join(p.Dir, "sample1.in"), "1 2\n")
 	wizardWriteFile(filepath.Join(p.Dir, "sample1.out"), "3\n")
 	wizardWriteFile(p.sourcePath(), wizardSolution)
-	wizardSay("确认放好了，按回车继续：")
+	wizardSay(tr("确认放好了，按回车继续："))
 	if _, ok := wizardInput(""); !ok {
 		return false
 	}
 
-	wizardStep("第 3 步 · 样例入库")
-	wizardSay("文件放好了，还要登记进样例库，评测才知道有哪些数据：")
+	wizardStep(tr("第 3 步 · 样例入库"))
+	wizardSay(tr("文件放好了，还要登记进样例库，评测才知道有哪些数据："))
 	if _, ok := wizardInput("otk refresh"); !ok {
 		return false
 	}
 	cmdRefresh()
-	wizardSay("入库完成，样例库里现在有一组数据。")
+	wizardSay(tr("入库完成，样例库里现在有一组数据。"))
 
-	wizardStep("第 4 步 · 看状态")
-	wizardSay("评测之前，先检查项目状态：")
+	wizardStep(tr("第 4 步 · 看状态"))
+	wizardSay(tr("评测之前，先检查项目状态："))
 	if _, ok := wizardInput("otk st"); !ok {
 		return false
 	}
 	cmdStatus()
-	wizardSay("时限、内存、编译选项、样例数，都在这一行里。")
+	wizardSay(tr("时限、内存、编译选项、样例数，都在这一行里。"))
 
-	wizardStep("第 5 步 · 编译评测")
-	wizardSay("重头戏来了：编译并评测。这是你以后每天都要敲的命令：")
+	wizardStep(tr("第 5 步 · 编译评测"))
+	wizardSay(tr("重头戏来了：编译并评测。这是你以后每天都要敲的命令："))
 	if _, ok := wizardInput("otk j"); !ok {
 		return false
 	}
 	cmdJudge(nil)
 
-	wizardSay("恭喜你 AC 了这道题！")
-	wizardSay("回顾一下：init 建项目、refresh 样例入库、j 评测。")
-	wizardSay("还有很多有用的功能没有在这里展示，可以运行 otk help 查看完整的帮助文件 。")
-	wizardSay("向导流程完毕，赶紧给我做题去")
+	wizardSay(tr("恭喜你 AC 了这道题！"))
+	wizardSay(tr("回顾一下：init 建项目、refresh 样例入库、j 评测。"))
+	wizardSay(tr("还有很多有用的功能没有在这里展示，可以运行 otk help 查看完整的帮助文件 。"))
+	wizardSay(tr("向导流程完毕，赶紧给我做题去"))
 	return true
 }
 
@@ -190,9 +190,9 @@ func wizardInput(expect string) (string, bool) {
 		return expect, true
 	}
 	wizardHint(expect)
-	prompt := green + "请输入 > " + reset
+	prompt := green + tr("请输入 > ") + reset
 	if expect == "" {
-		prompt = green + "按回车继续 > " + reset
+		prompt = green + tr("按回车继续 > ") + reset
 	}
 	for {
 		fmt.Print(prompt)
@@ -208,7 +208,7 @@ func wizardInput(expect string) (string, bool) {
 			time.Sleep(300 * time.Millisecond)
 			return input, true
 		}
-		fmt.Printf("  嗯？再输入一次 '%s'（或 q 退出）\n", expect)
+		fmt.Printf("  "+tr("嗯？再输入一次 '%s'（或 q 退出）")+"\n", expect)
 	}
 }
 
@@ -262,7 +262,7 @@ func wizardWd() string {
 
 func wizardWriteFile(path, content string) {
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-		fatal("无法写入 %s: %v", path, err)
+		fatal(tr("无法写入 %s: %v"), path, err)
 	}
 }
 

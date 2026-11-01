@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with OierToolKit.  If not, see <https://www.gnu.org/licenses/>.
 
-//go:build !windows
+//go:build !windows && !linux
 
 package main
 
@@ -25,8 +25,12 @@ import (
 	"syscall"
 )
 
-// startMemProbe 在 Unix (Linux/macOS/BSD) 上通过 wait4 填充的 getrusage
-// 结构读取子进程峰值常驻内存 (Maxrss)，无需任何外部工具。
+// startMemProbe 在 macOS/BSD 上通过 wait4 填充的 getrusage 结构读取子进程
+// 峰值常驻内存 (Maxrss)，无需任何外部工具。
+//
+// Linux 不用这套：内核会在 exec 时把 fork 继承来的地址空间峰值记进
+// signal->maxrss 且只增不减，导致被测程序的 ru_maxrss 至少等于父进程的
+// RSS（详见 measure_linux.go 里改为采样 VmHWM 的原因）。
 func startMemProbe(cmd *exec.Cmd) memProbeFunc {
 	return func() (float64, bool) {
 		if cmd == nil || cmd.ProcessState == nil {
@@ -36,11 +40,12 @@ func startMemProbe(cmd *exec.Cmd) memProbeFunc {
 		if !ok || ru == nil {
 			return 0, false
 		}
-		kb := int64(ru.Maxrss)
-		if runtime.GOOS == "darwin" {
-			// macOS 的 Maxrss 单位是字节，Linux 等是 KB。
-			kb /= 1024
+		v := int64(ru.Maxrss)
+		switch runtime.GOOS {
+		case "darwin", "freebsd", "dragonfly":
+			// 这几家的 ru_maxrss 单位是字节；Linux/NetBSD/OpenBSD 是 KB。
+			v /= 1024
 		}
-		return float64(kb) / 1024.0, true
+		return float64(v) / 1024.0, true
 	}
 }
