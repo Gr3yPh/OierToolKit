@@ -83,7 +83,7 @@ func newSamplesPage(pg *projectPage) *samplesPage {
 	side := container.NewBorder(sideTop, sideBottom, nil, nil, s.list)
 
 	s.title = strong(tr("未选择样例"))
-	s.note = caption(tr("切换样例或刷新时自动保存修改"))
+	s.note = caption("")
 	s.inBox = widget.NewMultiLineEntry()
 	s.inBox.SetPlaceHolder(tr("输入数据（.in）"))
 	s.inBox.OnChanged = func(string) { s.note.SetText(tr("有未保存的修改")) }
@@ -185,7 +185,6 @@ func (s *samplesPage) addDialog() {
 
 	content := container.NewVBox(
 		widget.NewForm(widget.NewFormItem(tr("样例编号"), entry)),
-		caption(tr("会创建 <编号>.in 与 <编号>.out 两个文件。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("新建样例"), tr("创建"), tr("取消"), content, func(ok bool) {
@@ -231,7 +230,6 @@ func (s *samplesPage) importDialog() {
 
 	content := container.NewVBox(
 		form,
-		caption(tr("可以从题面选中样例复制后逐项粘贴，保存后即可在评测页使用。")),
 	)
 	content.Resize(fyne.NewSize(460, 320))
 

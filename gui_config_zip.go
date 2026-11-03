@@ -35,10 +35,9 @@ func (g *guiApp) exportConfigDialog() {
 	withTokens := widget.NewCheck(tr("连 OJ 令牌一起导出"), nil)
 
 	content := container.NewVBox(
-		caption(tr("导出 ~/.otkprofile 下的配置：编辑器、远端地址、界面偏好都在里面。")),
 		withRegistry,
 		withTokens,
-		caption(tr("令牌是登录凭据，默认不带。带了又放到网盘上，等于把账号交出去。")),
+		caption(tr("令牌默认不导出。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("导出配置"), tr("下一步"), tr("取消"), content, func(ok bool) {
@@ -97,11 +96,9 @@ func (g *guiApp) confirmImportConfig(path string) {
 
 	content := container.NewVBox(
 		wrappedCaption(tr("来源：")+path),
-		caption(tr("默认只补本地没有的项，已有的设置保持不动。")),
 		overwrite,
 		withTokens,
 		withRegistry,
-		caption(tr("项目库是绝对路径，换机器后多半指向不存在的目录，会在列表里标成「目录缺失」。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("导入配置"), tr("导入"), tr("取消"), content, func(ok bool) {

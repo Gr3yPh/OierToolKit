@@ -420,7 +420,7 @@ func (p *contestPage) refreshBoard() {
 // buildBoard 生成榜单区域：没有结果时给提示，有结果时给表格 + 明细。
 func (p *contestPage) buildBoard() fyne.CanvasObject {
 	if !p.hasResult {
-		tip := caption(tr("还没有评测结果。点上方“开始评测”，或到“题目配置”检查子任务。"))
+		tip := caption(tr("还没有评测结果。"))
 		tip.Alignment = fyne.TextAlignCenter
 		tip.Wrapping = fyne.TextWrapWord
 		return container.NewVBox(

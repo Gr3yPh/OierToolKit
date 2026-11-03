@@ -57,7 +57,7 @@ func newSubmitPage(pg *projectPage) *submitPage {
 	s := &submitPage{pg: pg}
 
 	s.info = hint("")
-	s.status = caption(tr("提交前请确认远端地址与题号。"))
+	s.status = caption("")
 	s.badge = newVerdictBadge()
 	s.badge.set("")
 	s.verdict = strong(tr("尚未提交"))

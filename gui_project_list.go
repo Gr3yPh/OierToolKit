@@ -208,7 +208,6 @@ func (g *guiApp) buildProjectList() fyne.CanvasObject {
 		container.NewPadded(container.NewBorder(nil, nil,
 			container.NewVBox(
 				widget.NewLabelWithStyle(tr("项目库"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-				caption(tr("所有登记过的项目一张表：点表头排序，选中一行后可打开、打包或存为模板。")),
 			),
 			container.NewCenter(container.NewHBox(
 				widget.NewButtonWithIcon(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog),
@@ -223,7 +222,6 @@ func (g *guiApp) buildProjectList() fyne.CanvasObject {
 	if len(dirs) == 0 {
 		empty := container.NewCenter(container.NewVBox(
 			widget.NewLabelWithStyle(tr("项目库还是空的"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			caption(tr("新建一个项目，或者从网站添加题目——建好的项目都会出现在这张表里。")),
 			container.NewCenter(g.newProjectButton()),
 		))
 		return container.NewBorder(head, nil, nil, nil, empty)

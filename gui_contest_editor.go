@@ -153,7 +153,7 @@ func (e *contestEditor) reload() {
 	if e.selected < 0 {
 		e.titleLabel.SetText(tr("选择左侧的题目"))
 		e.detail.Objects = []fyne.CanvasObject{
-			container.NewPadded(caption(tr("这场比赛没有可配置的题目。点左下角“重新扫描测试点”从 data/ 目录重新读取。"))),
+			container.NewPadded(caption(tr("没有题目。"))),
 		}
 		e.detail.Refresh()
 		return
@@ -246,10 +246,7 @@ func (e *contestEditor) showProblem() {
 			Title:   prob.Name + tr(" 题面"),
 			Confirm: tr("保存"),
 			Dismiss: tr("取消"),
-			Content: container.NewBorder(
-				caption(tr("Markdown 源码，保存后立即渲染到下方预览与榜单明细。")), nil, nil, nil,
-				stmtIn,
-			),
+			Content: stmtIn,
 			OnConfirm: func() {
 				p.updateProblem(e.selected, func(pr *contestProblem) { pr.Statement = stmtIn.Text })
 				stmtView.ParseMarkdown(stmtPreviewText(stmtIn.Text))
@@ -258,7 +255,7 @@ func (e *contestEditor) showProblem() {
 		})
 	})
 	stmtPane := container.NewBorder(
-		container.NewHBox(editBtn, caption(tr("预览如下；没有题面时显示占位提示"))),
+		container.NewHBox(editBtn),
 		nil, nil, nil,
 		container.NewVScroll(stmtBox),
 	)
@@ -282,19 +279,15 @@ func (e *contestEditor) showProblem() {
 			widget.NewFormItem(tr("内存（MB）"), memIn),
 			widget.NewFormItem(tr("编译器"), compSel),
 			widget.NewFormItem(tr("输入输出"), container.NewVBox(ioChk, ioIn, ioOut)),
-			widget.NewFormItem(tr("特殊判题"), container.NewVBox(spjChk,
-				caption(fmt.Sprintf(tr("把 checker.cpp 放进 data/%s/，约定：")+"\n"+tr("checker <输入> <选手输出> <期望输出>，退出码 0 为 AC。"), prob.Name)))),
-			widget.NewFormItem(tr("题面"), container.NewVBox(stmtPane,
-				caption(tr("Markdown，保存在比赛配置里，榜单明细中渲染。")))),
+			widget.NewFormItem(tr("特殊判题"), spjChk),
+			widget.NewFormItem(tr("题面"), stmtPane),
 		),
 		e.scoreSum,
 		widget.NewSeparator(),
 		section(tr("子任务")),
-		caption(tr("子任务决定一道题的分值构成。没有子任务时按测试点分值直接累加。")),
 		e.subtaskBox,
 		widget.NewSeparator(),
 		section(tr("测试点")),
-		caption(tr("测试点来自 data/<题目>/ 下的 .in 与 .ans/.out，分值可逐点调整。")),
 		e.testBox,
 	)
 	e.detail.Objects = []fyne.CanvasObject{basic}
@@ -315,9 +308,8 @@ func (e *contestEditor) buildSubtasks(prob contestProblem) {
 	e.subtaskRows = nil
 
 	if len(prob.Subtasks) == 0 {
-		hint := caption(tr("当前没有子任务，每个测试点独立计分。点下方按钮可以让每个测试点变成一个捆绑子任务。"))
 		add := widget.NewButtonWithIcon(tr("按测试点生成子任务"), theme.ContentAddIcon(), e.page.autoSubtasks)
-		e.subtaskBox.Add(container.NewVBox(hint, container.NewHBox(add)))
+		e.subtaskBox.Add(container.NewVBox(container.NewHBox(add)))
 		e.subtaskBox.Refresh()
 		return
 	}
@@ -421,7 +413,7 @@ func (e *contestEditor) buildTests(prob contestProblem) {
 	e.testRows = nil
 
 	if len(prob.Tests) == 0 {
-		e.testBox.Add(caption(tr("这道题在 data/ 下没有成对的 .in 与 .ans/.out。")))
+		e.testBox.Add(caption(tr("没有测试点。")))
 		e.testBox.Refresh()
 		return
 	}

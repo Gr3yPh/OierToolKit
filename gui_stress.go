@@ -68,8 +68,8 @@ func (s *stressPage) reload() {
 		return
 	}
 	p := s.pg.p
-	s.status.SetText(fmt.Sprintf(tr("准备就绪，待测：%s.cpp。项目目录里需要有 gen.cpp 与 brute.cpp。"), p.codeName()))
-	s.detail.SetText(tr("对拍结果会显示在这里。"))
+	s.status.SetText(fmt.Sprintf(tr("准备就绪，待测：%s.cpp。"), p.codeName()))
+	s.detail.SetText("")
 }
 
 func newStressPage(pg *projectPage) *stressPage {
@@ -85,8 +85,8 @@ func newStressPage(pg *projectPage) *stressPage {
 		return nil
 	}
 
-	s.status = caption(tr("准备就绪。项目目录里需要有 gen.cpp 与 brute.cpp。"))
-	s.detail = hint(tr("对拍结果会显示在这里。"))
+	s.status = caption(tr("准备就绪。"))
+	s.detail = hint("")
 	s.bar = widget.NewProgressBar()
 	s.bar.Hide()
 
@@ -122,9 +122,7 @@ func newStressPage(pg *projectPage) *stressPage {
 		widget.NewSeparator(),
 	)
 
-	bottom := container.NewPadded(container.NewBorder(nil, nil, nil,
-		container.NewHBox(s.saveBtn, s.manageBtn, s.dataBtn),
-		caption(tr("反例数据保存为 <轮次>.in / .ans / .out，可一键存为样例后在评测页复测"))))
+	bottom := container.NewPadded(container.NewHBox(s.saveBtn, s.manageBtn, s.dataBtn))
 
 	s.failBtns = map[string]*widget.Button{}
 	s.failBox = container.NewHBox()
@@ -442,7 +440,7 @@ func (s *stressPage) manageDialog() {
 	}
 
 	if len(stressRounds(dir)) == 0 {
-		body := container.NewVBox(caption(tr(".stress 目录里还没有反例。\n跑一次对拍，发现反例后会自动保存到这里。")))
+		body := container.NewVBox(caption(tr("还没有反例。")))
 		d = dialog.NewCustom(tr("管理反例"), tr("关闭"), container.NewPadded(body), s.pg.g.win)
 	} else {
 		body := container.NewHSplit(

@@ -40,7 +40,6 @@ func (g *guiApp) buildContestList() fyne.CanvasObject {
 		container.NewPadded(container.NewBorder(nil, nil,
 			container.NewVBox(
 				widget.NewLabelWithStyle(tr("模拟赛"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
-				caption(tr("整场比赛一起导入、一起评测，自动出榜单，可导出 HTML。")),
 			),
 			// 用 Center 包一层：Border 的右槽会把按钮拉到整块高度，
 			// 两个按钮并排时会显得又高又胖。
@@ -53,8 +52,6 @@ func (g *guiApp) buildContestList() fyne.CanvasObject {
 	if len(list) == 0 {
 		empty := container.NewCenter(container.NewVBox(
 			widget.NewLabelWithStyle(tr("还没有导入任何模拟赛"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
-			caption(tr("上传目录结构：")+"\n  <目录>/data/<题目名>/<测试点>.in\n  <目录>/data/<题目名>/<测试点>.ans（或 .out）\n  <目录>/source/<选手名>/<题目名>.cpp"),
-			caption(tr("也可以直接导入 .zip 数据包，连时限与题面一起还原。")),
 			// 必须另建一套按钮：Fyne 里同一个控件不能挂在两处，否则
 			// 标题栏和这里会抢着布局，按钮直接被挤到窗口外面。
 			container.NewCenter(g.importButtons()),
@@ -339,8 +336,6 @@ func (g *guiApp) importContestDialog() {
 			widget.NewFormItem(tr("上传目录"), dirRow),
 			widget.NewFormItem(tr("比赛名称"), nameEntry),
 		),
-		caption(tr("目录结构：")+"\n  <目录>/data/<题目名>/<测试点>.in 与 .ans（或 .out）\n  <目录>/source/<选手名>/<题目名>.cpp"),
-		caption(tr("导入后数据会复制到配置目录，原目录可以删掉。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("导入模拟赛"), tr("导入"), tr("取消"), content, func(ok bool) {
@@ -384,8 +379,6 @@ func (g *guiApp) importContestZipDialog() {
 			widget.NewFormItem(tr("数据包"), pathRow),
 			widget.NewFormItem(tr("比赛名称"), nameEntry),
 		),
-		caption(tr("数据包里带 contest.json 时，时限、子任务、题面与提交清单都会一起还原。")),
-		caption(tr("评测结果不会打包，导入后需要重新评测。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("导入 ZIP 数据包"), tr("导入"), tr("取消"), content, func(ok bool) {
@@ -467,8 +460,6 @@ func (g *guiApp) duplicateContestDialog(c contest) {
 
 	content := container.NewVBox(
 		widget.NewForm(widget.NewFormItem(tr("新名称"), nameEntry)),
-		caption(tr("题目配置、测试数据与选手源码都会复制一份。")),
-		caption(tr("评测结果不复制：新比赛要重新评测。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("复制模拟赛"), tr("复制"), tr("取消"), content, func(ok bool) {

@@ -67,7 +67,7 @@ type judgePage struct {
 func newJudgePage(pg *projectPage) *judgePage {
 	j := &judgePage{pg: pg}
 
-	j.status = caption(tr("点“编译并评测”开始，默认跟随项目配置的时限与内存。"))
+	j.status = caption("")
 	j.detail = hint(tr("选择左侧测试点查看详情。"))
 	j.detail.Wrapping = fyne.TextWrapWord
 
@@ -605,7 +605,7 @@ func (j *judgePage) reload() {
 	j.score.SetText("—")
 	j.note.SetText(tr("尚未评测"))
 	j.detail.SetText(tr("选择左侧测试点查看详情。"))
-	j.status.SetText(tr("点“编译并评测”开始，默认跟随项目配置的时限与内存。"))
+	j.status.SetText("")
 }
 
 // setLimits 记录本次评测使用的时限与内存限制。只能在 UI 线程调用：

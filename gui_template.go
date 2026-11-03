@@ -39,8 +39,6 @@ func (g *guiApp) saveAsTemplateDialog(p project) {
 	content := container.NewVBox(
 		widget.NewForm(widget.NewFormItem(tr("模板名称"), nameEntry)),
 		withSamples,
-		caption(tr("源码、时限内存、语言标准、编译参数与 gen.cpp / brute.cpp 都会带上。")),
-		caption(tr("同名模板会被覆盖；内置模板不会被顶掉。")),
 	)
 
 	g.showWideDialog(tr("存为模板"), tr("保存"), tr("取消"), content, func() {

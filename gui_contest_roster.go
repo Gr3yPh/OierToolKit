@@ -56,7 +56,7 @@ type rosterEntry struct {
 func newContestRoster(p *contestPage) *contestRoster {
 	r := &contestRoster{page: p, selected: -1}
 	r.summary = caption("")
-	r.preview = hint(tr("选择一行查看源码路径与文件是否存在。"))
+	r.preview = hint("")
 
 	r.list = widget.NewList(
 		func() int { return len(r.entries) },
@@ -94,7 +94,6 @@ func newContestRoster(p *contestPage) *contestRoster {
 
 	head := container.NewVBox(
 		container.NewPadded(container.NewVBox(
-			caption(tr("比赛里的选手与提交决定了评测范围。src 目录结构为 source/<选手>/<题目>.cpp。")),
 			container.NewHBox(addBtn, renameBtn, removeBtn, openDirBtn),
 			r.summary,
 			widget.NewSeparator(),
@@ -194,7 +193,7 @@ func (r *contestRoster) addDialog() {
 			widget.NewFormItem(tr("题目"), probSel),
 			widget.NewFormItem(tr("源码"), pathRow),
 		),
-		caption(tr("源码会被复制到 source/<选手>/<题目>.cpp，原有同名文件会被覆盖。")),
+		caption(tr("同名源码会被覆盖。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("补交源码"), tr("添加"), tr("取消"), content, func(ok bool) {
@@ -243,7 +242,6 @@ func (r *contestRoster) renameDialog() {
 			widget.NewFormItem(tr("原选手"), from),
 			widget.NewFormItem(tr("新名字"), to),
 		),
-		caption(tr("会把 source/<原选手>/ 整个目录改名为新名字，并更新配置。")),
 	)
 
 	dialog.ShowCustomConfirm(tr("选手改名"), tr("改名"), tr("取消"), content, func(ok bool) {

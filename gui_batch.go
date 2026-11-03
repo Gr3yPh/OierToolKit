@@ -69,7 +69,6 @@ func (g *guiApp) batchJudgeDialog() {
 	})
 
 	content := container.NewVBox(
-		caption(tr("串行评测：每个项目用自己的时限、内存与线程数，结果写进各自的评测历史。")),
 		container.NewHBox(allBtn, noneBtn),
 		widget.NewSeparator(),
 		box,
@@ -123,7 +122,7 @@ func (g *guiApp) runBatchJudge(list []project) {
 		),
 		container.NewVBox(
 			widget.NewSeparator(),
-			container.NewHBox(stopBtn, caption(tr("停止后不再开始新项目，正在跑的那个会提前收工。"))),
+			container.NewHBox(stopBtn),
 		),
 		nil, nil,
 		box,

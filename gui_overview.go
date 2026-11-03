@@ -119,7 +119,7 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o.ioIn.OnChanged = func(string) { o.markDirty() }
 	o.ioOut.OnChanged = func(string) { o.markDirty() }
 
-	o.note = caption(tr("配置修改后自动保存，无需手动操作。"))
+	o.note = caption("")
 	o.note.Alignment = fyne.TextAlignLeading
 
 	refreshBtn := widget.NewButtonWithIcon(tr("同步样例"), theme.ViewRefreshIcon(), o.refreshSamples)
@@ -188,12 +188,10 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 		container.NewHBox(
 			widget.NewButton(tr("配置远端"), func() { pg.g.remoteConfigDialog(pg.p) }),
 		),
-		wrappedCaption(tr("从网站添加的题目会自动填好这两项")),
 		spacerH(10),
 		section(tr("操作")),
 		container.NewHBox(refreshBtn, openBtn, editBtn, termBtn),
 		container.NewHBox(packBtn, tplBtn),
-		wrappedCaption(tr("打包 ZIP：源码、样例与配置打成一个包，不含编译产物。存为模板：把这份骨架留作下次新建的起手式。")),
 		container.NewHBox(removeBtn, layout.NewSpacer()),
 	)
 
