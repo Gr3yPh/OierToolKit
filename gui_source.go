@@ -43,10 +43,12 @@ type sourcePage struct {
 func newSourcePage(pg *projectPage) *sourcePage {
 	s := &sourcePage{pg: pg}
 
-	s.path = hint("")
+	s.path = monoLabel("")
 	s.note = caption("")
+	s.note.Truncation = fyne.TextTruncateEllipsis
 	s.editor = widget.NewMultiLineEntry()
 	s.editor.Wrapping = fyne.TextWrapOff
+	s.editor.TextStyle = fyne.TextStyle{Monospace: true}
 	s.editor.OnChanged = s.onChanged
 
 	saveBtn := widget.NewButtonWithIcon(tr("保存"), theme.DocumentSaveIcon(), s.save)
@@ -63,13 +65,16 @@ func newSourcePage(pg *projectPage) *sourcePage {
 	})
 	statsBtn := widget.NewButtonWithIcon(tr("统计"), theme.InfoIcon(), s.showStats)
 
-	head := container.NewBorder(nil, nil, nil,
-		container.NewHBox(saveBtn, reloadBtn, extBtn, gdbBtn, statsBtn),
-		container.NewVBox(container.NewPadded(s.path), s.note),
-	)
+	// 按钮放进 Center，避免 HBox 被 Border 拉到整行高度；路径和保存状态
+	// 放在同一行，工具栏从原来的两行 60+px 收到约 44px。
+	buttons := container.NewCenter(container.NewHBox(saveBtn, reloadBtn, extBtn, gdbBtn, statsBtn))
+	// 保存状态/报错最多占 180px，避免长路径错误把源码路径挤成负宽度。
+	note := maxWidth(180, vCenter(s.note))
+	info := container.NewBorder(nil, nil, nil, note, vCenter(s.path))
+	head := container.NewBorder(nil, nil, nil, buttons, info)
 
 	s.content = container.NewBorder(
-		container.NewVBox(head, widget.NewSeparator()),
+		container.NewVBox(inset(12, 4, 12, 4, head), widget.NewSeparator()),
 		nil, nil, nil,
 		s.editor,
 	)

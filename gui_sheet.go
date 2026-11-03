@@ -18,8 +18,6 @@
 package main
 
 import (
-	"image/color"
-
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
@@ -107,11 +105,11 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 	title.SizeName = theme.SizeNameSubHeadingText
 
 	head := container.NewVBox(
-		container.NewPadded(title),
+		inset(8, 6, 8, 6, title),
 		widget.NewSeparator(),
 	)
 
-	body := container.NewVScroll(container.NewPadded(opt.Content))
+	body := container.NewVScroll(inset(8, 4, 8, 4, opt.Content))
 
 	cancel := func() {
 		g.closeSheet()
@@ -139,16 +137,27 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 
 	foot := container.NewVBox(
 		widget.NewSeparator(),
-		container.NewPadded(container.NewBorder(nil, nil,
+		inset(8, 4, 8, 4, container.NewBorder(nil, nil,
 			escHint,
 			rightBtns,
 		)),
 	)
 
+	// 和 Fyne 自带对话框保持同样的观感：圆角 + 向下的柔和阴影。
+	bg := canvas.NewRectangle(theme.Color(theme.ColorNameOverlayBackground))
+	bg.CornerRadius = theme.Size(theme.SizeNameDialogRadius)
+	bg.Shadow = canvas.Shadow{
+		Color:      theme.Color(theme.ColorNameShadow),
+		BlurRadius: 18,
+		Offset:     fyne.NewPos(0, 6),
+		Variant:    canvas.DropShadow,
+	}
 	panel := container.NewStack(
-		canvas.NewRectangle(theme.Color(theme.ColorNameOverlayBackground)),
+		bg,
 		container.NewBorder(head, foot, nil, nil, body),
 	)
+	// sheetLayout 必须拿到整个窗口的尺寸才能按比例计算；外面再套 Center
+	// 会把它钉死在 MinSize(600x560)，比例就成了摆设。
 	holder := container.New(&sheetLayout{
 		widthRatio:  ratio,
 		minWidth:    600,
@@ -158,10 +167,13 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 		maxHeight:   900,
 	}, panel)
 
-	// 遮罩：半透明黑，挡住下层点击，也让面板更聚焦。
-	scrim := canvas.NewRectangle(color.NRGBA{A: 170})
+	// 遮罩：和模态弹窗一致，先模糊下层再压一层浅阴影。
+	scrim := container.NewStack(
+		canvas.NewBlur(theme.Size(theme.SizeNameModalBlurRadius)),
+		canvas.NewRectangle(theme.Color(theme.ColorNameShadow)),
+	)
 
-	g.sheet = container.NewStack(base, scrim, container.NewCenter(holder))
+	g.sheet = container.NewStack(base, scrim, holder)
 	g.sheetBase = base
 	g.win.SetContent(g.sheet)
 

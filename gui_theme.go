@@ -183,7 +183,10 @@ func (t *otkTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
 func (t *otkTheme) Size(name fyne.ThemeSizeName) float32 {
 	switch name {
 	case theme.SizeNamePadding:
-		return 5
+		// Fyne 的 Label 高度 = 字号行高 + 2*Padding，按钮高度又在这个基础上
+		// 加 2*InnerPadding。5px 会让每个 Label 白占 10px，按钮轻松超过 40px。
+		// 收到 4 以后控件约 36px，页面仍然有呼吸感，但不再虚胖。
+		return 4
 	case theme.SizeNameText:
 		return 14
 	case sizeNameHeader:
@@ -194,9 +197,9 @@ func (t *otkTheme) Size(name fyne.ThemeSizeName) float32 {
 		// 11px 在 125% 缩放的 Windows 上太小，状态栏和辅助说明读起来费劲。
 		return 12
 	case theme.SizeNameInnerPadding:
-		// 默认 8 会把按钮/输入框撑到 36-40px。收到 6 以后按钮约 31px，
-		// 正好放进 56px 的顶栏和 28px 的状态栏。
-		return 6
+		// 默认 8 会把按钮/输入框撑到 40px 以上。4px 内边距配合上面的
+		// Padding=4，按钮/输入框约 36px，正好放进 48px 的顶栏。
+		return 4
 	case theme.SizeNameInlineIcon:
 		return 18
 	case theme.SizeNameInputRadius:

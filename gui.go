@@ -301,7 +301,7 @@ func (g *guiApp) buildHeader() fyne.CanvasObject {
 	right := container.NewHBox(newBtn, cloneBtn, settingsBtn, aboutBtn)
 
 	bar := container.NewBorder(nil, nil, left, right, layout.NewSpacer())
-	return container.NewVBox(fixedHeight(56, inset(16, 0, 16, 0, bar)), widget.NewSeparator())
+	return container.NewVBox(fixedHeight(48, inset(16, 0, 16, 0, bar)), widget.NewSeparator())
 }
 
 func (g *guiApp) buildSidebar() fyne.CanvasObject {

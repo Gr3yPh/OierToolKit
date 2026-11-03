@@ -180,8 +180,37 @@ func (l insetLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 	return fyne.NewSize(w+l.left+l.right, h+l.top+l.bottom)
 }
 
+// vCenter 只在纵向上居中：宽度仍拉满父容器，便于 Label 截断长文本。
+// container.NewCenter 会把子对象缩到 MinSize，长路径会顶出去。
+func vCenter(obj fyne.CanvasObject) fyne.CanvasObject {
+	return container.New(vCenterLayout{}, obj)
+}
+
+type vCenterLayout struct{}
+
+func (vCenterLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	for _, obj := range objects {
+		h := obj.MinSize().Height
+		if h > size.Height {
+			h = size.Height
+		}
+		obj.Resize(fyne.NewSize(size.Width, h))
+		obj.Move(fyne.NewPos(0, (size.Height-h)/2))
+	}
+}
+
+func (vCenterLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	var w, h float32
+	for _, obj := range objects {
+		s := obj.MinSize()
+		w = fyne.Max(w, s.Width)
+		h = fyne.Max(h, s.Height)
+	}
+	return fyne.NewSize(w, h)
+}
+
 // fixedHeight 把内容钉在固定高度（宽度仍跟随父容器），
-// 用于 56px 顶栏和 28px 状态栏。
+// 用于 48px 顶栏和 28px 状态栏。
 func fixedHeight(h float32, content fyne.CanvasObject) fyne.CanvasObject {
 	w := &fixedHeightWidget{content: content, height: h}
 	w.ExtendBaseWidget(w)
