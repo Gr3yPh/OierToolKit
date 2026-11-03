@@ -41,13 +41,18 @@
         $ok = $false
         foreach ($u in $urls) {
             try {
+                Write-Host "downloading $asset ..."
+                Write-Host "  source: $u"
                 Invoke-WebRequest -Uri $u -OutFile $zip -UseBasicParsing -TimeoutSec 120
                 $ok = $true
                 break
-            } catch {}
+            } catch {
+                Write-Host "download failed, trying next source ..." -ForegroundColor Yellow
+            }
         }
-        if (-not $ok) { throw "otk-install: download failed: $asset" }
+        if (-not $ok) { throw "otk-install: download failed: $asset (try OTK_SOURCE=github)" }
 
+        Write-Host "download complete, extracting ..."
         Expand-Archive -Path $zip -DestinationPath $tmp -Force
 
         # 归档内是 otk.exe（命令行版）；兜底查找时要排除 otk-gui.exe：
@@ -57,12 +62,13 @@
             $found = Get-ChildItem -Path $tmp -Filter '*.exe' |
                 Where-Object { $_.Name -ne 'otk-gui.exe' } |
                 Select-Object -First 1
-            if (-not $found) { throw 'otk-install: otk.exe not found in archive' }
+            if (-not $found) { throw 'otk-install: otk.exe not found in archive (the download may be corrupted; retry or use OTK_SOURCE=github)' }
             $src = $found.FullName
         }
 
         # --- 安装到用户目录，无需管理员权限 ---
         $installDir = if ($env:OTK_INSTALL_DIR) { $env:OTK_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA 'Programs\otk' }
+        Write-Host "installing to $installDir ..."
         New-Item -ItemType Directory -Force -Path $installDir | Out-Null
         Copy-Item -Path $src -Destination (Join-Path $installDir 'otk.exe') -Force
 

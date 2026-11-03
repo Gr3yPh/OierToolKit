@@ -30,11 +30,22 @@ esac
 asset="otk-$platform-$arch.tar.gz"
 
 # --- 下载 ---
+# 下载时保留进度条：镜像的 30MB 安装包在慢速网络下要等很久，
+# 静默下载很容易让人以为脚本卡死。
 fetch() {
     if command -v curl >/dev/null 2>&1; then
-        curl -fsSL --retry 2 "$1" -o "$2"
+        if [ -t 2 ]; then
+            # 终端里给进度条；重定向到日志时保持安静，避免刷屏。
+            curl -fL --retry 2 --progress-bar --connect-timeout 15 "$1" -o "$2"
+        else
+            curl -fsSL --retry 2 --connect-timeout 15 "$1" -o "$2"
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -q --tries=2 -O "$2" "$1"
+        if [ -t 2 ]; then
+            wget --tries=2 --timeout=15 -O "$2" "$1"
+        else
+            wget -q --tries=2 --timeout=15 -O "$2" "$1"
+        fi
     else
         die "需要 curl 或 wget"
     fi
@@ -51,35 +62,58 @@ esac
 
 ok=
 for url in $urls; do
-    if fetch "$url" "$tmp/$asset" 2>/dev/null; then
+    echo "正在下载 $asset ..."
+    echo "  源: $url"
+    if fetch "$url" "$tmp/$asset"; then
         ok=1
         break
     fi
+    echo "下载失败，尝试下一个源 ..." >&2
 done
-[ -n "$ok" ] || die "下载失败（$asset）"
+[ -n "$ok" ] || die "下载失败（$asset）；可用 OTK_SOURCE=github 强制从 GitHub 下载"
 
 # --- 解包 ---
-tar -xzf "$tmp/$asset" -C "$tmp"
+echo "下载完成，正在解压 ..."
+if ! tar -xzf "$tmp/$asset" -C "$tmp"; then
+    die "解压失败（$asset 可能不完整，请重试）"
+fi
+
+# 正式包内通常是 otk；兼容旧包里带平台后缀的文件名。
 src="$tmp/otk"
-[ -f "$src" ] || die "归档里没找到 otk"
+if [ ! -f "$src" ]; then
+    for candidate in "$tmp/otk-$platform-$arch" "$tmp/otk-gui"; do
+        if [ -f "$candidate" ]; then
+            src="$candidate"
+            break
+        fi
+    done
+fi
+if [ ! -f "$src" ]; then
+    echo "otk-install: 归档内容：" >&2
+    tar -tzf "$tmp/$asset" 2>/dev/null | sed 's/^/  /' >&2
+    die "归档里没有可执行文件 otk；请重试，或用 OTK_SOURCE=github 从 GitHub 下载"
+fi
 chmod +x "$src"
 
 # --- 安装 ---
 if [ -n "${OTK_INSTALL_DIR:-}" ]; then
     install_dir="$OTK_INSTALL_DIR"
     mkdir -p "$install_dir"
+    echo "正在安装到 $install_dir ..."
     cp "$src" "$install_dir/otk"
 elif [ -w /usr/local/bin ]; then
     install_dir=/usr/local/bin
+    echo "正在安装到 $install_dir ..."
     cp "$src" "$install_dir/otk"
 elif command -v sudo >/dev/null 2>&1; then
     install_dir=/usr/local/bin
-    echo "将用 sudo 安装到 $install_dir ..."
+    echo "正在安装到 $install_dir（需要 sudo）..."
     sudo mkdir -p /usr/local/bin
     sudo cp "$src" /usr/local/bin/otk
 else
     install_dir="$HOME/.local/bin"
     mkdir -p "$install_dir"
+    echo "正在安装到 $install_dir ..."
     cp "$src" "$install_dir/otk"
     case ":$PATH:" in
         *":$install_dir:"*) ;;
@@ -87,7 +121,8 @@ else
     esac
 fi
 
-echo "已安装 $("$install_dir/otk" version) → $install_dir/otk"
+version=$("$install_dir/otk" version 2>&1) || die "安装后无法运行 $install_dir/otk：$version"
+echo "已安装 $version → $install_dir/otk"
 
 # --- GUI 入口：发行包里的 otk-gui 是单独编出的图形版入口（按文件名进 GUI）；
 # 老包没有它时退回复制一份主程序，功能等价，只是要用 otk gui 命令打开。
