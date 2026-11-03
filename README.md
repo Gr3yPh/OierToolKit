@@ -164,11 +164,20 @@ otk contest rm <id>                        # 删除比赛
 - [x] 添加更多样例和项目管理功能
 - [ ] 集成模板库
 
+## 🤝 贡献者
+
+- [魇珩Gr3yPh4ntom](https://github.com/Gr3yPh) — 项目发起与维护；命令行工具链、核心评测引擎、远程 OJ 协议
+- [YANGRENRUIYRR](https://github.com/YANGRENRUIYRR) — 图形界面、模拟赛系统、评测增强（SPJ、评测历史、多远端）、英文翻译等
+
+提交贡献即表示同意以 GPLv3+ 授权本项目。
+
+[![贡献者](https://contrib.rocks/image?repo=Gr3yPh/OierToolKit)](https://github.com/Gr3yPh/OierToolKit/graphs/contributors)
+
 
 ---
 
 
-**Copyright (C) 2026 魇珩Gr3yPh4ntom.**
+**Copyright (C) 2026 魇珩Gr3yPh4ntom and contributors.**
 
 logo.png 与 demo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
 

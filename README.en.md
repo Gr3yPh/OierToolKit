@@ -156,9 +156,18 @@ Global configuration and the project registry are stored in `~/.otkprofile`. Set
 - [x] Add more examples and project management features
 - [ ] Integrate template library
 
+## 🤝 Contributors
+
+- [魇珩Gr3yPh4ntom](https://github.com/Gr3yPh) — project founder and maintainer; command-line toolchain, core judging engine, remote OJ protocol
+- [YANGRENRUIYRR](https://github.com/YANGRENRUIYRR) — GUI, contest system, judging enhancements (SPJ, judge history, multiple remotes), English translation, and more
+
+Contributions are accepted under the GNU General Public License, version 3 or any later version.
+
+[![Contributors](https://contrib.rocks/image?repo=Gr3yPh/OierToolKit)](https://github.com/Gr3yPh/OierToolKit/graphs/contributors)
+
 ---
 
-**Copyright (C) 2026 魇珩Gr3yPh4ntom.**
+**Copyright (C) 2026 魇珩Gr3yPh4ntom and contributors.**
 
 logo.png and demo.png are part of OierToolKit and are distributed under the terms of the GNU General Public License, version 3 or any later version, as published by the Free Software Foundation. See the LICENSE file for details.
 
