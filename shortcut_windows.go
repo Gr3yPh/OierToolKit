@@ -41,6 +41,14 @@ func shortcutPath(desktop string) string {
 // 用户改过 otk-gui.exe 的名字时快捷方式也不会丢图标。
 func writeShortcut(desktop, target string) (string, error) {
 	path := shortcutPath(desktop)
+	if err := writeLnk(path, target); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// writeLnk 在指定位置创建指向 target 的 .lnk。
+func writeLnk(path, target string) error {
 	// 图标优先用随程序发布的 otk.ico（首次创建时从内嵌资源导出）；
 	// 导出失败就退回 exe 自带的图标。
 	icon := target
@@ -61,13 +69,65 @@ func writeShortcut(desktop, target string) (string, error) {
 	)
 
 	if err := runPowerShell(script); err != nil {
-		return "", fmt.Errorf("创建快捷方式失败：%v", err)
+		return fmt.Errorf(tr("创建快捷方式失败：%v"), err)
 	}
 	if _, err := os.Stat(path); err != nil {
-		return "", fmt.Errorf("快捷方式没有生成：%v", err)
+		return fmt.Errorf(tr("快捷方式没有生成：%v"), err)
+	}
+	return nil
+}
+
+// menuShortcutPath 返回开始菜单里的入口。Windows 的“应用菜单”就是
+// 当前用户的开始菜单程序目录。
+func menuShortcutPath() (string, error) {
+	dir, err := os.UserConfigDir()
+	if err != nil {
+		return "", fmt.Errorf(tr("无法定位用户配置目录：%v"), err)
+	}
+	return filepath.Join(dir, "Microsoft", "Windows", "Start Menu", "Programs", "OierToolKit.lnk"), nil
+}
+
+func menuShortcutExists() bool {
+	path, err := menuShortcutPath()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(path)
+	return err == nil
+}
+
+func createMenuShortcut() (string, error) {
+	target, err := ensureGuiCopy()
+	if err != nil {
+		return "", err
+	}
+	path, err := menuShortcutPath()
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+		return "", fmt.Errorf(tr("无法访问开始菜单目录：%v"), err)
+	}
+	if err := writeLnk(path, target); err != nil {
+		return "", err
 	}
 	return path, nil
 }
+
+func removeMenuShortcut() (string, error) {
+	path, err := menuShortcutPath()
+	if err != nil {
+		return "", err
+	}
+	if err := os.Remove(path); err != nil {
+		return "", err
+	}
+	return path, nil
+}
+
+// autoInstallMenuShortcut 在 Windows 上不需要：窗口图标由 exe/SetIcon
+// 提供，不依赖开始菜单入口。
+func autoInstallMenuShortcut() {}
 
 // icoFilePath 返回随程序发布的 ICO 文件路径（与可执行文件同目录）。
 func icoFilePath() string {
@@ -83,7 +143,7 @@ func ensureIcoFile() (string, error) {
 		return path, nil
 	}
 	if err := os.WriteFile(path, guiIcoData, 0644); err != nil {
-		return "", fmt.Errorf("无法写入图标文件：%v", err)
+		return "", fmt.Errorf(tr("无法写入图标文件：%v"), err)
 	}
 	return path, nil
 }

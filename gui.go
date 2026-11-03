@@ -39,6 +39,9 @@ import (
 //go:embed logo.png
 var guiLogoData []byte
 
+//go:embed assets/icon.png
+var guiAppIconData []byte
+
 // 界面模式：项目库与模拟赛共用同一个右侧详情区。
 const (
 	modeProject     = "project"
@@ -94,11 +97,18 @@ func cmdGui() {
 	// 主题变体只在创建 App 时读一次，必须赶在 app.NewWithID 之前。
 	applyThemeEnv()
 
-	a := app.NewWithID("cn.gr3yph4ntom.otk")
+	a := app.NewWithID(appDesktopID)
 	a.Settings().SetTheme(newOtkTheme())
+	appIcon := fyne.NewStaticResource("otk-icon.png", guiAppIconData)
+	a.SetIcon(appIcon)
+
+	// Wayland 不支持按窗口设置图标，任务栏/标题栏只认 app_id 对应的
+	// .desktop 文件；安装版启动时顺手补一次应用菜单入口，文件在窗口
+	// 创建前就位，任务栏/标题栏即可显示 OTK 图标。go run 的临时二进制会跳过。
+	autoInstallMenuShortcut()
 
 	w := a.NewWindow("OierToolKit " + otkVersion)
-	w.SetIcon(fyne.NewStaticResource("logo.png", guiLogoData))
+	w.SetIcon(appIcon)
 
 	g := &guiApp{app: a, win: w, mode: modeProject}
 	g.build()

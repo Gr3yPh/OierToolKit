@@ -24,7 +24,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 
 ## 🌟 Features
 * **GUI and CLI in One Binary**: one binary, two entry points — `otk` (CLI) and `otk-gui` (native GUI on Windows / macOS / Linux, full feature parity), so they never get in each other's way. The GUI starts maximized (title bar and window buttons kept; F11 toggles; switchable in Settings). CLI output is safe to redirect (colors are disabled off-terminal).
-* **Desktop Shortcut**: the GUI asks once on first launch whether to create a desktop shortcut, and you can create or remove it from Settings at any time.
+* **Desktop and Application Menu Shortcuts**: the GUI asks once on first launch whether to create a desktop shortcut; Settings can also register OierToolKit in the application menu. On Linux Wayland the taskbar icon relies on this menu entry too.
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
 * **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.

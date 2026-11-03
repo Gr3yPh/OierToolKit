@@ -22,7 +22,13 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
+
+// appDesktopID 同时是 Fyne 的 UniqueID、Wayland app_id 和 Linux 应用菜单
+// 文件名。Wayland 下窗口/任务栏图标就是靠这个 ID 去匹配 .desktop 的，
+// 所以这三处必须保持一致。
+const appDesktopID = "cn.gr3yph4ntom.otk"
 
 // 桌面快捷方式：把当前可执行文件做成一个带图标的入口。
 //
@@ -30,9 +36,36 @@ import (
 // 二进制复制成 otk-gui(.exe) 放进入口指向的位置，再让快捷方式指向副本，
 // 程序启动时按文件名识别出 GUI 身份（见 mode.go）。
 
-// shortcutTarget 返回 GUI 副本的路径：与可执行文件同目录。
+// shortcutTarget 返回 GUI 副本的路径。
+//
+// 以 otk-gui 运行时就用同目录的自身；以 otk gui 运行时优先复用同目录
+// 的 otk-gui。若当前进程来自 go-build 临时目录或只读目录，入口不能指向
+// 那里，否则程序一退出快捷方式就失效，此时落到 ~/.local/bin/otk-gui。
 func shortcutTarget() string {
-	return filepath.Join(filepath.Dir(selfExe()), guiBinaryFileName())
+	dir := filepath.Dir(selfExe())
+	if isGuiBinary() {
+		return filepath.Join(dir, guiBinaryFileName())
+	}
+	// otk gui 启动时，安装脚本通常已经把 otk-gui 放在同一个 bin 目录，
+	// 直接复用它，避免再往 ~/.local/bin 复制一份。
+	sibling := filepath.Join(dir, guiBinaryFileName())
+	if st, err := os.Stat(sibling); err == nil && !st.IsDir() {
+		return sibling
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return filepath.Join(home, ".local", "bin", guiBinaryFileName())
+	}
+	return sibling
+}
+
+// isTempExecutable 判断当前进程是否来自 go run 的临时构建目录。
+func isTempExecutable() bool {
+	exe := filepath.Clean(selfExe())
+	if strings.Contains(exe, string(filepath.Separator)+"go-build") {
+		return true
+	}
+	tmp := filepath.Clean(os.TempDir())
+	return tmp != "" && strings.HasPrefix(exe, tmp+string(filepath.Separator))
 }
 
 // guiBinaryFileName 返回当前平台下 GUI 副本的文件名（otk-gui / otk-gui.exe）。
@@ -65,8 +98,12 @@ func ensureGuiCopy() (string, error) {
 		return dst, nil
 	}
 
-	if ok := copyFileIfStale(src, dst); ok {
-		return dst, nil
+	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
+		return "", fmt.Errorf(tr("无法创建 GUI 副本目录：%v"), err)
+	}
+	_ = copyFileIfStale(src, dst)
+	if _, err := os.Stat(dst); err != nil {
+		return "", fmt.Errorf(tr("无法创建 GUI 副本：%v"), err)
 	}
 	return dst, nil
 }
@@ -143,8 +180,57 @@ func desktopDir() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf(tr("无法定位用户主目录：%v"), err)
 	}
-	if dir := os.Getenv("XDG_DESKTOP_DIR"); dir != "" && runtime.GOOS == "linux" {
-		return dir, nil
+	if runtime.GOOS == "linux" {
+		if dir := linuxDesktopDir(home); dir != "" {
+			return dir, nil
+		}
 	}
 	return filepath.Join(home, "Desktop"), nil
+}
+
+// linuxDesktopDir 解析 XDG 桌面目录。
+//
+// 很多中文桌面只把 XDG_DESKTOP_DIR 写进 ~/.config/user-dirs.dirs，
+// 并不会导出到进程环境里；只读环境变量就会误判成 ~/Desktop，
+// 于是快捷方式“创建成功”却不出现在真正的桌面上。
+func linuxDesktopDir(home string) string {
+	if dir := expandXDGPath(os.Getenv("XDG_DESKTOP_DIR"), home); dir != "" {
+		return dir
+	}
+	if data, err := os.ReadFile(filepath.Join(home, ".config", "user-dirs.dirs")); err == nil {
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(line)
+			if !strings.HasPrefix(line, "XDG_DESKTOP_DIR=") {
+				continue
+			}
+			if dir := expandXDGPath(strings.TrimPrefix(line, "XDG_DESKTOP_DIR="), home); dir != "" {
+				return dir
+			}
+		}
+	}
+	// 没有配置时优先用真实存在的目录，兼容中文桌面。
+	for _, name := range []string{"Desktop", "桌面"} {
+		dir := filepath.Join(home, name)
+		if st, err := os.Stat(dir); err == nil && st.IsDir() {
+			return dir
+		}
+	}
+	return ""
+}
+
+func expandXDGPath(value, home string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	if value == "" {
+		return ""
+	}
+	value = strings.ReplaceAll(value, "${HOME}", home)
+	value = strings.ReplaceAll(value, "$HOME", home)
+	if strings.HasPrefix(value, "~/") {
+		value = filepath.Join(home, value[2:])
+	}
+	if !filepath.IsAbs(value) {
+		value = filepath.Join(home, value)
+	}
+	return filepath.Clean(value)
 }

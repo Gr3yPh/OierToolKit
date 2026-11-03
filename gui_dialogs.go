@@ -344,6 +344,40 @@ func (g *guiApp) settingsDialog() {
 		g.setStatus(tr("桌面快捷方式已删除"))
 	})
 
+	menuState := caption("")
+	refreshMenuState := func() {
+		if menuShortcutExists() {
+			menuState.SetText(tr("应用菜单快捷方式：已创建"))
+		} else {
+			menuState.SetText(tr("应用菜单快捷方式：未创建"))
+		}
+	}
+	refreshMenuState()
+
+	makeMenu := widget.NewButton(tr("添加到应用菜单"), func() {
+		if _, err := createMenuShortcut(); err != nil {
+			g.showError(err)
+			return
+		}
+		_ = setGuiPrefBool(prefMenuShortcut, true)
+		refreshMenuState()
+		g.setStatus(tr("应用菜单快捷方式已创建"))
+	})
+	delMenu := widget.NewButton(tr("从应用菜单移除"), func() {
+		if !menuShortcutExists() {
+			g.showError(fmt.Errorf("%s", tr("没有找到应用菜单快捷方式")))
+			return
+		}
+		if _, err := removeMenuShortcut(); err != nil {
+			g.showError(err)
+			return
+		}
+		// 记住“用户主动移除”：否则下次启动时自动注册又把它加回来。
+		_ = setGuiPrefBool(prefMenuShortcut, false)
+		refreshMenuState()
+		g.setStatus(tr("应用菜单快捷方式已删除"))
+	})
+
 	langSel := widget.NewSelect(languageChoices, nil)
 	langSel.SetSelected(languageChoiceFromValue(guiPref(prefLang, "auto")))
 	langNote := caption(tr("语言改动在重启应用后生效。"))
@@ -393,8 +427,15 @@ func (g *guiApp) settingsDialog() {
 		container.NewVBox(
 			shortcutState,
 			container.NewHBox(makeShortcut, delShortcut),
-			wrappedCaption(tr("快捷方式指向同目录下的 ")+guiBinaryFileName()+
+			wrappedCaption(tr("快捷方式指向 ")+prettyPath(shortcutTarget())+
 				tr("，与命令行版本 ")+filepath.Base(selfExe())+tr(" 互不影响。")),
+		),
+		widget.NewSeparator(),
+		section(tr("应用程序菜单")),
+		container.NewVBox(
+			menuState,
+			container.NewHBox(makeMenu, delMenu),
+			wrappedCaption(tr("应用菜单入口会注册到系统应用列表；在 Wayland 下，任务栏图标也依赖这个入口。")),
 		),
 		widget.NewSeparator(),
 		section(tr("编辑器")),
