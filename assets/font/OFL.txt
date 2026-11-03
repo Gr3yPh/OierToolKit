@@ -1,19 +1,19 @@
 Fonts bundled with OierToolKit
 ==============================
 
-NotoSansSC-Regular.ttf, NotoSansSC-Bold.ttf
-    Subsets of Noto Sans CJK SC.
-    Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved
-    Font Name 'Source'. Noto is a trademark of Google Inc.
-
-SarasaMonoSC-Regular.ttf
-    Subset of Sarasa Mono SC.
+SarasaGothicSC-Regular.ttf, SarasaGothicSC-Bold.ttf
+    Subsets of Sarasa Gothic SC.
     Copyright (c) 2015-2025, Renzhi Li (aka. Belleve Invis,
     belleve@typeof.net).
     Portions Copyright (c) 2016 The Inter Project Authors.
     Portions Copyright (c) 2014-2021 Adobe Systems Incorporated
     (http://www.adobe.com/).
     Portions Copyright (c) 2012 Google Inc.
+
+BlexMono-Regular.ttf, BlexMono-Bold.ttf
+    Subsets of BlexMono Nerd Font, a Nerd Fonts patch of IBM Plex Mono.
+    Copyright (c) 2017 IBM Corp., with Reserved Font Name "Plex".
+    Nerd Fonts patching by Ryan L. McIntyre and contributors.
 
 The subsets contain only the glyphs needed by the application UI and
 are distributed under the same license as the original fonts.

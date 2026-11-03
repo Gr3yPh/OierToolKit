@@ -628,7 +628,7 @@ var enUI = map[string]string{
 	"详情请参阅 GNU 通用公共许可证。":                                                                 "See the GNU General Public License for details.",
 	"完整许可证全文请查看项目中的 LICENSE 文件：https://github.com/Gr3yPh/OierToolKit/blob/main/LICENSE。": "The full license text is in the LICENSE file: https://github.com/Gr3yPh/OierToolKit/blob/main/LICENSE.",
 	"OierToolKit 版权所有 (C) 2026 魇珩Gr3yPh4ntom":                                            "OierToolKit Copyright (C) 2026 魇珩Gr3yPh4ntom",
-	"界面字体：Noto Sans SC 与 Sarasa Mono SC 子集（SIL Open Font License 1.1）":                   "UI fonts: Noto Sans SC and Sarasa Mono SC subsets (SIL Open Font License 1.1)",
+	"界面字体：更纱黑体 SC 与 BlexMono 子集（SIL Open Font License 1.1）":                              "UI fonts: Sarasa Gothic SC and BlexMono subsets (SIL Open Font License 1.1)",
 	"把这段内容贴到 issue 里通常就够了":                                                               "Pasting this into an issue is usually enough",
 	"诊断信息已复制": "Diagnostics copied",
 	"快捷方式指向 ": "The shortcut points to ",

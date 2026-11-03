@@ -66,29 +66,35 @@ func themeIndexFromValue(v string) int {
 	return 0
 }
 
-// 内置中文字体：Fyne 自带字体不含 CJK 字形，不打字体的话界面会出现豆腐块。
+// 内置字体：Fyne 自带字体不含 CJK 字形，不打字体的话界面会出现豆腐块。
 //
-// 三份都是子集（SIL OFL 1.1，见 assets/font/OFL.txt）：
-//   - Noto Sans SC Regular：正文，GB2312 全集，约 2.4MB；
-//   - Noto Sans SC Bold：标题与强调，GB2312 一级字 + 常用符号，约 1.6MB；
-//   - Sarasa Mono SC Regular：代码/日志/表格数字，GB2312 一级字 + ASCII，约 1.3MB。
+// 四份都是子集（SIL OFL 1.1，见 assets/font/OFL.txt）：
+//   - Sarasa Gothic SC Regular：正文，GB2312 与源码中的界面用字，约 2.2MB；
+//   - Sarasa Gothic SC Bold：标题与强调，同样覆盖界面常用字，约 2.2MB；
+//   - BlexMono Regular：代码/日志/表格数字，ASCII + 常用符号，约 60KB；
+//   - BlexMono Bold：等宽加粗场景，约 60KB。
 //
-// Bold 与 Mono 故意只带一级字：生僻字会回退到 Regular 或系统字体，
-// 不会出现豆腐块，却能把嵌入体积压在 3MB 以内。
+// BlexMono 不含 CJK；代码里的中文会由 Fyne 的回退链交给系统等宽字体，
+// 不会出现豆腐块。去掉 TrueType hinting 是因为 Fyne 使用 go-text 的
+// 矢量排版，不消费 hint 指令，保留只会白白增加嵌入体积。
 //
-//go:embed assets/font/NotoSansSC-Regular.ttf
+//go:embed assets/font/SarasaGothicSC-Regular.ttf
 var guiFontData []byte
 
-//go:embed assets/font/NotoSansSC-Bold.ttf
+//go:embed assets/font/SarasaGothicSC-Bold.ttf
 var guiFontBoldData []byte
 
-//go:embed assets/font/SarasaMonoSC-Regular.ttf
+//go:embed assets/font/BlexMono-Regular.ttf
 var guiFontMonoData []byte
 
+//go:embed assets/font/BlexMono-Bold.ttf
+var guiFontMonoBoldData []byte
+
 var (
-	guiFont     = fyne.NewStaticResource("NotoSansSC-Regular.ttf", guiFontData)
-	guiFontBold = fyne.NewStaticResource("NotoSansSC-Bold.ttf", guiFontBoldData)
-	guiFontMono = fyne.NewStaticResource("SarasaMonoSC-Regular.ttf", guiFontMonoData)
+	guiFont         = fyne.NewStaticResource("SarasaGothicSC-Regular.ttf", guiFontData)
+	guiFontBold     = fyne.NewStaticResource("SarasaGothicSC-Bold.ttf", guiFontBoldData)
+	guiFontMono     = fyne.NewStaticResource("BlexMono-Regular.ttf", guiFontMonoData)
+	guiFontMonoBold = fyne.NewStaticResource("BlexMono-Bold.ttf", guiFontMonoBoldData)
 )
 
 // 内置简体中文翻译：Fyne 自带的 zh-Hans 词条很少，像 Select 的占位
@@ -163,11 +169,12 @@ func (t *otkTheme) Font(style fyne.TextStyle) fyne.Resource {
 	if style.Symbol {
 		return t.base.Font(style)
 	}
-	// 以前这里对 Bold/Monospace 也返回同一个 Regular 资源，Fyne 的
-	// dynamicFontMap 永远只认第一个含该字形的 face，于是加粗和等宽
-	// 在界面上全部失效。现在按样式返回不同资源，等宽优先于加粗：
-	// 代码块要的是对齐，字重可以退让。
+	// 按样式返回不同资源。等宽优先于加粗，但两者同时出现时仍尽量
+	// 使用等宽的粗体，避免代码块里的强调退化成普通正文。
 	if style.Monospace {
+		if style.Bold {
+			return guiFontMonoBold
+		}
 		return guiFontMono
 	}
 	if style.Bold {

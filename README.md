@@ -19,7 +19,7 @@
 ~~叫做OierOperationSimplifier更合理吧。。~~
 
 <p align="center">
-  <img src="demo.png" width="900" alt="OierToolKit 向导与评测演示">
+  <img src="demo.png" width="900" alt="OierToolKit 图形界面与评测演示">
 </p>
 
 

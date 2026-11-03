@@ -19,7 +19,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 ~~It would be more reasonable to call it OierOperationSimplifier...~~
 
 <p align="center">
-  <img src="demo.png" width="900" alt="OierToolKit wizard and judge demo">
+  <img src="demo.png" width="900" alt="OierToolKit GUI and judge demo">
 </p>
 
 ## 🌟 Features

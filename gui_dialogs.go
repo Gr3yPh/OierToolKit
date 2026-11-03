@@ -622,7 +622,7 @@ func (g *guiApp) aboutDialog() {
 		widget.NewSeparator(),
 		container.NewCenter(links),
 		container.NewCenter(license),
-		caption(tr("界面字体：Noto Sans SC 与 Sarasa Mono SC 子集（SIL Open Font License 1.1）")),
+		caption(tr("界面字体：更纱黑体 SC 与 BlexMono 子集（SIL Open Font License 1.1）")),
 	)
 	dialog.ShowCustom(tr("关于"), tr("关闭"), content, g.win)
 }
