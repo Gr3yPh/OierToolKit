@@ -68,9 +68,11 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o := &overviewPage{pg: pg}
 
 	o.name = strong("")
-	o.dir = hint("")
-	o.source = hint("")
-	o.count = hint("")
+	o.name.Truncation = fyne.TextTruncateEllipsis
+	o.dir = monoLabel("")
+	o.source = monoLabel("")
+	o.count = widget.NewLabel("")
+	o.count.Truncation = fyne.TextTruncateEllipsis
 	o.remote = hint("")
 
 	o.timeIn = widget.NewEntry()
@@ -148,50 +150,54 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 
 	info := container.NewVBox(
 		section(tr("项目")),
-		caption(tr("名称")), o.name,
-		caption(tr("目录")), o.dir,
-		caption(tr("源码")), o.source,
-		caption(tr("样例")), o.count,
+		infoRow(tr("名称"), o.name),
+		infoRow(tr("目录"), o.dir),
+		infoRow(tr("源码"), o.source),
+		infoRow(tr("样例"), o.count),
 	)
 
-	form := widget.NewForm(
-		widget.NewFormItem(tr("时限（秒）"), o.timeIn),
-		widget.NewFormItem(tr("内存（MB）"), o.memIn),
-		widget.NewFormItem(tr("编译器"), o.compSel),
-		widget.NewFormItem(tr("语言标准"), o.langSel),
-		widget.NewFormItem(tr("优化"), o.o2),
-		widget.NewFormItem(tr("编译参数"), o.cflags),
-		widget.NewFormItem(tr("并发线程"), o.threads),
-		widget.NewFormItem(tr("输入输出"), o.ioFile),
-		widget.NewFormItem(tr("输入文件名"), o.ioIn),
-		widget.NewFormItem(tr("输出文件名"), o.ioOut),
+	// 配置项用四列网格：输入框不再一条占满 900px，扫一眼就能看全。
+	form := container.NewGridWithColumns(4,
+		field(tr("时限（秒）"), o.timeIn),
+		field(tr("内存（MB）"), o.memIn),
+		field(tr("编译器"), o.compSel),
+		field(tr("语言标准"), o.langSel),
+		field(tr("编译参数"), o.cflags),
+		field(tr("并发线程"), o.threads),
+		field(tr("优化"), o.o2),
+		field(tr("输入输出"), o.ioFile),
+		field(tr("输入文件名"), o.ioIn),
+		field(tr("输出文件名"), o.ioOut),
 	)
 
 	o.spjTip = caption("")
+	o.spjTip.Wrapping = fyne.TextWrapWord
+	o.note.Wrapping = fyne.TextWrapWord
 
 	body := container.NewVBox(
 		info,
-		widget.NewSeparator(),
+		spacerH(10),
 		section(tr("评测配置")),
 		form,
-		container.NewHBox(o.spjTip),
-		container.NewHBox(o.note),
-		widget.NewSeparator(),
+		spacerH(4),
+		o.spjTip,
+		o.note,
+		spacerH(10),
 		section(tr("远端")),
 		o.remote,
 		container.NewHBox(
 			widget.NewButton(tr("配置远端"), func() { pg.g.remoteConfigDialog(pg.p) }),
-			caption(tr("从网站添加的题目会自动填好这两项")),
 		),
-		widget.NewSeparator(),
+		wrappedCaption(tr("从网站添加的题目会自动填好这两项")),
+		spacerH(10),
 		section(tr("操作")),
 		container.NewHBox(refreshBtn, openBtn, editBtn, termBtn),
 		container.NewHBox(packBtn, tplBtn),
-		container.NewHBox(caption(tr("打包 ZIP：源码、样例与配置打成一个包，不含编译产物。存为模板：把这份骨架留作下次新建的起手式。"))),
+		wrappedCaption(tr("打包 ZIP：源码、样例与配置打成一个包，不含编译产物。存为模板：把这份骨架留作下次新建的起手式。")),
 		container.NewHBox(removeBtn, layout.NewSpacer()),
 	)
 
-	o.content = container.NewVScroll(container.NewPadded(body))
+	o.content = container.NewVScroll(maxWidth(980, inset(16, 16, 16, 16, body)))
 	o.reload()
 	return o
 }

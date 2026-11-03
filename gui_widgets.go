@@ -19,6 +19,8 @@ package main
 
 import (
 	"image/color"
+	"os"
+	"strings"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
@@ -119,20 +121,247 @@ func hint(text string) *widget.Label {
 }
 
 // section 返回一个小标题。
+// 以前每个标题下面都跟一条整宽分隔线，一页四五个 section 就变成
+// 四五道横线，页面被切得很碎。现在只留 13px 粗体 + 一点下边距，
+// 层级靠字重和留白，不靠线。
 func section(text string) fyne.CanvasObject {
 	l := widget.NewLabel(text)
 	l.TextStyle = fyne.TextStyle{Bold: true}
-	return container.NewVBox(l, widget.NewSeparator())
+	l.SizeName = sizeNameSection
+	return container.NewVBox(l, spacerH(4))
 }
 
-// kv 返回一行「标签：值」，用于概览页的只读信息。
-func kv(key, value string) fyne.CanvasObject {
-	k := caption(key)
-	v := widget.NewLabel(value)
-	v.Selectable = true
-	v.Wrapping = fyne.TextWrapWord
-	return container.NewBorder(nil, nil, container.NewGridWrap(fyne.NewSize(88, k.MinSize().Height), k), nil, v)
+// spacerH 返回固定高度的空白，用于控制纵向节奏。
+func spacerH(h float32) fyne.CanvasObject {
+	r := canvas.NewRectangle(color.Transparent)
+	r.SetMinSize(fyne.NewSize(0, h))
+	return r
 }
+
+// inset 给单个对象加内边距。container.NewPadded 四边固定 5px，
+// 顶栏/状态栏需要更精确的横向留白，所以单独做一个。
+func inset(left, top, right, bottom float32, obj fyne.CanvasObject) fyne.CanvasObject {
+	return container.New(insetLayout{left: left, top: top, right: right, bottom: bottom}, obj)
+}
+
+type insetLayout struct {
+	left, top, right, bottom float32
+}
+
+func (l insetLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	w := size.Width - l.left - l.right
+	h := size.Height - l.top - l.bottom
+	if w < 0 {
+		w = 0
+	}
+	if h < 0 {
+		h = 0
+	}
+	for _, obj := range objects {
+		obj.Move(fyne.NewPos(l.left, l.top))
+		obj.Resize(fyne.NewSize(w, h))
+	}
+}
+
+func (l insetLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	var w, h float32
+	for _, obj := range objects {
+		if !obj.Visible() {
+			continue
+		}
+		s := obj.MinSize()
+		if s.Width > w {
+			w = s.Width
+		}
+		if s.Height > h {
+			h = s.Height
+		}
+	}
+	return fyne.NewSize(w+l.left+l.right, h+l.top+l.bottom)
+}
+
+// fixedHeight 把内容钉在固定高度（宽度仍跟随父容器），
+// 用于 56px 顶栏和 28px 状态栏。
+func fixedHeight(h float32, content fyne.CanvasObject) fyne.CanvasObject {
+	w := &fixedHeightWidget{content: content, height: h}
+	w.ExtendBaseWidget(w)
+	return w
+}
+
+type fixedHeightWidget struct {
+	widget.BaseWidget
+	content fyne.CanvasObject
+	height  float32
+}
+
+func (w *fixedHeightWidget) CreateRenderer() fyne.WidgetRenderer {
+	return &fixedHeightRenderer{w: w}
+}
+
+type fixedHeightRenderer struct {
+	w *fixedHeightWidget
+}
+
+func (r *fixedHeightRenderer) Layout(size fyne.Size) {
+	r.w.content.Move(fyne.NewPos(0, (size.Height-r.w.height)/2))
+	r.w.content.Resize(fyne.NewSize(size.Width, r.w.height))
+}
+
+func (r *fixedHeightRenderer) MinSize() fyne.Size {
+	return fyne.NewSize(r.w.content.MinSize().Width, r.w.height)
+}
+
+func (r *fixedHeightRenderer) Refresh() {
+	canvas.Refresh(r.w.content)
+}
+
+func (r *fixedHeightRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.w.content}
+}
+
+func (r *fixedHeightRenderer) Destroy() {}
+
+// maxWidth 让内容在宽窗口里保持最大宽度并居中，避免表单和文字被拉满。
+func maxWidth(max float32, obj fyne.CanvasObject) fyne.CanvasObject {
+	return container.New(maxWidthLayout{max: max}, obj)
+}
+
+type maxWidthLayout struct {
+	max float32
+}
+
+func (l maxWidthLayout) Layout(objects []fyne.CanvasObject, size fyne.Size) {
+	w := size.Width
+	if w > l.max {
+		w = l.max
+	}
+	x := (size.Width - w) / 2
+	for _, obj := range objects {
+		obj.Move(fyne.NewPos(x, 0))
+		obj.Resize(fyne.NewSize(w, obj.MinSize().Height))
+	}
+}
+
+func (l maxWidthLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
+	var w, h float32
+	for _, obj := range objects {
+		if !obj.Visible() {
+			continue
+		}
+		s := obj.MinSize()
+		if s.Width > w {
+			w = s.Width
+		}
+		if s.Height > h {
+			h = s.Height
+		}
+	}
+	if w > l.max {
+		w = l.max
+	}
+	return fyne.NewSize(w, h)
+}
+
+// infoRow 是一行只读信息：左边固定宽度标签，右边值。
+func infoRow(key string, value fyne.CanvasObject) fyne.CanvasObject {
+	k := caption(key)
+	left := container.NewGridWrap(fyne.NewSize(72, k.MinSize().Height), k)
+	return container.NewBorder(nil, nil, left, nil, value)
+}
+
+// field 是表单里的一格：小标签在上，控件在下。
+func field(label string, control fyne.CanvasObject) fyne.CanvasObject {
+	return container.NewVBox(caption(label), control)
+}
+
+// monoLabel 返回等宽、可选中、超长省略的标签（路径、命令、代码片段）。
+func monoLabel(text string) *widget.Label {
+	l := widget.NewLabel(text)
+	l.TextStyle = fyne.TextStyle{Monospace: true}
+	l.Truncation = fyne.TextTruncateEllipsis
+	l.Selectable = true
+	return l
+}
+
+// prettyPath 把主目录缩成 ~，侧栏里不再出现一长串绝对路径。
+func prettyPath(path string) string {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return path
+	}
+	if path == home {
+		return "~"
+	}
+	if strings.HasPrefix(path, home+string(os.PathSeparator)) {
+		return "~" + path[len(home):]
+	}
+	return path
+}
+
+// navButton 是侧栏的扁平导航项：透明底、左对齐，悬停才显出底色。
+func navButton(label string, icon fyne.Resource, tapped func()) *widget.Button {
+	b := widget.NewButtonWithIcon(label, icon, tapped)
+	b.Alignment = widget.ButtonAlignLeading
+	b.Importance = widget.LowImportance
+	return b
+}
+
+// sidebarSplit 用固定宽度的侧栏替代按比例分栏：窗口最大化后
+// 侧栏不会跟着涨到 480px，列表始终有稳定的阅读宽度。
+func sidebarSplit(side, main fyne.CanvasObject) fyne.CanvasObject {
+	w := &sidebarSplitWidget{side: side, main: main}
+	w.ExtendBaseWidget(w)
+	return w
+}
+
+type sidebarSplitWidget struct {
+	widget.BaseWidget
+	side fyne.CanvasObject
+	main fyne.CanvasObject
+}
+
+func (w *sidebarSplitWidget) CreateRenderer() fyne.WidgetRenderer {
+	return &sidebarSplitRenderer{w: w}
+}
+
+type sidebarSplitRenderer struct {
+	w *sidebarSplitWidget
+}
+
+func (r *sidebarSplitRenderer) Layout(size fyne.Size) {
+	w := float32(280)
+	if size.Width < 900 {
+		w = 240
+	}
+	if w > size.Width*0.4 {
+		w = size.Width * 0.4
+	}
+	r.w.side.Move(fyne.NewPos(0, 0))
+	r.w.side.Resize(fyne.NewSize(w, size.Height))
+	r.w.main.Move(fyne.NewPos(w, 0))
+	r.w.main.Resize(fyne.NewSize(size.Width-w, size.Height))
+}
+
+func (r *sidebarSplitRenderer) MinSize() fyne.Size {
+	s := r.w.side.MinSize()
+	m := r.w.main.MinSize()
+	h := s.Height
+	if m.Height > h {
+		h = m.Height
+	}
+	return fyne.NewSize(s.Width+m.Width, h)
+}
+
+func (r *sidebarSplitRenderer) Refresh() {
+	canvas.Refresh(r.w.side)
+	canvas.Refresh(r.w.main)
+}
+
+func (r *sidebarSplitRenderer) Objects() []fyne.CanvasObject {
+	return []fyne.CanvasObject{r.w.side, r.w.main}
+}
+
+func (r *sidebarSplitRenderer) Destroy() {}
 
 // scrollHint 把长文本放进纵向滚动区域。
 func scrollHint(text string) fyne.CanvasObject {

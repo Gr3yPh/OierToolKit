@@ -67,13 +67,29 @@ func themeIndexFromValue(v string) int {
 }
 
 // 内置中文字体：Fyne 自带字体不含 CJK 字形，不打字体的话界面会出现豆腐块。
-// 这里用的是 Noto Sans SC 的 GB2312 子集（SIL OFL 1.1，见 assets/font/OFL.txt），
-// 覆盖 ASCII、常用符号与全部 GB2312 汉字，约 2.4MB。
+//
+// 三份都是子集（SIL OFL 1.1，见 assets/font/OFL.txt）：
+//   - Noto Sans SC Regular：正文，GB2312 全集，约 2.4MB；
+//   - Noto Sans SC Bold：标题与强调，GB2312 一级字 + 常用符号，约 1.6MB；
+//   - Sarasa Mono SC Regular：代码/日志/表格数字，GB2312 一级字 + ASCII，约 1.3MB。
+//
+// Bold 与 Mono 故意只带一级字：生僻字会回退到 Regular 或系统字体，
+// 不会出现豆腐块，却能把嵌入体积压在 3MB 以内。
 //
 //go:embed assets/font/NotoSansSC-Regular.ttf
 var guiFontData []byte
 
-var guiFont = fyne.NewStaticResource("NotoSansSC-Regular.ttf", guiFontData)
+//go:embed assets/font/NotoSansSC-Bold.ttf
+var guiFontBoldData []byte
+
+//go:embed assets/font/SarasaMonoSC-Regular.ttf
+var guiFontMonoData []byte
+
+var (
+	guiFont     = fyne.NewStaticResource("NotoSansSC-Regular.ttf", guiFontData)
+	guiFontBold = fyne.NewStaticResource("NotoSansSC-Bold.ttf", guiFontBoldData)
+	guiFontMono = fyne.NewStaticResource("SarasaMonoSC-Regular.ttf", guiFontMonoData)
+)
 
 // 内置简体中文翻译：Fyne 自带的 zh-Hans 词条很少，像 Select 的占位
 // 提示 "(Select one)" 会缺失并在日志里刷 "Translation failure"。这里补全
@@ -127,6 +143,12 @@ var (
 	colorIdleDark    = color.NRGBA{R: 0x9A, G: 0xA3, B: 0xB0, A: 0xFF}
 )
 
+// 自定义字号：Fyne 没有 16px 标题和 13px 小节的档位。
+const (
+	sizeNameHeader  fyne.ThemeSizeName = "otkHeader"
+	sizeNameSection fyne.ThemeSizeName = "otkSection"
+)
+
 // otkTheme 只覆盖字体、强调色与几个面板色，其余交给 Fyne 默认主题，
 // 这样浅色/深色两套配色都能自动跟随系统。
 type otkTheme struct {
@@ -141,8 +163,16 @@ func (t *otkTheme) Font(style fyne.TextStyle) fyne.Resource {
 	if style.Symbol {
 		return t.base.Font(style)
 	}
-	// 等宽字体没有中文字形，样例与日志里出现中文就会变豆腐块，所以
-	// 统一用内置中文字体。
+	// 以前这里对 Bold/Monospace 也返回同一个 Regular 资源，Fyne 的
+	// dynamicFontMap 永远只认第一个含该字形的 face，于是加粗和等宽
+	// 在界面上全部失效。现在按样式返回不同资源，等宽优先于加粗：
+	// 代码块要的是对齐，字重可以退让。
+	if style.Monospace {
+		return guiFontMono
+	}
+	if style.Bold {
+		return guiFontBold
+	}
 	return guiFont
 }
 
@@ -156,6 +186,29 @@ func (t *otkTheme) Size(name fyne.ThemeSizeName) float32 {
 		return 5
 	case theme.SizeNameText:
 		return 14
+	case sizeNameHeader:
+		return 16
+	case sizeNameSection:
+		return 13
+	case theme.SizeNameCaptionText:
+		// 11px 在 125% 缩放的 Windows 上太小，状态栏和辅助说明读起来费劲。
+		return 12
+	case theme.SizeNameInnerPadding:
+		// 默认 8 会把按钮/输入框撑到 36-40px。收到 6 以后按钮约 31px，
+		// 正好放进 56px 的顶栏和 28px 的状态栏。
+		return 6
+	case theme.SizeNameInlineIcon:
+		return 18
+	case theme.SizeNameInputRadius:
+		return 8
+	case theme.SizeNameSelectionRadius:
+		return 8
+	case theme.SizeNameScrollBar:
+		return 9
+	case theme.SizeNameScrollBarSmall:
+		return 4
+	case theme.SizeNameLineSpacing:
+		return 5
 	}
 	return t.base.Size(name)
 }
@@ -239,6 +292,29 @@ func (t *otkTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) co
 			return color.NRGBA{R: 0xA8, G: 0xC5, B: 0xFF, A: 0x78}
 		}
 		return color.NRGBA{R: 0x9B, G: 0xBB, B: 0xFA, A: 0x6E}
+	case theme.ColorNameButton:
+		// 默认按钮色比背景还深一截，一排按钮看起来像一排灰砖。
+		// 这里只比面板深一点：按钮仍然可辨认，但不抢正文。
+		if dark {
+			return color.NRGBA{R: 0x26, G: 0x2A, B: 0x30, A: 0xFF}
+		}
+		return color.NRGBA{R: 0xED, G: 0xEF, B: 0xF3, A: 0xFF}
+	case theme.ColorNameSelection:
+		// 列表/表格选中态：淡品牌蓝，不用默认的高饱和蓝。
+		if dark {
+			return color.NRGBA{R: 0x6A, G: 0x9B, B: 0xFF, A: 0x3D}
+		}
+		return color.NRGBA{R: 0x2F, G: 0x6F, B: 0xE8, A: 0x24}
+	case theme.ColorNameFocus:
+		if dark {
+			return colorAccentDark
+		}
+		return colorAccentLight
+	case theme.ColorNameMenuBackground:
+		if dark {
+			return colorPanelDark
+		}
+		return colorPanelLight
 	}
 	// 基础主题只认"是不是浅色"，其余一律按深色取；而上面的判断反过来，
 	// 只认"是不是深色"。遇到两边都不认的值（测试驱动给的就是 2），

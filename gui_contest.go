@@ -1312,6 +1312,7 @@ func (g *guiApp) showProjectList() {
 	}
 	g.selected = ""
 	g.mode = modeProjectList
+	g.setNav(modeProjectList)
 	if g.list != nil {
 		g.list.UnselectAll()
 		g.list.Refresh()
@@ -1326,6 +1327,7 @@ func (g *guiApp) showContestList() {
 	g.page = nil
 	g.selected = ""
 	g.mode = modeContest
+	g.setNav(modeContest)
 	if g.list != nil {
 		g.list.UnselectAll()
 		g.list.Refresh()

@@ -62,6 +62,11 @@ type guiApp struct {
 	status  *widget.Label
 	spinner *widget.ProgressBarInfinite
 
+	// 侧栏导航项的选中态：只有"全部项目"和"模拟赛"是页面，
+	// "批量评测"是动作，不参与高亮。
+	navList    *widget.Button
+	navContest *widget.Button
+
 	mode     string // project / projects / contest
 	selected string
 	page     *projectPage
@@ -251,10 +256,8 @@ func (g *guiApp) build() {
 	g.spinner.Hide()
 	g.detail = container.NewStack(g.emptyView())
 
-	split := container.NewHSplit(g.buildSidebar(), g.detail)
-	split.SetOffset(0.25)
-
-	root := container.NewBorder(g.buildHeader(), g.buildStatusBar(), nil, nil, split)
+	root := container.NewBorder(g.buildHeader(), g.buildStatusBar(), nil, nil,
+		sidebarSplit(g.buildSidebar(), g.detail))
 	g.win.SetContent(root)
 }
 
@@ -277,22 +280,28 @@ func screenWorkArea(w fyne.Window) (fyne.Size, bool) {
 func (g *guiApp) buildHeader() fyne.CanvasObject {
 	logo := canvas.NewImageFromResource(fyne.NewStaticResource("logo.png", guiLogoData))
 	logo.FillMode = canvas.ImageFillContain
-	logo.SetMinSize(fyne.NewSize(30, 30))
+	logo.SetMinSize(fyne.NewSize(24, 24))
 
-	title := widget.NewLabelWithStyle("OierToolKit", fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
-	title.SizeName = theme.SizeNameSubHeadingText
-	subtitle := caption(otkVersion + tr(" · 本地评测 · 题目管理 · 对拍"))
+	title := widget.NewLabel("OierToolKit")
+	title.TextStyle = fyne.TextStyle{Bold: true}
+	title.SizeName = sizeNameHeader
+	version := caption(otkVersion)
 
-	left := container.NewHBox(logo, container.NewVBox(title, subtitle))
+	// 品牌块只占一行：logo + 名称 + 版本，副标题留给"关于"。
+	left := container.NewHBox(logo, title, version)
 
 	newBtn := widget.NewButtonWithIcon(tr("新建项目"), theme.ContentAddIcon(), g.newProjectDialog)
+	newBtn.Importance = widget.HighImportance
 	cloneBtn := widget.NewButtonWithIcon(tr("从网站添加题目"), theme.DownloadIcon(), g.cloneDialog)
+	cloneBtn.Importance = widget.LowImportance
 	settingsBtn := widget.NewButtonWithIcon("", theme.SettingsIcon(), g.settingsDialog)
+	settingsBtn.Importance = widget.LowImportance
 	aboutBtn := widget.NewButtonWithIcon("", theme.InfoIcon(), g.aboutDialog)
+	aboutBtn.Importance = widget.LowImportance
 	right := container.NewHBox(newBtn, cloneBtn, settingsBtn, aboutBtn)
 
 	bar := container.NewBorder(nil, nil, left, right, layout.NewSpacer())
-	return container.NewVBox(container.NewPadded(bar), widget.NewSeparator())
+	return container.NewVBox(fixedHeight(56, inset(16, 0, 16, 0, bar)), widget.NewSeparator())
 }
 
 func (g *guiApp) buildSidebar() fyne.CanvasObject {
@@ -326,34 +335,48 @@ func (g *guiApp) buildSidebar() fyne.CanvasObject {
 
 	g.count = caption("")
 
-	contestBtn := widget.NewButtonWithIcon(tr("模拟赛"), theme.GridIcon(), g.showContestList)
-	contestBtn.Alignment = widget.ButtonAlignLeading
-	batchBtn := widget.NewButtonWithIcon(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog)
-	batchBtn.Alignment = widget.ButtonAlignLeading
-	listBtn := widget.NewButtonWithIcon(tr("全部项目"), theme.ListIcon(), g.showProjectList)
-	listBtn.Alignment = widget.ButtonAlignLeading
+	g.navList = navButton(tr("全部项目"), theme.ListIcon(), g.showProjectList)
+	batchBtn := navButton(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog)
+	g.navContest = navButton(tr("模拟赛"), theme.GridIcon(), g.showContestList)
 
+	// 侧栏只保留搜索 + 三个导航项。以前每组还有一个"粗体标题 + 分隔线"，
+	// 三组叠起来吃掉 350px，项目列表只剩三四行。
 	head := container.NewVBox(
-		container.NewPadded(container.NewVBox(
-			section(tr("模拟赛")),
-			contestBtn,
-		)),
+		inset(8, 8, 8, 2, g.search),
+		inset(4, 0, 4, 6, container.NewVBox(g.navList, batchBtn, g.navContest)),
 		widget.NewSeparator(),
-		container.NewPadded(container.NewVBox(
-			section(tr("项目库")),
-			listBtn,
-			batchBtn,
-		)),
-		container.NewPadded(g.search),
 	)
-	foot := container.NewPadded(g.count)
+	foot := inset(8, 4, 8, 4, g.count)
 
 	return container.NewBorder(head, foot, nil, nil, g.list)
 }
 
 func (g *guiApp) buildStatusBar() fyne.CanvasObject {
-	bar := container.NewBorder(nil, nil, nil, g.spinner, container.NewPadded(g.status))
-	return container.NewVBox(widget.NewSeparator(), bar)
+	g.status.SizeName = theme.SizeNameCaptionText
+	spin := container.NewCenter(container.NewGridWrap(fyne.NewSize(64, 4), g.spinner))
+	bar := container.NewBorder(nil, nil, nil, spin, g.status)
+	return container.NewVBox(widget.NewSeparator(), fixedHeight(28, inset(12, 0, 12, 0, bar)))
+}
+
+// setNav 更新侧栏导航的选中态。批量评测是动作，不参与高亮。
+func (g *guiApp) setNav(mode string) {
+	for _, item := range []struct {
+		mode string
+		btn  *widget.Button
+	}{
+		{modeProjectList, g.navList},
+		{modeContest, g.navContest},
+	} {
+		if item.btn == nil {
+			continue
+		}
+		if item.mode == mode {
+			item.btn.Importance = widget.MediumImportance
+		} else {
+			item.btn.Importance = widget.LowImportance
+		}
+		item.btn.Refresh()
+	}
 }
 
 // emptyView 是未选择项目时的占位页。
@@ -376,8 +399,8 @@ func (g *guiApp) emptyView() fyne.CanvasObject {
 		container.NewCenter(logo),
 		container.NewCenter(title),
 		container.NewCenter(tip),
-		layout.NewSpacer(),
-		btns,
+		spacerH(10),
+		container.NewCenter(btns),
 	))
 }
 
@@ -435,6 +458,7 @@ func (g *guiApp) showProject(dir string) {
 	g.generation.Add(1)
 	g.mode = modeProject
 	g.selected = dir
+	g.setNav(modeProject)
 	if g.list != nil {
 		g.list.Refresh()
 	}
@@ -512,25 +536,38 @@ func dirExists(path string) bool {
 }
 
 // projectRow 是项目库列表中的一行：项目名 + 目录，行尾带删除入口。
+// 删除按钮只在选中时出现，平时不打扰阅读；也避免鼠标移到按钮上时
+// 行先收到 MouseOut 把按钮藏掉的闪烁。
 type projectRow struct {
 	widget.BaseWidget
 	name   *widget.Label
 	path   *widget.Label
 	remove *widget.Button
+	accent *canvas.Rectangle
+
+	selected bool
 }
 
 func newProjectRow(onRemove func()) *projectRow {
-	r := &projectRow{name: strong(""), path: caption("")}
+	r := &projectRow{
+		name:   strong(""),
+		path:   caption(""),
+		accent: canvas.NewRectangle(theme.Color(theme.ColorNamePrimary)),
+	}
 	r.name.Truncation = fyne.TextTruncateEllipsis
 	r.path.Truncation = fyne.TextTruncateEllipsis
+	r.accent.Resize(fyne.NewSize(2, 1))
+	r.accent.Hide()
 	r.remove = deleteIconButton(tr("删除这个项目…"), onRemove)
+	r.remove.Hide()
 	r.ExtendBaseWidget(r)
 	return r
 }
 
 func (r *projectRow) update(name, path string, selected, missing bool) {
+	r.selected = selected
 	r.name.SetText(name)
-	r.path.SetText(path)
+	r.path.SetText(prettyPath(path))
 	switch {
 	case missing:
 		r.name.Importance = widget.LowImportance
@@ -540,13 +577,71 @@ func (r *projectRow) update(name, path string, selected, missing bool) {
 	default:
 		r.name.Importance = widget.MediumImportance
 	}
+	if selected {
+		r.accent.Show()
+		r.remove.Show()
+	} else {
+		r.accent.Hide()
+		r.remove.Hide()
+	}
+	r.Refresh()
 }
 
 func (r *projectRow) CreateRenderer() fyne.WidgetRenderer {
-	text := container.NewVBox(r.name, r.path)
-	return widget.NewSimpleRenderer(container.NewPadded(
-		container.NewBorder(nil, nil, nil, r.remove, text)))
+	return &projectRowRenderer{row: r, objects: []fyne.CanvasObject{r.accent, r.name, r.path, r.remove}}
 }
+
+type projectRowRenderer struct {
+	row     *projectRow
+	objects []fyne.CanvasObject
+}
+
+func (r *projectRowRenderer) Layout(size fyne.Size) {
+	const pad = float32(8)
+	const removeSize = float32(28)
+
+	r.row.accent.Move(fyne.NewPos(0, 0))
+	r.row.accent.Resize(fyne.NewSize(2, size.Height))
+
+	// Fyne 的 Label 自带上下各 5px 内边距（MinSize 已经含进去），
+	// 两行标签实际要 56px 左右。这里让 path 压进 name 的底边距 4px，
+	// 把行高收到 52px 左右，既不重叠文字，也不像原来那样 72px 一行。
+	nameH := r.row.name.MinSize().Height
+	pathH := r.row.path.MinSize().Height
+	y := (size.Height - nameH - pathH + 4) / 2
+	if y < 0 {
+		y = 0
+	}
+	textW := size.Width - (pad + 2) - pad - removeSize - 4
+	if textW < 20 {
+		textW = 20
+	}
+	r.row.name.Move(fyne.NewPos(pad+2, y))
+	r.row.name.Resize(fyne.NewSize(textW, nameH))
+	r.row.path.Move(fyne.NewPos(pad+2, y+nameH-4))
+	r.row.path.Resize(fyne.NewSize(textW, pathH))
+
+	r.row.remove.Resize(fyne.NewSize(removeSize, removeSize))
+	r.row.remove.Move(fyne.NewPos(size.Width-pad-removeSize, (size.Height-removeSize)/2))
+}
+
+func (r *projectRowRenderer) MinSize() fyne.Size {
+	nameH := r.row.name.MinSize().Height
+	pathH := r.row.path.MinSize().Height
+	// 两个 Label 各带 10px 上下内边距；叠掉 4px 后行高约 52px，
+	// 默认窗口里 8 个项目能一屏放下。
+	return fyne.NewSize(180, nameH+pathH-4)
+}
+
+func (r *projectRowRenderer) Refresh() {
+	canvas.Refresh(r.row)
+}
+
+func (r *projectRowRenderer) Objects() []fyne.CanvasObject {
+	return r.objects
+}
+
+func (r *projectRowRenderer) Destroy() {}
 
 // projectPage 汇总一个项目的六个页面，并持有停止后台任务的开关。
 type projectPage struct {
