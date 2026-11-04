@@ -246,7 +246,11 @@ func showConfig() {
 		fmt.Printf("tag=%s\n", tag)
 	}
 	if b := props["remote_base"]; b != "" {
-		fmt.Printf("remote=%s @ %s\n", props["remote_id"], b)
+		site := props["remote_site"]
+		if site == "" {
+			site = b
+		}
+		fmt.Printf("remote=%s @ %s\n", props["remote_id"], site)
 	}
 }
 

@@ -336,9 +336,10 @@ func (g *guiApp) importContestDialog() {
 			widget.NewFormItem(tr("上传目录"), dirRow),
 			widget.NewFormItem(tr("比赛名称"), nameEntry),
 		),
+		caption(tr("目录结构：")+"\n  data/<problem>/<test>.in + .ans/.out\n  source/<player>/<problem>.cpp"),
 	)
 
-	dialog.ShowCustomConfirm(tr("导入模拟赛"), tr("导入"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("导入模拟赛"), tr("导入"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -362,7 +363,7 @@ func (g *guiApp) importContestZipDialog() {
 	nameEntry.SetPlaceHolder(tr("比赛名称（默认用包里的名字）"))
 
 	browse := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-		picker := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
+		picker := newLargeFileOpen(func(uc fyne.URIReadCloser, err error) {
 			if err != nil || uc == nil {
 				return
 			}
@@ -381,7 +382,7 @@ func (g *guiApp) importContestZipDialog() {
 		),
 	)
 
-	dialog.ShowCustomConfirm(tr("导入 ZIP 数据包"), tr("导入"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("导入 ZIP 数据包"), tr("导入"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -400,7 +401,7 @@ func (g *guiApp) importContestZipDialog() {
 // exportContestZip 弹出保存框，把整场比赛打包成 zip 数据包。
 func (g *guiApp) exportContestZip(c contest) {
 	def := sanitizeFileName(c.Cfg.Name) + ".zip"
-	save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+	save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 		if err != nil || w == nil {
 			return
 		}
@@ -462,7 +463,7 @@ func (g *guiApp) duplicateContestDialog(c contest) {
 		widget.NewForm(widget.NewFormItem(tr("新名称"), nameEntry)),
 	)
 
-	dialog.ShowCustomConfirm(tr("复制模拟赛"), tr("复制"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("复制模拟赛"), tr("复制"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}

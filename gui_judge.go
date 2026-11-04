@@ -530,7 +530,7 @@ func (j *judgePage) showHistory() {
 			j.pg.g.showError(err)
 			return
 		}
-		save := dialog.NewFileSave(func(f fyne.URIWriteCloser, werr error) {
+		save := newLargeFileSave(func(f fyne.URIWriteCloser, werr error) {
 			if werr != nil || f == nil {
 				return
 			}

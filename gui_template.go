@@ -41,7 +41,7 @@ func (g *guiApp) saveAsTemplateDialog(p project) {
 		withSamples,
 	)
 
-	g.showWideDialog(tr("存为模板"), tr("保存"), tr("取消"), content, func() {
+	g.showFormDialog(tr("存为模板"), tr("保存"), tr("取消"), content, func() {
 		name := strings.TrimSpace(nameEntry.Text)
 		if name == "" {
 			g.showError(fmt.Errorf("%s", tr("模板名称不能为空")))

@@ -50,6 +50,9 @@ type sheetOptions struct {
 	WidthRatio float64
 	// HeightRatio 占主窗口高度的比例（0 表示 0.82），下限 560px、上限 900px。
 	HeightRatio float64
+	// 可选的像素上下限；0 表示沿用上面的默认值。
+	MinWidth, MaxWidth   float32
+	MinHeight, MaxHeight float32
 	// HideDismiss 隐藏底部的取消按钮（进度类面板只有「关闭」有意义，
 	// 两个「关闭」并排会让人以为它们不一样）。Esc 仍然关闭。
 	HideDismiss bool
@@ -67,6 +70,34 @@ func (g *guiApp) showWideDialog(title, confirm, dismiss string, content fyne.Can
 		Dismiss:   dismiss,
 		Content:   content,
 		OnConfirm: onConfirm,
+	})
+}
+
+// showFormDialog 给普通表单弹窗一个更舒服的宽度。Fyne 默认对话框会把
+// 两三个字段挤成一条窄缝，这里复用浮层面板，但比设置页窄、比默认宽。
+func (g *guiApp) showFormDialog(title, confirm, dismiss string, content fyne.CanvasObject, onConfirm func()) {
+	g.showSheet(sheetOptions{
+		Title:       title,
+		Confirm:     confirm,
+		Dismiss:     dismiss,
+		Content:     content,
+		WidthRatio:  0.46,
+		MinWidth:    560,
+		MaxWidth:    760,
+		HeightRatio: 0.38,
+		MinHeight:   260,
+		MaxHeight:   620,
+		OnConfirm:   onConfirm,
+	})
+}
+
+// showFormConfirm 保持 dialog.ShowCustomConfirm 的调用形式，但改用有
+// 正常留白的表单面板。取消时不会回调，和原来的 ok=false 分支等价。
+func (g *guiApp) showFormConfirm(title, confirm, dismiss string, content fyne.CanvasObject, onConfirm func(bool), _ fyne.Window) {
+	g.showFormDialog(title, confirm, dismiss, content, func() {
+		if onConfirm != nil {
+			onConfirm(true)
+		}
 	})
 }
 
@@ -158,13 +189,27 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 	)
 	// sheetLayout 必须拿到整个窗口的尺寸才能按比例计算；外面再套 Center
 	// 会把它钉死在 MinSize(600x560)，比例就成了摆设。
+	minWidth, maxWidth := opt.MinWidth, opt.MaxWidth
+	if minWidth <= 0 {
+		minWidth = 600
+	}
+	if maxWidth <= 0 {
+		maxWidth = 1000
+	}
+	minHeight, maxHeight := opt.MinHeight, opt.MaxHeight
+	if minHeight <= 0 {
+		minHeight = 560
+	}
+	if maxHeight <= 0 {
+		maxHeight = 900
+	}
 	holder := container.New(&sheetLayout{
 		widthRatio:  ratio,
-		minWidth:    600,
-		maxWidth:    1000,
+		minWidth:    minWidth,
+		maxWidth:    maxWidth,
 		heightRatio: hRatio,
-		minHeight:   560,
-		maxHeight:   900,
+		minHeight:   minHeight,
+		maxHeight:   maxHeight,
 	}, panel)
 
 	// 遮罩：和模态弹窗一致，先模糊下层再压一层浅阴影。

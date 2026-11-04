@@ -27,7 +27,6 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/storage"
 	"fyne.io/fyne/v2/theme"
@@ -242,9 +241,13 @@ func (o *overviewPage) reload() {
 	}
 
 	if base := props["remote_base"]; base != "" {
-		o.remote.SetText(fmt.Sprintf(tr("题目 %s @ %s"), props["remote_id"], base))
+		site := strings.TrimSpace(props["remote_site"])
+		if site == "" {
+			site = base
+		}
+		o.remote.SetText(fmt.Sprintf(tr("题目 %s @ %s"), props["remote_id"], site))
 	} else {
-		o.remote.SetText(tr("未配置远端。可用“从网站添加题目”自动写入，或手动填写地址与题号。"))
+		o.remote.SetText(tr("未配置远端。"))
 	}
 	o.note.SetText(tr("配置修改后自动保存。"))
 }
@@ -357,7 +360,7 @@ func containsString(items []string, want string) bool {
 // exportProjectZip 弹保存框把当前项目打包成 zip 数据包。
 // 默认文件名用项目名，落在用户上次选择的位置（保存框自己记忆）。
 func (g *guiApp) exportProjectZip(p project) {
-	save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+	save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 		if err != nil || w == nil {
 			return
 		}

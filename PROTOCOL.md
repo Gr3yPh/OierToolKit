@@ -27,6 +27,8 @@ GET {base}/otk/v1/problems/{id}
 {
   "id": "P1007",
   "title": "有偿参观",
+  "site_name": "NLOJ",
+  "statement": "# 有偿参观\n\n给定两个整数，输出它们的和。\n",
   "time_limit_ms": 1000,
   "memory_limit_mb": 128,
   "samples": [
@@ -38,17 +40,23 @@ GET {base}/otk/v1/problems/{id}
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| id | string | 题号；客户端以此作为项目名 |
-| title | string | 题目标题，可为空 |
+| id | string | 题号；用于远端标识与目录名 |
+| title | string | 题目标题；客户端把它设为项目显示名，空则回退题号 |
+| site_name | string | 站点显示名（如 `NLOJ`）；可选，客户端用于界面展示 |
+| statement | string | 题面 Markdown；可选，客户端写入 `problem.md` |
 | time_limit_ms | int | 时限（毫秒）；0 或缺省表示不下发，客户端保留默认 |
 | memory_limit_mb | number | 内存限制（MB）；0 或缺省同上 |
 | samples | array | 样例对；可为空数组 |
 
+`site_name` 与 `statement` 是向后兼容的可选扩展：旧客户端会忽略它们，
+新客户端在缺失时回退到原行为。
+
 客户端行为：新建 `<域名首段>-<题号>` 目录（`https://xxxoj.ac/.../123` →
-`xxxoj-123`），在其中初始化项目，时限与内存写入项目配置，样例落成
-`1.in/1.out`、`2.in/2.out`… 并入样例库，同时把 `remote_base` 与
-`remote_id` 记入项目配置供提交使用；目标目录已存在则拒绝，网络请求失败
-不留残骸目录。
+`xxxoj-123`），在其中初始化项目；`title` 写入项目显示名，`site_name`
+记入项目远端信息，`statement` 落成 `problem.md`（空题面但有标题时写入
+`# <title>`），时限与内存写入项目配置，样例落成 `1.in/1.out`、
+`2.in/2.out`… 并入样例库，同时把 `remote_base` 与 `remote_id` 记入项目
+配置供提交使用；目标目录已存在则拒绝，网络请求失败不留残骸目录。
 
 ## 2. 提交
 

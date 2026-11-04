@@ -33,7 +33,7 @@
 * **评测历史**：每次完整评测自动记入 `.otk/history.json`（最多 100 条），`otk history` 或 GUI「历史」按钮随时回看；`otk j 2` 或 GUI「重测此点」只重测单个样例。
 * **多远端**：支持配置多个 OJ 远端（各自独立令牌），`otk config remote add <名> <地址>` 管理，克隆与提交按地址自动匹配令牌。
 * **对拍**：gen.cpp 造数据、brute.cpp 做标答，反例自动保存到 `.stress/`。
-* **远程 OJ**：`otk clone` 从支持 [otk-remote 协议](PROTOCOL.md)的 OJ 克隆题目到独立目录，`otk submit` 本地提交、等到 verdict。
+* **远程 OJ**：`otk clone` 从支持 [otk-remote 协议](PROTOCOL.md)的 OJ 克隆题目到独立目录，自动写入题目标题、站点名、题面 Markdown 与样例；`otk submit` 本地提交、等到 verdict。
 * **模拟赛**：`otk contest` 整目录导入比赛（多题多选手），并发评测 + subtask 捆绑给分（`all` / `any` / `sum`），一键导出独立 HTML 榜单。
 * **脚本可用**：存在非 AC 结果时退出码非零。
 
@@ -99,7 +99,7 @@ otk j                         # 编译并评测
 | `otk config export \| import` | 把 `~/.otkprofile` 的配置打包成几十 KB 的 zip 搬到另一台机器；默认不含令牌与项目库 |
 | `otk judge (j) [-v] [样例...]` | 编译并评测样例；`-v` 显示报错与 WA 详情；指定样例号只测该点 |
 | `otk history (his) [次数]` | 查看最近几次评测结果 |
-| `otk clone [-r 远端名] [url] <id>` | 从网站添加题目：题目与样例到 `<oj>-<题号>` 目录并初始化（协议见 PROTOCOL.md） |
+| `otk clone [-r 远端名] [url] <id>` | 从网站添加题目：标题、题面、样例到 `<oj>-<题号>` 目录并初始化（协议见 PROTOCOL.md） |
 | `otk submit (sub) [-q]` | 提交源码到远端评测并等待结果；`-q` 只提交 |
 | `otk run (r)` | 编译并运行 |
 | `otk debug (d)` | gdb 调试 |

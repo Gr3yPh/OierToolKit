@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -61,12 +62,26 @@ func openPath(path string) error {
 	return nil
 }
 
+// terminalEditors 是必须在终端里运行的编辑器。GUI 直接 exec 它们时，
+// 进程拿不到 TTY，往往启动后立刻退出或什么都不显示。
+var terminalEditors = map[string]bool{
+	"vi": true, "vim": true, "nvim": true, "neovim": true,
+	"nano": true, "pico": true, "micro": true, "hx": true, "helix": true,
+	"kak": true, "kakoune": true, "joe": true, "mcedit": true, "ed": true, "ne": true,
+}
+
 // launchEditor 用全局配置的编辑器打开项目源码。
 func launchEditor(p project) error {
 	editor := propsOr(readIni(globalConfigPath()), "editor", defaultEditorCommand())
-	parts := splitQuoted(fmt.Sprintf(editor, p.sourcePath()))
+	quotedPath := quoteArg(p.sourcePath())
+	command := fmt.Sprintf(editor, quotedPath)
+	parts := splitQuoted(command)
 	if len(parts) == 0 {
 		return fmt.Errorf("%s", tr("无效的编辑器命令，请在设置里修改"))
+	}
+
+	if terminalEditors[strings.ToLower(filepath.Base(parts[0]))] {
+		return openTerminal(p.Dir, command)
 	}
 
 	cmd := exec.Command(parts[0], parts[1:]...)
@@ -100,7 +115,10 @@ func launchWizard(dir string) error {
 func openTerminal(dir, command string) error {
 	switch runtime.GOOS {
 	case "windows":
-		inner := "cd /d " + quoteArg(dir) + " && " + command
+		inner := "cd /d " + quoteArg(dir)
+		if command != "" {
+			inner += " && " + command
+		}
 		cmd := exec.Command("cmd.exe", "/c", "start", "", "cmd.exe", "/k", inner)
 		if err := detached(cmd); err != nil {
 			return fmt.Errorf(tr("无法启动终端: %v"), err)
@@ -108,7 +126,11 @@ func openTerminal(dir, command string) error {
 		return nil
 
 	case "darwin":
-		script := fmt.Sprintf(`tell application "Terminal" to do script "cd %s && %s"`, dir, command)
+		inner := "cd " + quoteArg(dir)
+		if command != "" {
+			inner += " && " + command
+		}
+		script := fmt.Sprintf(`tell application "Terminal" to do script "%s"`, inner)
 		cmd := exec.Command("osascript", "-e", script)
 		if err := detached(cmd); err != nil {
 			return fmt.Errorf(tr("无法启动终端: %v"), err)
@@ -116,11 +138,21 @@ func openTerminal(dir, command string) error {
 		return nil
 
 	default:
-		inner := fmt.Sprintf("cd %s && %s; exec $SHELL", quoteArg(dir), command)
+		// 空 command 只开一个 shell；之前的 "cd dir && ; exec $SHELL" 是
+		// shell 语法错误，所以“在终端中打开”会闪一下就关。
+		inner := "cd " + quoteArg(dir)
+		if command != "" {
+			inner += " && " + command
+		}
+		inner += "; exec $SHELL"
 		candidates := [][]string{
 			{"x-terminal-emulator", "-e", "sh", "-c", inner},
 			{"gnome-terminal", "--", "sh", "-c", inner},
 			{"konsole", "-e", "sh", "-c", inner},
+			{"kitty", "sh", "-c", inner},
+			{"alacritty", "-e", "sh", "-c", inner},
+			{"wezterm", "start", "--", "sh", "-c", inner},
+			{"foot", "sh", "-c", inner},
 			{"xfce4-terminal", "-e", inner},
 			{"xterm", "-e", "sh", "-c", inner},
 		}
@@ -135,7 +167,7 @@ func openTerminal(dir, command string) error {
 			}
 			return nil
 		}
-		return fmt.Errorf("%s", tr("没有找到可用的终端程序（试过 x-terminal-emulator / gnome-terminal / konsole / xterm）"))
+		return fmt.Errorf("%s", tr("没有找到可用的终端程序（试过 x-terminal-emulator / gnome-terminal / konsole / kitty / alacritty / wezterm / foot / xterm）"))
 	}
 }
 

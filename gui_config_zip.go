@@ -40,11 +40,11 @@ func (g *guiApp) exportConfigDialog() {
 		caption(tr("令牌默认不导出。")),
 	)
 
-	dialog.ShowCustomConfirm(tr("导出配置"), tr("下一步"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("导出配置"), tr("下一步"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
-		save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+		save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 			if err != nil || w == nil {
 				return
 			}
@@ -75,7 +75,7 @@ func (g *guiApp) exportConfigDialog() {
 
 // 配置导入：先选文件，再确认合并方式。
 func (g *guiApp) importConfigDialog() {
-	open := dialog.NewFileOpen(func(r fyne.URIReadCloser, err error) {
+	open := newLargeFileOpen(func(r fyne.URIReadCloser, err error) {
 		if err != nil || r == nil {
 			return
 		}
@@ -101,7 +101,7 @@ func (g *guiApp) confirmImportConfig(path string) {
 		withRegistry,
 	)
 
-	dialog.ShowCustomConfirm(tr("导入配置"), tr("导入"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("导入配置"), tr("导入"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}

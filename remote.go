@@ -43,6 +43,8 @@ var remoteHTTP = &http.Client{Timeout: 15 * time.Second}
 type remoteProblem struct {
 	ID            string         `json:"id"`
 	Title         string         `json:"title"`
+	SiteName      string         `json:"site_name"`
+	Statement     string         `json:"statement"`
 	TimeLimitMS   int            `json:"time_limit_ms"`
 	MemoryLimitMB float64        `json:"memory_limit_mb"`
 	Samples       []remoteSample `json:"samples"`
@@ -348,6 +350,10 @@ func cmdClone(args []string) {
 		fmt.Printf(" %s", prob.Title)
 	}
 	fmt.Println()
+	site := strings.Join(strings.Fields(prob.SiteName), " ")
+	if site == "" {
+		site = base
+	}
 	var parts []string
 	if prob.TimeLimitMS > 0 {
 		parts = append(parts, fmt.Sprintf(tr("时限 %.2fs"), float64(prob.TimeLimitMS)/1000))
@@ -358,7 +364,7 @@ func cmdClone(args []string) {
 	if len(parts) > 0 {
 		fmt.Println(strings.Join(parts, "  "))
 	}
-	fmt.Printf(tr("样例 %d 组，远端 %s\n"), len(prob.Samples), base)
+	fmt.Printf(tr("样例 %d 组，远端 %s\n"), len(prob.Samples), site)
 }
 
 // cloneProblem 在 parentDir 下新建题目目录并初始化项目（不切换进程工作
@@ -392,16 +398,41 @@ func cloneProblem(parentDir, base, id string) (project, remoteProblem, refreshRe
 		return project{}, remoteProblem{}, refreshResult{}, err
 	}
 
+	title := strings.Join(strings.Fields(prob.Title), " ")
+	if title == "" {
+		title = prob.ID
+	}
+	if title == "" {
+		title = dirName
+	}
+
 	props := p.cfg()
+	props["name"] = title
 	if prob.TimeLimitMS > 0 {
 		props["time_limit"] = strconv.FormatFloat(float64(prob.TimeLimitMS)/1000, 'f', 2, 64)
 	}
 	if prob.MemoryLimitMB > 0 {
 		props["memory_limit"] = strconv.FormatFloat(prob.MemoryLimitMB, 'f', -1, 64)
 	}
+	if site := strings.Join(strings.Fields(prob.SiteName), " "); site != "" {
+		props["remote_site"] = site
+	}
 	props["remote_base"] = base
 	props["remote_id"] = prob.ID
 	writeIni(p.configPath(), props)
+	p.Name = title
+
+	// 题面页会自动读取 problem.md；远端没给题面时至少留一个标题。
+	statement := prob.Statement
+	if strings.TrimSpace(statement) == "" {
+		statement = ""
+		if title != "" {
+			statement = "# " + title + "\n"
+		}
+	}
+	if statement != "" {
+		_ = os.WriteFile(filepath.Join(p.Dir, "problem.md"), []byte(statement), 0644)
+	}
 
 	for i, s := range prob.Samples {
 		_ = os.WriteFile(filepath.Join(p.Dir, strconv.Itoa(i+1)+".in"), []byte(s.Input), 0644)

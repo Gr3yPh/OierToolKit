@@ -78,9 +78,8 @@ var enUI = map[string]string{
 	"已打开 %s":                 "Opened %s",
 	"从项目库移除记录":               "Remove from library",
 	"将删除整个目录：":               "This will delete the whole folder:",
-	"该项目未配置远端。可以点“配置远端”，或用“从网站添加题目”建立带远端信息的项目。": "No remote configured. Use Remotes…, or add a problem from the web to get remote info filled in.",
-	"从网站添加题目": "Add Problem from Web",
-	"已打开模拟赛 ": "Opened contest ",
+	"从网站添加题目":                "Add Problem from Web",
+	"已打开模拟赛 ":                "Opened contest ",
 
 	// ── 题面页 ────────────────────────────────────────────────
 	"没有找到题面文件（点“编辑题面”可直接新建 problem.md）": "No statement file found (click Edit Statement to create problem.md)",
@@ -288,11 +287,9 @@ var enUI = map[string]string{
 	"地址无效（需含协议头，如 https://xxxoj.ac）: %s":    "Invalid URL (needs a scheme, e.g. https://xxxoj.ac): %s",
 	"网站地址":                                  "Site URL",
 	"远端地址、题号与保存目录都不能为空":                     "Remote URL, problem ID and save folder are all required",
-	"远端题号：":                                 "Remote problem ID: ",
 	"该项目未配置远端题号（otk config remote_id <题号>）": "No remote problem ID configured (otk config remote_id <id>)",
 	"该项目未配置远端（可从网站添加题目，或 otk config remote_base <地址> 与 otk config remote_id <题号>）": "No remote configured for this project (add a problem from the web, or run otk config remote_base <url> and otk config remote_id <id>)",
 	"未配置远程地址：otk config remote <地址>，或直接 otk clone <地址> <题号>":                       "No remote URL configured: otk config remote <url>, or just otk clone <url> <id>",
-	"未配置远端。可用“从网站添加题目”自动写入，或手动填写地址与题号。":                                            "No remote configured. Add a problem from the web, or enter the URL and ID manually.",
 	"请先配置远端地址与题号":                                 "Configure the remote URL and problem ID first",
 	"（还没有配置远端，otk config remote add <名> <地址> 添加）": "(no remote configured yet: otk config remote add <name> <url>)",
 	"正在从 %s 拉取题目 %s ...":                          "Fetching problem %s from %s…",
@@ -323,7 +320,8 @@ var enUI = map[string]string{
 
 	// ── 模拟赛：列表与导入 ─────────────────────────────────────
 	"比赛名称": "Contest name", "比赛名称（默认取目录名）": "Contest name (defaults to folder name)",
-	"上传目录": "Upload folder",
+	"上传目录":  "Upload folder",
+	"目录结构：": "Directory layout:",
 	"上传目录（内含 data/ 与 source/）": "Upload folder (with data/ and source/)",
 	"请选择上传目录":                  "Please choose an upload folder",
 	"还没有导入任何模拟赛":               "No contests imported yet",
@@ -498,7 +496,7 @@ var enUI = map[string]string{
 	"无法打开 %s: %v":                                                       "Cannot open %s: %v",
 	"无法启动终端: %v":                                                        "Failed to launch terminal: %v",
 	"无法启动 shell (%s): %v":                                               "Failed to launch shell (%s): %v",
-	"没有找到可用的终端程序（试过 x-terminal-emulator / gnome-terminal / konsole / xterm）": "No usable terminal found (tried x-terminal-emulator / gnome-terminal / konsole / xterm)",
+	"没有找到可用的终端程序（试过 x-terminal-emulator / gnome-terminal / konsole / kitty / alacritty / wezterm / foot / xterm）": "No usable terminal found (tried x-terminal-emulator / gnome-terminal / konsole / kitty / alacritty / wezterm / foot / xterm)",
 	"无法访问桌面目录：%v":  "Cannot access the Desktop folder: %v",
 	"无法定位用户主目录：%v": "Cannot locate the home folder: %v",
 	"读取不完整：%v":     "Incomplete read: %v",
@@ -629,6 +627,7 @@ var enUI = map[string]string{
 	"如果觉得好用，一定要返回来给个 star！ https://github.com/Gr3yPh/OierToolKit": "If it helps, please come back and give it a star! https://github.com/Gr3yPh/OierToolKit",
 
 	"还没有评测结果。":         "No judge results yet.",
+	"未配置远端。":           "No remote configured.",
 	"语言与主题改动在重启应用后生效。": "Language and theme changes take effect after restart.",
 	"令牌默认不导出。":         "Tokens are not exported by default.",
 	"没有题目。":            "No problems.",

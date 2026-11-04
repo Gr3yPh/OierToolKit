@@ -176,7 +176,7 @@ func (r *contestRoster) addDialog() {
 	pathIn := widget.NewEntry()
 	pathIn.SetPlaceHolder(tr("选择 .cpp 源码文件"))
 	browse := widget.NewButtonWithIcon("", theme.FileIcon(), func() {
-		picker := dialog.NewFileOpen(func(uc fyne.URIReadCloser, err error) {
+		picker := newLargeFileOpen(func(uc fyne.URIReadCloser, err error) {
 			if err != nil || uc == nil {
 				return
 			}
@@ -196,7 +196,7 @@ func (r *contestRoster) addDialog() {
 		caption(tr("同名源码会被覆盖。")),
 	)
 
-	dialog.ShowCustomConfirm(tr("补交源码"), tr("添加"), tr("取消"), content, func(ok bool) {
+	r.page.g.showFormConfirm(tr("补交源码"), tr("添加"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -244,7 +244,7 @@ func (r *contestRoster) renameDialog() {
 		),
 	)
 
-	dialog.ShowCustomConfirm(tr("选手改名"), tr("改名"), tr("取消"), content, func(ok bool) {
+	r.page.g.showFormConfirm(tr("选手改名"), tr("改名"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}

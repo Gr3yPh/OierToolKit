@@ -30,7 +30,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
 * **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
 * **Stress Testing**: gen.cpp generates tests, brute.cpp serves as the reference; counter-examples are saved to `.stress/`.
-* **Remote OJ**: `otk clone` clones problems and samples from any OJ implementing the [otk-remote protocol](PROTOCOL.md) into a fresh project directory; `otk submit` submits locally and waits for the verdict.
+* **Remote OJ**: `otk clone` clones problems from any OJ implementing the [otk-remote protocol](PROTOCOL.md) into a fresh project directory, importing the title, site name, Markdown statement and samples; `otk submit` submits locally and waits for the verdict.
 * **Mock Contests**: `otk contest` imports a whole contest folder (multi-problem, multi-contestant), judges in parallel with subtask scoring (`all` / `any` / `sum`), and exports a standalone HTML leaderboard.
 * **Scripting**: Non-zero exit code when any test is not AC.
 
@@ -92,7 +92,7 @@ Main commands at a glance (`otk help` for the full list):
 | `otk config [key value]` | Show/update config (project: time/memory/version/o2; global: editor) |
 | `otk config export \| import` | Pack `~/.otkprofile` into a small zip for another machine; tokens and registry are opt-in |
 | `otk judge (j) [-v]` | Compile and judge all samples; `-v` shows errors and WA details |
-| `otk clone [url] <id>` | Add a problem from a website: clones it and samples into a new `<oj>-<id>` project dir (see PROTOCOL.md) |
+| `otk clone [url] <id>` | Add a problem from a website: title, statement and samples into a new `<oj>-<id>` project dir (see PROTOCOL.md) |
 | `otk submit (sub) [-q]` | Submit the source to remote judging and wait; `-q` submits only |
 | `otk run (r)` | Compile and run |
 | `otk debug (d)` | Debug with gdb |

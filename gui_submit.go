@@ -127,14 +127,15 @@ func (s *submitPage) reload() {
 	id := props["remote_id"]
 	switch {
 	case base == "" && id == "":
-		s.info.SetText(tr("该项目未配置远端。可以点“配置远端”，或用“从网站添加题目”建立带远端信息的项目。"))
+		s.info.SetText(tr("未配置远端。"))
 	case base == "":
 		s.info.SetText(fmt.Sprintf(tr("已配置题号 %s，但缺少远端地址。"), id))
 	default:
-		s.info.SetText(fmt.Sprintf(tr("题目 %s @ %s"), id, base))
-	}
-	if s.pg.p.cfg()["remote_id"] != "" {
-		s.info.SetText(s.info.Text + "\n" + tr("远端题号：") + s.pg.p.cfg()["remote_id"])
+		site := strings.TrimSpace(props["remote_site"])
+		if site == "" {
+			site = base
+		}
+		s.info.SetText(fmt.Sprintf(tr("题目 %s @ %s"), id, site))
 	}
 }
 

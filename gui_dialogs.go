@@ -564,7 +564,7 @@ func (g *guiApp) remoteConfigDialog(p project) {
 		),
 	)
 
-	dialog.ShowCustomConfirm(tr("配置远端"), tr("保存"), tr("取消"), content, func(ok bool) {
+	g.showFormConfirm(tr("配置远端"), tr("保存"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -659,7 +659,7 @@ func diagnosticsText() string {
 
 // pickFolder 弹出目录选择框，选中后写入 entry。
 func (g *guiApp) pickFolder(entry *widget.Entry, after func(string)) {
-	picker := dialog.NewFolderOpen(func(list fyne.ListableURI, err error) {
+	picker := newLargeFolderOpen(func(list fyne.ListableURI, err error) {
 		if err != nil || list == nil {
 			return
 		}

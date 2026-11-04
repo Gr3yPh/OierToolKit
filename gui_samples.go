@@ -187,7 +187,7 @@ func (s *samplesPage) addDialog() {
 		widget.NewForm(widget.NewFormItem(tr("样例编号"), entry)),
 	)
 
-	dialog.ShowCustomConfirm(tr("新建样例"), tr("创建"), tr("取消"), content, func(ok bool) {
+	s.pg.g.showFormConfirm(tr("新建样例"), tr("创建"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}
@@ -231,9 +231,8 @@ func (s *samplesPage) importDialog() {
 	content := container.NewVBox(
 		form,
 	)
-	content.Resize(fyne.NewSize(460, 320))
 
-	dialog.ShowCustomConfirm(tr("从剪贴板导入样例"), tr("保存"), tr("取消"), content, func(ok bool) {
+	s.pg.g.showFormConfirm(tr("从剪贴板导入样例"), tr("保存"), tr("取消"), content, func(ok bool) {
 		if !ok {
 			return
 		}

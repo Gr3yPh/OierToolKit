@@ -1122,7 +1122,7 @@ func (p *contestPage) exportHTML() {
 		return
 	}
 	def := sanitizeFileName(p.c.Cfg.Name) + tr("-排名.html")
-	save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+	save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 		if err != nil || w == nil {
 			return
 		}
@@ -1189,7 +1189,7 @@ func (p *contestPage) exportMarkdown() {
 		return
 	}
 	def := sanitizeFileName(p.c.Cfg.Name) + tr("-排名.md")
-	save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+	save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 		if err != nil || w == nil {
 			return
 		}
@@ -1213,7 +1213,7 @@ func (p *contestPage) exportCSV() {
 		return
 	}
 	def := sanitizeFileName(p.c.Cfg.Name) + tr("-排名.csv")
-	save := dialog.NewFileSave(func(w fyne.URIWriteCloser, err error) {
+	save := newLargeFileSave(func(w fyne.URIWriteCloser, err error) {
 		if err != nil || w == nil {
 			return
 		}
