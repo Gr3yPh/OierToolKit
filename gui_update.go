@@ -19,9 +19,12 @@ package main
 
 import (
 	"fmt"
+	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -59,13 +62,91 @@ func (g *guiApp) checkForUpdates(manual bool) {
 				if uiLangIsEnglish() {
 					openLabel = tr("打开发布页")
 				}
-				content := container.NewVBox(label,
+				var updateDialog *dialog.CustomDialog
+				updateBtn := widget.NewButtonWithIcon(tr("立即更新"), theme.DownloadIcon(), func() {
+					if updateDialog != nil {
+						updateDialog.Hide()
+					}
+					g.startUpdate(info)
+				})
+				updateBtn.Importance = widget.HighImportance
+				content := container.NewVBox(label, updateBtn,
 					widget.NewHyperlink(openLabel, parseURL(link)))
-				dialog.ShowCustom(tr("检查更新"), tr("关闭"), content, g.win)
+				updateDialog = dialog.NewCustom(tr("检查更新"), tr("关闭"), content, g.win)
+				updateDialog.Show()
 				return
 			}
 			g.setStatus(fmt.Sprintf(tr("发现新版本 %s（当前 %s），%s 可下载"),
 				info.Version, otkVersion, link))
+		})
+	}()
+}
+
+// startUpdate 一键下载当前平台的发行包，显示下载进度，替换并重启。
+func (g *guiApp) startUpdate(info updateInfo) {
+	if asset, ok := updateAssetName(); !ok || asset == "" {
+		g.showError(fmt.Errorf("%s", tr("当前平台没有可用的更新包。")))
+		return
+	}
+	if _, _, _, err := currentUpdateExecutable(); err != nil {
+		g.showError(err)
+		return
+	}
+
+	status := widget.NewLabel(tr("准备下载更新 ..."))
+	status.Wrapping = fyne.TextWrapWord
+	bar := widget.NewProgressBar()
+	bar.Min = 0
+	bar.Max = 1
+	content := container.NewVBox(status, bar)
+	progressDialog := dialog.NewCustomWithoutButtons(tr("更新 OierToolKit"), content, g.win)
+	progressDialog.Show()
+
+	go func() {
+		var last time.Time
+		pkg, err := downloadAndExtractUpdate(info, func(done, total int64) {
+			if time.Since(last) < 100*time.Millisecond {
+				return
+			}
+			last = time.Now()
+			ui(func() {
+				if total > 0 {
+					bar.SetValue(float64(done) / float64(total))
+					status.SetText(fmt.Sprintf(tr("正在下载更新 ... %s / %s"),
+						humanSize(int(done)), humanSize(int(total))))
+					return
+				}
+				status.SetText(fmt.Sprintf(tr("正在下载更新 ... %s"), humanSize(int(done))))
+			})
+		})
+		if err != nil {
+			ui(func() {
+				progressDialog.Hide()
+				g.showError(fmt.Errorf(tr("下载更新失败：%v"), err))
+			})
+			return
+		}
+
+		ui(func() {
+			status.SetText(tr("正在安装更新 ..."))
+			bar.SetValue(1)
+		})
+		if err := installUpdatePackage(pkg); err != nil {
+			pkg.cleanup()
+			ui(func() {
+				progressDialog.Hide()
+				g.showError(fmt.Errorf(tr("安装更新失败：%v"), err))
+			})
+			return
+		}
+		ui(func() {
+			progressDialog.Hide()
+			if g.win != nil {
+				g.win.Close()
+			}
+			if g.app != nil {
+				g.app.Quit()
+			}
 		})
 	}()
 }
