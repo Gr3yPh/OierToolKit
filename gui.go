@@ -304,7 +304,7 @@ func (g *guiApp) buildHeader() fyne.CanvasObject {
 	right := container.NewHBox(newBtn, cloneBtn, settingsBtn, aboutBtn)
 
 	bar := container.NewBorder(nil, nil, left, right, layout.NewSpacer())
-	return container.NewVBox(fixedHeight(48, inset(16, 0, 16, 0, bar)), widget.NewSeparator())
+	return container.NewVBox(fixedHeight(40, inset(16, 0, 16, 0, bar)), widget.NewSeparator())
 }
 
 func (g *guiApp) buildSidebar() fyne.CanvasObject {
@@ -615,6 +615,10 @@ type projectPage struct {
 	judge    *judgePage
 	stress   *stressPage
 	submit   *submitPage
+
+	sourceItem *container.TabItem
+	editor     *terminalEditorPage
+	editorItem *container.TabItem
 }
 
 func newProjectPage(g *guiApp, dir string) *projectPage {
@@ -628,9 +632,10 @@ func newProjectPage(g *guiApp, dir string) *projectPage {
 	pg.stress = newStressPage(pg)
 	pg.submit = newSubmitPage(pg)
 
+	sourceItem := container.NewTabItemWithIcon(tr("源码"), theme.DocumentIcon(), pg.source.content)
 	tabs := container.NewAppTabs(
 		container.NewTabItemWithIcon(tr("概览"), theme.HomeIcon(), pg.overview.content),
-		container.NewTabItemWithIcon(tr("源码"), theme.DocumentIcon(), pg.source.content),
+		sourceItem,
 		container.NewTabItemWithIcon(tr("题面"), theme.FileTextIcon(), pg.stmt.content),
 		container.NewTabItemWithIcon(tr("样例"), theme.ListIcon(), pg.samples.content),
 		container.NewTabItemWithIcon(tr("评测"), theme.MediaPlayIcon(), pg.judge.content),
@@ -638,7 +643,16 @@ func newProjectPage(g *guiApp, dir string) *projectPage {
 		container.NewTabItemWithIcon(tr("提交"), theme.UploadIcon(), pg.submit.content),
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
+	tabs.OnSelected = func(item *container.TabItem) {
+		if item == pg.sourceItem {
+			pg.source.reloadIfClean()
+		}
+		if pg.editorItem != nil && item == pg.editorItem {
+			pg.editor.start()
+		}
+	}
 
+	pg.sourceItem = sourceItem
 	pg.tabs = tabs
 	pg.content = tabs
 	return pg
@@ -662,6 +676,9 @@ func (pg *projectPage) alive() bool {
 // close 标记标签已关闭，并停掉后台任务。
 func (pg *projectPage) close() {
 	pg.closed.Store(true)
+	if pg.editor != nil {
+		pg.editor.close()
+	}
 	pg.stop()
 }
 

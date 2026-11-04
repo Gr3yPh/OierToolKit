@@ -205,7 +205,7 @@ func (t *otkTheme) Size(name fyne.ThemeSizeName) float32 {
 		return 12
 	case theme.SizeNameInnerPadding:
 		// 默认 8 会把按钮/输入框撑到 40px 以上。4px 内边距配合上面的
-		// Padding=4，按钮/输入框约 36px，正好放进 48px 的顶栏。
+		// Padding=4，按钮/输入框约 36px，正好放进 40px 的顶栏。
 		return 4
 	case theme.SizeNameInlineIcon:
 		return 18

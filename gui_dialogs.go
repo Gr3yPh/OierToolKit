@@ -247,6 +247,9 @@ func (g *guiApp) settingsDialog() {
 	editorEntry.SetText(propsOr(global, "editor", defaultEditorCommand()))
 	editorEntry.SetPlaceHolder("code -g %s")
 
+	editorTerminal := widget.NewCheck(tr("在应用内置终端中打开编辑器（适合 nvim / vim）"), nil)
+	editorTerminal.SetChecked(guiPrefBool(prefEditorTerminal, false))
+
 	// 远端编辑行：新增行名字可改，已有行名字固定（避免改名带来的歧义）。
 	type remoteRow struct {
 		origName string
@@ -417,8 +420,11 @@ func (g *guiApp) settingsDialog() {
 		),
 		widget.NewSeparator(),
 		section(tr("编辑器")),
-		widget.NewForm(
-			widget.NewFormItem(tr("编辑器命令"), editorEntry),
+		container.NewVBox(
+			widget.NewForm(
+				widget.NewFormItem(tr("编辑器命令"), editorEntry),
+			),
+			editorTerminal,
 		),
 		widget.NewSeparator(),
 		section(tr("远端列表")),
@@ -475,6 +481,10 @@ func (g *guiApp) settingsDialog() {
 				}
 			}
 			if _, err := setGlobalConfig("editor", strings.TrimSpace(editorEntry.Text)); err != nil {
+				g.showError(err)
+				return
+			}
+			if err := setGuiPrefBool(prefEditorTerminal, editorTerminal.Checked); err != nil {
 				g.showError(err)
 				return
 			}

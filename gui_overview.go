@@ -127,8 +127,8 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 			pg.g.showError(err)
 		}
 	})
-	editBtn := widget.NewButtonWithIcon(tr("外部编辑器"), theme.DocumentCreateIcon(), func() {
-		if err := launchEditor(pg.p); err != nil {
+	editBtn := widget.NewButtonWithIcon(editorActionLabel(), theme.DocumentCreateIcon(), func() {
+		if err := pg.openEditor(); err != nil {
 			pg.g.showError(err)
 		}
 	})

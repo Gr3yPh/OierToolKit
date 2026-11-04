@@ -210,7 +210,7 @@ func (vCenterLayout) MinSize(objects []fyne.CanvasObject) fyne.Size {
 }
 
 // fixedHeight 把内容钉在固定高度（宽度仍跟随父容器），
-// 用于 48px 顶栏和 28px 状态栏。
+// 用于 40px 顶栏和 28px 状态栏。
 func fixedHeight(h float32, content fyne.CanvasObject) fyne.CanvasObject {
 	w := &fixedHeightWidget{content: content, height: h}
 	w.ExtendBaseWidget(w)

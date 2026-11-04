@@ -70,6 +70,13 @@ var terminalEditors = map[string]bool{
 	"kak": true, "kakoune": true, "joe": true, "mcedit": true, "ed": true, "ne": true,
 }
 
+// editorName 把编辑器可执行文件名归一成终端编辑器表里的键。
+// Windows 用户常写 nvim.exe，这里统一去掉 .exe。
+func editorName(path string) string {
+	name := strings.ToLower(filepath.Base(path))
+	return strings.TrimSuffix(name, ".exe")
+}
+
 // launchEditor 用全局配置的编辑器打开项目源码。
 func launchEditor(p project) error {
 	editor := propsOr(readIni(globalConfigPath()), "editor", defaultEditorCommand())
@@ -80,7 +87,7 @@ func launchEditor(p project) error {
 		return fmt.Errorf("%s", tr("无效的编辑器命令，请在设置里修改"))
 	}
 
-	if terminalEditors[strings.ToLower(filepath.Base(parts[0]))] {
+	if terminalEditors[editorName(parts[0])] {
 		return openTerminal(p.Dir, command)
 	}
 

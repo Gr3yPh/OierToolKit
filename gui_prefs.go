@@ -31,10 +31,11 @@ import (
 // 免得和项目/远端配置混在一起。
 
 const (
-	prefShortcutAsked = "gui_shortcut_asked" // 是否已经问过"要不要创建桌面快捷方式"
-	prefMenuShortcut  = "gui_menu_shortcut"  // 应用菜单入口：1=保留 / 0=用户主动移除
-	prefJudgeParallel = "gui_judge_parallel" // 评测并发度：0=自动（CPU核数-1，上限8）
-	prefTheme         = "gui_theme"          // 主题：auto=跟随系统 / light / dark
+	prefShortcutAsked  = "gui_shortcut_asked"  // 是否已经问过"要不要创建桌面快捷方式"
+	prefMenuShortcut   = "gui_menu_shortcut"   // 应用菜单入口：1=保留 / 0=用户主动移除
+	prefJudgeParallel  = "gui_judge_parallel"  // 评测并发度：0=自动（CPU核数-1，上限8）
+	prefTheme          = "gui_theme"           // 主题：auto=跟随系统 / light / dark
+	prefEditorTerminal = "gui_editor_terminal" // 在应用内终端中启动编辑器
 
 	// 窗口状态记忆：关闭时的最大化状态与窗口化时的尺寸/位置。
 	prefWinMax = "gui_win_max"

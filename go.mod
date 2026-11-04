@@ -19,7 +19,16 @@ module github.com/Gr3yPh/OierToolKit
 
 go 1.26.3
 
-require fyne.io/fyne/v2 v2.8.2
+require (
+	fyne.io/fyne/v2 v2.8.2
+	github.com/fyne-io/terminal v0.0.0-20261023210238-45431670057e
+)
+
+require (
+	github.com/ActiveState/termtest/conpty v0.5.0 // indirect
+	github.com/Azure/go-ansiterm v0.0.0-20170929234023-d6e3b3328b78 // indirect
+	github.com/creack/pty v1.1.21 // indirect
+)
 
 require (
 	fyne.io/systray v1.12.3-0.20260810170012-af4e8e793ec4 // indirect

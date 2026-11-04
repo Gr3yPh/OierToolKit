@@ -53,8 +53,8 @@ func newSourcePage(pg *projectPage) *sourcePage {
 
 	saveBtn := widget.NewButtonWithIcon(tr("保存"), theme.DocumentSaveIcon(), s.save)
 	reloadBtn := widget.NewButtonWithIcon(tr("重新加载"), theme.ViewRefreshIcon(), s.reload)
-	extBtn := widget.NewButtonWithIcon(tr("外部编辑器"), theme.DocumentCreateIcon(), func() {
-		if err := launchEditor(pg.p); err != nil {
+	extBtn := widget.NewButtonWithIcon(editorActionLabel(), theme.DocumentCreateIcon(), func() {
+		if err := pg.openEditor(); err != nil {
 			pg.g.showError(err)
 		}
 	})
@@ -91,6 +91,15 @@ func (s *sourcePage) onChanged(text string) {
 }
 
 // reload 从磁盘重新读取源码。
+// reloadIfClean 只在源码页没有未保存修改时重新读盘，避免内置终端
+// 编辑完文件后，把源码页里的旧内容又写回去。
+func (s *sourcePage) reloadIfClean() {
+	if s.editor.Text != s.loaded {
+		return
+	}
+	s.reload()
+}
+
 func (s *sourcePage) reload() {
 	path := s.pg.p.sourcePath()
 	s.path.SetText(path)
