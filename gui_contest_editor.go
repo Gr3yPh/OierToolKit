@@ -110,7 +110,7 @@ func newContestEditor(p *contestPage) *contestEditor {
 	e.detail = container.NewStack()
 	e.content = container.NewHSplit(
 		e.buildLeftPane(),
-		container.NewVScroll(container.NewPadded(e.detail)),
+		scrollWithWheel(container.NewVScroll(container.NewPadded(e.detail))),
 	)
 	e.content.(*container.Split).SetOffset(0.24)
 	e.reload()
@@ -238,7 +238,7 @@ func (e *contestEditor) showProblem() {
 	}
 	stmtView := widget.NewRichText()
 	stmtView.Wrapping = fyne.TextWrapWord
-	stmtView.ParseMarkdown(stmtPreviewText(prob.Statement))
+	renderMarkdown(stmtView, stmtPreviewText(prob.Statement))
 
 	stmtBox := container.NewStack(stmtView)
 	editBtn := widget.NewButtonWithIcon(tr("编辑题面"), theme.DocumentCreateIcon(), func() {
@@ -249,15 +249,16 @@ func (e *contestEditor) showProblem() {
 			Content: stmtIn,
 			OnConfirm: func() {
 				p.updateProblem(e.selected, func(pr *contestProblem) { pr.Statement = stmtIn.Text })
-				stmtView.ParseMarkdown(stmtPreviewText(stmtIn.Text))
+				renderMarkdown(stmtView, stmtPreviewText(stmtIn.Text))
 				p.refreshBoard()
 			},
 		})
 	})
+	stmtScroll := container.NewVScroll(stmtBox)
 	stmtPane := container.NewBorder(
 		container.NewHBox(editBtn),
 		nil, nil, nil,
-		container.NewVScroll(stmtBox),
+		scrollWithWheel(stmtScroll),
 	)
 
 	// 特殊判题：data/<题目>/checker.cpp（checker <输入> <选手输出> <期望输出>）。

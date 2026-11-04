@@ -27,8 +27,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// 题面展示页：直接用 Fyne 内置的 Markdown 渲染，支持标题、粗体、斜体、
-// 行内代码、代码块、列表、链接与表格（渲染范围以 Fyne 实现为准）。
+// 题面展示页：用 Fyne 内置的 Markdown 渲染，再补上 $...$ 公式；支持标题、
+// 粗体、斜体、行内代码、代码块、列表、链接与表格（渲染范围以 Fyne 实现为准）。
 
 // statementFileNames 是题面文件的候选名，按优先级排列。
 var statementFileNames = []string{"problem.md", "statement.md", tr("题面.md"), "README.md"}
@@ -70,7 +70,7 @@ func newStatementPage(pg *projectPage) *statementPage {
 	s.editor = widget.NewMultiLineEntry()
 	s.editor.Wrapping = fyne.TextWrapOff
 	s.editor.SetPlaceHolder(tr("## 题面\n\n在这里写 Markdown，Ctrl+S 保存。"))
-	s.preview = container.NewVScroll(container.NewPadded(s.rich))
+	s.preview = scrollWithWheel(container.NewVScroll(container.NewPadded(s.rich)))
 	s.paneStack = container.NewStack(s.preview)
 
 	reloadBtn := widget.NewButtonWithIcon(tr("重新加载"), theme.ViewRefreshIcon(), s.reload)
@@ -95,7 +95,7 @@ func (s *statementPage) toggleEdit() {
 		s.paneStack.Objects = []fyne.CanvasObject{container.NewVScroll(s.editor)}
 		s.editBtn.SetText(tr("退出编辑"))
 	} else {
-		s.rich.ParseMarkdown(stmtPreviewText(s.text))
+		renderMarkdown(s.rich, stmtPreviewText(s.text))
 		s.paneStack.Objects = []fyne.CanvasObject{s.preview}
 		s.editBtn.SetText(tr("编辑题面"))
 	}
@@ -116,7 +116,7 @@ func (s *statementPage) save() {
 		return
 	}
 	s.title.SetText(path)
-	s.rich.ParseMarkdown(stmtPreviewText(s.text))
+	renderMarkdown(s.rich, stmtPreviewText(s.text))
 	s.pg.g.setStatus(tr("题面已保存：") + path)
 }
 
@@ -126,7 +126,7 @@ func (s *statementPage) reload() {
 	if path == "" {
 		s.title.SetText(tr("没有找到题面文件（点“编辑题面”可直接新建 problem.md）"))
 		s.text = ""
-		s.rich.ParseMarkdown(stmtPreviewText(""))
+		renderMarkdown(s.rich, stmtPreviewText(""))
 		return
 	}
 	data, err := os.ReadFile(path)
@@ -138,5 +138,5 @@ func (s *statementPage) reload() {
 	}
 	s.title.SetText(path)
 	s.text = string(data)
-	s.rich.ParseMarkdown(stmtPreviewText(s.text))
+	renderMarkdown(s.rich, stmtPreviewText(s.text))
 }

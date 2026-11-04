@@ -1001,7 +1001,7 @@ func (p *contestPage) showPointDetail(player, problem string) {
 
 	scroll := container.NewVScroll(container.NewVBox(items...))
 	scroll.SetMinSize(fyne.NewSize(520, 380))
-	d := dialog.NewCustom(tr("评测明细"), tr("关闭"), scroll, p.g.win)
+	d := dialog.NewCustom(tr("评测明细"), tr("关闭"), scrollWithWheel(scroll), p.g.win)
 	d.Resize(fyne.NewSize(560, 430))
 	d.Show()
 }
@@ -1036,7 +1036,7 @@ func (p *contestPage) problemDetail(prob contestProblem, rows []rankRow) fyne.Ca
 	// 题面（Markdown）
 	if strings.TrimSpace(prob.Statement) != "" {
 		rich := widget.NewRichText()
-		rich.ParseMarkdown(prob.Statement)
+		renderMarkdown(rich, prob.Statement)
 		rich.Wrapping = fyne.TextWrapWord
 		items = append(items, container.NewPadded(rich), widget.NewSeparator())
 	}

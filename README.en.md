@@ -26,6 +26,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **GUI and CLI in One Binary**: one binary, two entry points — `otk` (CLI) and `otk-gui` (native GUI on Windows / macOS / Linux, full feature parity), so they never get in each other's way. The workspace uses tabs, so multiple projects, contests and Start Here can stay open. The GUI restores the last window state (maximized on first launch; title bar and window buttons kept; F11 toggles). CLI output is safe to redirect (colors are disabled off-terminal).
 * **Desktop and Application Menu Shortcuts**: the GUI asks once on first launch whether to create a desktop shortcut; Settings can also register OierToolKit in the application menu. On Linux Wayland the taskbar icon relies on this menu entry too.
 * **Built-in Terminal Editor**: Settings can run nvim/vim inside a terminal tab next to the source editor; when disabled, the original external-editor behavior is kept.
+* **Statement Math**: statement Markdown supports inline `$...$` and display `$$...$$` (plus `\(...\)` / `\[...\]`), rendered locally without a browser or external TeX installation.
 * **Update Check**: checks at startup or on demand from Settings; users in mainland China get the version from the homepage's `version.json` first, falling back to GitHub only if needed.
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
 * **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
@@ -172,6 +173,8 @@ Contributions are accepted under the GNU General Public License, version 3 or an
 **Copyright (C) 2026 魇珩Gr3yPh4ntom and contributors.**
 
 logo.png and demo.png are part of OierToolKit and are distributed under the terms of the GNU General Public License, version 3 or any later version, as published by the Free Software Foundation. See the LICENSE file for details.
+
+Statement math is rendered with [go-tex](https://github.com/luo-studio/go-tex) (MIT License).
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright

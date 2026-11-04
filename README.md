@@ -27,6 +27,7 @@
 * **图形界面与命令行双形态**：同一份二进制有两个入口 —— `otk`（命令行）与 `otk-gui`（图形界面），互不干扰；右侧工作区使用多标签页，可同时打开多个项目、模拟赛和 Start Here。启动时沿用上次窗口状态（首次默认最大化，保留标题栏与最小化/最大化/关闭按钮，F11 切换）。命令行输出可安全重定向（非终端自动关闭颜色）。
 * **桌面与应用菜单快捷方式**：GUI 首次启动会询问是否在桌面创建快捷方式；设置里还可以把 OierToolKit 注册到应用菜单。Linux Wayland 下任务栏图标也依赖这个菜单入口。
 * **内置终端编辑器**：设置里可以让 nvim/vim 在源码页旁的终端标签内启动；不开启时仍使用原来的外部编辑器方式。
+* **题面公式**：题面 Markdown 支持行内 `$...$`、独立 `$$...$$`（以及 `\(...\)` / `\[...\]`），公式在本地渲染，不依赖浏览器或外部 TeX。
 * **更新检查**：启动时自动检查，也可在设置里手动检查；国内优先从主页的 `version.json` 获取版本号，失败才回退 GitHub。
 * **项目库**：项目可以建在任意目录（`otk init`），统一登记到项目库中管理。
 * **样例即文件**：目录里放成对的 `.in` 与 `.out`（比赛下发的 `.ans` 也认），`otk refresh` 一下即入样例库。
@@ -182,6 +183,8 @@ otk contest rm <id>                        # 删除比赛
 **Copyright (C) 2026 魇珩Gr3yPh4ntom and contributors.**
 
 logo.png 与 demo.png: Copyright (C) 2026 魇珩Gr3yPh4ntom. Licensed under the GNU General Public License, version 3 or any later version.
+
+题面数学公式由 [go-tex](https://github.com/luo-studio/go-tex) 渲染（MIT License）。
 
 Copying and distribution of this file, with or without modification,
 are permitted in any medium without royalty provided the copyright
