@@ -31,7 +31,6 @@ import (
 // 免得和项目/远端配置混在一起。
 
 const (
-	prefFullscreen    = "gui_fullscreen"     // 启动时全屏
 	prefShortcutAsked = "gui_shortcut_asked" // 是否已经问过"要不要创建桌面快捷方式"
 	prefMenuShortcut  = "gui_menu_shortcut"  // 应用菜单入口：1=保留 / 0=用户主动移除
 	prefJudgeParallel = "gui_judge_parallel" // 评测并发度：0=自动（CPU核数-1，上限8）
@@ -191,12 +190,4 @@ func (g *guiApp) removeShortcut() {
 		return
 	}
 	g.setStatus(tr("桌面快捷方式已删除"))
-}
-
-// fullscreenLabel 生成全屏偏好的文案。
-func fullscreenLabel(on bool) string {
-	if on {
-		return tr("全屏启动")
-	}
-	return tr("窗口化启动（恢复上次窗口大小与位置）")
 }

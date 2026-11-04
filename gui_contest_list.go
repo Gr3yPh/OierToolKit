@@ -278,6 +278,7 @@ func (g *guiApp) contestTable(list []contest) (fyne.CanvasObject, fyne.CanvasObj
 					g.showError(err)
 					return
 				}
+				g.closeContestTab(c.Dir)
 				g.showContestList()
 				g.setStatus(tr("已删除模拟赛 ") + c.Cfg.Name)
 			}, g.win)
@@ -294,27 +295,6 @@ func (g *guiApp) contestTable(list []contest) (fyne.CanvasObject, fyne.CanvasObj
 	}
 
 	return container.NewBorder(headers, nil, nil, nil, table), actions
-}
-
-// showContest 打开某场比赛的工作台。
-func (g *guiApp) showContest(c contest) {
-	g.generation.Add(1)
-	if g.page != nil {
-		g.page.stop()
-		g.page = nil
-	}
-	g.selected = ""
-	g.mode = modeContest
-	if g.list != nil {
-		g.list.UnselectAll()
-		g.list.Refresh()
-	}
-
-	cp := newContestPage(g, c)
-	g.contest = cp
-	g.detail.Objects = []fyne.CanvasObject{cp.content}
-	g.detail.Refresh()
-	g.setStatus(tr("已打开模拟赛 ") + c.Cfg.Name)
 }
 
 // importContestDialog 选择上传目录并导入成一整场比赛。

@@ -39,9 +39,8 @@ import (
 
 // contestPage 是一整场模拟赛的工作台：题目/子任务配置、评测、榜单、导出。
 type contestPage struct {
-	g   *guiApp
-	c   contest
-	gen int64
+	g *guiApp
+	c contest
 
 	content fyne.CanvasObject
 	title   *widget.Label
@@ -71,6 +70,7 @@ type contestPage struct {
 
 	running atomic.Bool
 	cancel  atomic.Bool
+	closed  atomic.Bool
 	// savePending 用于合并连续输入产生的写盘请求。
 	savePending atomic.Bool
 	// saveTimer 是那个待触发的去抖定时器，flushSave / 页面销毁要能取消它，
@@ -81,7 +81,7 @@ type contestPage struct {
 }
 
 func newContestPage(g *guiApp, c contest) *contestPage {
-	p := &contestPage{g: g, c: c, gen: g.generation.Load()}
+	p := &contestPage{g: g, c: c}
 	p.res, p.hasResult = loadContestResult(c)
 	p.warns = validateContest(c)
 
@@ -286,8 +286,14 @@ func (p *contestPage) fillScores() {
 }
 
 // alive 判断页面的后台任务是否仍应更新界面。
-func (p *contestPage) alive(gen int64) bool {
-	return p.g.generation.Load() == gen
+func (p *contestPage) alive() bool {
+	return !p.closed.Load()
+}
+
+// close 标记标签已关闭，并中断评测。
+func (p *contestPage) close() {
+	p.closed.Store(true)
+	p.stop()
 }
 
 // stop 在切走页面时中断评测。
@@ -329,7 +335,6 @@ func (p *contestPage) startJudge() {
 	p.status.SetText(tr("正在编译并评测 ..."))
 	p.g.busy(true, tr("模拟赛评测中 ..."))
 
-	gen := p.gen
 	// isCancelled 是传给引擎的停止信号：编译与运行都会每 50ms 轮询它，
 	// 一旦为真立刻杀进程，所以点“停止”能马上生效，而不是等整场跑完。
 	isCancelled := func() bool { return p.cancel.Load() }
@@ -341,7 +346,7 @@ func (p *contestPage) startJudge() {
 				return
 			}
 			ui(func() {
-				if !p.alive(gen) {
+				if !p.alive() {
 					return
 				}
 				p.bar.SetValue(ev.Percent)
@@ -360,7 +365,7 @@ func (p *contestPage) startJudge() {
 			p.stopBtn.Disable()
 			p.bar.Hide()
 
-			if !p.alive(gen) {
+			if !p.alive() {
 				p.g.busy(false, "")
 				return
 			}
@@ -1296,43 +1301,4 @@ func scoreToneOf(c contest, problem string, score float64) scoreTone {
 	default:
 		return toneMissing
 	}
-}
-
-// showContestList 把右侧详情切回模拟赛列表。
-// showProjectList 打开项目库总览页（表格视图）。
-func (g *guiApp) showProjectList() {
-	g.generation.Add(1)
-	if g.page != nil {
-		g.page.stop()
-		g.page = nil
-	}
-	if g.contest != nil {
-		g.contest.stop()
-		g.contest = nil
-	}
-	g.selected = ""
-	g.mode = modeProjectList
-	g.setNav(modeProjectList)
-	if g.list != nil {
-		g.list.UnselectAll()
-		g.list.Refresh()
-	}
-	g.detail.Objects = []fyne.CanvasObject{g.buildProjectList()}
-	g.detail.Refresh()
-	g.setStatus(tr("项目库"))
-}
-
-func (g *guiApp) showContestList() {
-	g.generation.Add(1)
-	g.page = nil
-	g.selected = ""
-	g.mode = modeContest
-	g.setNav(modeContest)
-	if g.list != nil {
-		g.list.UnselectAll()
-		g.list.Refresh()
-	}
-	g.detail.Objects = []fyne.CanvasObject{g.buildContestList()}
-	g.detail.Refresh()
-	g.setStatus(tr("模拟赛"))
 }

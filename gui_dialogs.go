@@ -222,15 +222,9 @@ func (g *guiApp) cloneDialog() {
 		}
 
 		g.busy(true, fmt.Sprintf(tr("正在从 %s 拉取题目 %s ..."), base, id))
-		gen := g.generation.Load()
 		go func() {
 			p, prob, _, err := cloneProblem(parent, base, id)
 			ui(func() {
-				if gen != g.generation.Load() && g.page != nil {
-					// 用户已切走，只更新项目库不打扰当前页面
-					g.reloadProjects()
-					return
-				}
 				g.busy(false, tr("题目已添加"))
 				if err != nil {
 					g.showError(err)
@@ -300,10 +294,6 @@ func (g *guiApp) settingsDialog() {
 	addRemoteBtn := widget.NewButtonWithIcon(tr("添加远端"), theme.ContentAddIcon(), func() {
 		newRow("", "", "")
 	})
-
-	fullscreen := widget.NewCheck(tr("全屏（保留标题栏与右上角窗口按钮）"),
-		func(bool) {})
-	fullscreen.SetChecked(guiPrefBool(prefFullscreen, true))
 
 	shortcutState := caption("")
 	refreshShortcutState := func() {
@@ -404,7 +394,6 @@ func (g *guiApp) settingsDialog() {
 	content := container.NewVBox(
 		section(tr("外观")),
 		widget.NewForm(
-			widget.NewFormItem(tr("窗口模式"), fullscreen),
 			widget.NewFormItem(tr("界面语言"), langSel),
 			widget.NewFormItem(tr("主题"), themeSel),
 		),
@@ -459,10 +448,6 @@ func (g *guiApp) settingsDialog() {
 		Content:     content,
 		HeightRatio: 0.9,
 		OnConfirm: func() {
-			if err := setGuiPrefBool(prefFullscreen, fullscreen.Checked); err != nil {
-				g.showError(err)
-				return
-			}
 			if langSel.Selected != "" {
 				if err := setGuiPref(prefLang, languageValueFromChoice(langSel.Selected)); err != nil {
 					g.showError(err)
@@ -523,8 +508,6 @@ func (g *guiApp) settingsDialog() {
 					_ = removeRemote(r.origName)
 				}
 			}
-			// 全屏偏好立即生效，不必重启。
-			g.setMaximized(fullscreen.Checked)
 			g.setStatus(tr("全局设置已保存"))
 		},
 	})
@@ -708,14 +691,9 @@ func (g *guiApp) removeProjectDialog(p project) {
 	d.Show()
 }
 
-// afterRemove 在项目被移除后刷新列表与详情。
+// afterRemove 在项目被移除后刷新列表，并关掉对应的项目标签。
 func (g *guiApp) afterRemove(dir, msg string) {
 	g.reloadProjects()
-	if g.selected == dir {
-		g.page = nil
-		g.selected = ""
-		g.detail.Objects = []fyne.CanvasObject{g.emptyView()}
-		g.detail.Refresh()
-	}
+	g.closeProjectTab(dir)
 	g.setStatus(msg)
 }

@@ -44,6 +44,7 @@ var guiAppIconData []byte
 
 // 界面模式：项目库与模拟赛共用同一个右侧详情区。
 const (
+	modeStart       = "start"
 	modeProject     = "project"
 	modeProjectList = "projects"
 	modeContest     = "contest"
@@ -61,22 +62,23 @@ type guiApp struct {
 	search  *widget.Entry
 	list    *widget.List
 	count   *widget.Label
-	detail  *fyne.Container
 	status  *widget.Label
 	spinner *widget.ProgressBarInfinite
 
-	// 侧栏导航项的选中态：只有"全部项目"和"模拟赛"是页面，
+	// 顶层工作区：DocTabs 的每个标签是一个项目、比赛或静态页。
+	workspace *container.DocTabs
+	tabs      map[*container.TabItem]*workspaceTab
+
+	// 侧栏导航项的选中态：只有"开始""全部项目"和"模拟赛"是页面，
 	// "批量评测"是动作，不参与高亮。
+	navStart   *widget.Button
 	navList    *widget.Button
 	navContest *widget.Button
 
-	mode     string // project / projects / contest
+	mode     string // start / project / projects / contest
 	selected string
 	page     *projectPage
 	contest  *contestPage
-
-	// generation 在切换项目时自增，后台任务据此丢弃过期回调。
-	generation atomic.Int64
 
 	// startMaximized 表示"启动后要最大化"，真正的最大化动作在窗口 Show 之后做。
 	startMaximized bool
@@ -110,26 +112,23 @@ func cmdGui() {
 	w := a.NewWindow("OierToolKit " + otkVersion)
 	w.SetIcon(appIcon)
 
-	g := &guiApp{app: a, win: w, mode: modeProject}
+	g := &guiApp{app: a, win: w, mode: modeStart}
 	g.build()
 
 	// 默认以最大化启动，但必须保留标题栏和右上角的最小化/最大化/关闭按钮，
 	// 所以既不能用 SetFullScreen（独占全屏，会把标题栏吃掉），也不能用
 	// Resize(屏幕尺寸)（那是把客户区撑大，会盖住任务栏且不算最大化状态）。
-	// 窗口Show() 之后才有真正的 HWND，这时候再交给窗口管理器。
 	// 窗口 Show() 之后才有真正的 HWND，最大化动作放到应用启动事件里做。
-	g.startMaximized = guiPrefBool(prefFullscreen, true)
+	g.startMaximized = guiPrefBool(prefWinMax, true)
 	w.Resize(fyne.NewSize(1180, 760))
-	// 关闭前记住窗口状态，供下次"窗口化启动"时恢复。
+	// 关闭前记住窗口状态，供下次启动恢复最大化/窗口化。
 	w.SetCloseIntercept(func() {
 		g.saveWindowState()
 		w.Close()
 	})
 
 	g.reloadProjects()
-	if len(g.visible) > 0 {
-		g.showProject(g.visible[0])
-	}
+	g.showStartHere()
 
 	// 首次启动询问要不要创建桌面快捷方式。放到应用启动后执行，
 	// 保证对话框有主窗口可以依附。
@@ -264,10 +263,11 @@ func (g *guiApp) build() {
 	g.status = widget.NewLabel(tr("就绪"))
 	g.spinner = widget.NewProgressBarInfinite()
 	g.spinner.Hide()
-	g.detail = container.NewStack(g.emptyView())
+	g.tabs = map[*container.TabItem]*workspaceTab{}
+	g.workspace = g.newWorkspace()
 
 	root := container.NewBorder(g.buildHeader(), g.buildStatusBar(), nil, nil,
-		sidebarSplit(g.buildSidebar(), g.detail))
+		sidebarSplit(g.buildSidebar(), g.workspace))
 	g.win.SetContent(root)
 }
 
@@ -345,6 +345,7 @@ func (g *guiApp) buildSidebar() fyne.CanvasObject {
 
 	g.count = caption("")
 
+	g.navStart = navButton(tr("开始"), theme.HomeIcon(), g.showStartHere)
 	g.navList = navButton(tr("全部项目"), theme.ListIcon(), g.showProjectList)
 	batchBtn := navButton(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog)
 	g.navContest = navButton(tr("模拟赛"), theme.GridIcon(), g.showContestList)
@@ -353,7 +354,7 @@ func (g *guiApp) buildSidebar() fyne.CanvasObject {
 	// 三组叠起来吃掉 350px，项目列表只剩三四行。
 	head := container.NewVBox(
 		inset(8, 8, 8, 2, g.search),
-		inset(4, 0, 4, 6, container.NewVBox(g.navList, batchBtn, g.navContest)),
+		inset(4, 0, 4, 6, container.NewVBox(g.navStart, g.navList, batchBtn, g.navContest)),
 		widget.NewSeparator(),
 	)
 	foot := inset(8, 4, 8, 4, g.count)
@@ -374,6 +375,7 @@ func (g *guiApp) setNav(mode string) {
 		mode string
 		btn  *widget.Button
 	}{
+		{modeStart, g.navStart},
 		{modeProjectList, g.navList},
 		{modeContest, g.navContest},
 	} {
@@ -389,35 +391,23 @@ func (g *guiApp) setNav(mode string) {
 	}
 }
 
-// emptyView 是未选择项目时的占位页。
-func (g *guiApp) emptyView() fyne.CanvasObject {
-	logo := canvas.NewImageFromResource(fyne.NewStaticResource("logo.png", guiLogoData))
-	logo.FillMode = canvas.ImageFillContain
-	logo.SetMinSize(fyne.NewSize(72, 72))
-
-	title := widget.NewLabelWithStyle(tr("还没有打开项目"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	title.SizeName = theme.SizeNameSubHeadingText
-	tip := caption(tr("从左侧选择一个项目，或新建项目、从网站添加题目"))
-
-	btns := container.NewHBox(
-		layout.NewSpacer(),
-		widget.NewButton(tr("新建项目"), g.newProjectDialog),
-		widget.NewButton(tr("从网站添加题目"), g.cloneDialog),
-		layout.NewSpacer(),
-	)
-	return container.NewCenter(container.NewVBox(
-		container.NewCenter(logo),
-		container.NewCenter(title),
-		container.NewCenter(tip),
-		spacerH(10),
-		container.NewCenter(btns),
-	))
-}
-
 // reloadProjects 重新读取项目库并按当前搜索词过滤。
 func (g *guiApp) reloadProjects() {
 	g.dirs = registryRead()
 	g.applyFilter()
+	// 项目库标签如果已经打开，顺手刷新，避免新增/移除后还显示旧表。
+	if g.workspace != nil {
+		if t := g.findWorkspaceTab(tabProjectList, ""); t != nil {
+			t.content = g.buildProjectList()
+			t.item.Content = t.content
+			g.workspace.Refresh()
+		}
+		if t := g.findWorkspaceTab(tabStart, ""); t != nil {
+			t.content = g.buildStartPage()
+			t.item.Content = t.content
+			g.workspace.Refresh()
+		}
+	}
 }
 
 // applyFilter 按搜索框内容过滤项目列表。
@@ -454,38 +444,6 @@ func (g *guiApp) applyFilter() {
 	}
 }
 
-// showProject 切换右侧详情到指定项目。切换时旧页面的后台任务会因
-// generation 变化而停止回写界面。
-func (g *guiApp) showProject(dir string) {
-	if g.page != nil {
-		g.page.stop()
-		g.page = nil
-	}
-	if g.contest != nil {
-		g.contest.stop()
-		g.contest = nil
-	}
-	g.generation.Add(1)
-	g.mode = modeProject
-	g.selected = dir
-	g.setNav(modeProject)
-	if g.list != nil {
-		g.list.Refresh()
-	}
-
-	if !dirExists(dir) {
-		g.detail.Objects = []fyne.CanvasObject{g.missingView(dir)}
-		g.detail.Refresh()
-		return
-	}
-
-	pg := newProjectPage(g, dir)
-	g.page = pg
-	g.detail.Objects = []fyne.CanvasObject{pg.content}
-	g.detail.Refresh()
-	g.setStatus(fmt.Sprintf(tr("已打开 %s"), filepath.Base(dir)))
-}
-
 // missingView 提示项目目录已不存在，并给出清理项目库记录的入口。
 func (g *guiApp) missingView(dir string) fyne.CanvasObject {
 	title := widget.NewLabelWithStyle(tr("项目目录已缺失"), fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
@@ -493,11 +451,7 @@ func (g *guiApp) missingView(dir string) fyne.CanvasObject {
 	remove := widget.NewButton(tr("从项目库移除记录"), func() {
 		registryRemove(dir)
 		g.reloadProjects()
-		if g.selected == dir {
-			g.selected = ""
-			g.detail.Objects = []fyne.CanvasObject{g.emptyView()}
-			g.detail.Refresh()
-		}
+		g.closeProjectTab(dir)
 	})
 	return container.NewCenter(container.NewVBox(
 		container.NewCenter(title), container.NewCenter(body), container.NewCenter(remove)))
@@ -655,9 +609,9 @@ func (r *projectRowRenderer) Destroy() {}
 
 // projectPage 汇总一个项目的六个页面，并持有停止后台任务的开关。
 type projectPage struct {
-	g   *guiApp
-	p   project
-	gen int64
+	g      *guiApp
+	p      project
+	closed atomic.Bool
 
 	content  fyne.CanvasObject
 	tabs     *container.AppTabs
@@ -671,7 +625,7 @@ type projectPage struct {
 }
 
 func newProjectPage(g *guiApp, dir string) *projectPage {
-	pg := &projectPage{g: g, p: project{Name: projectNameOf(dir), Dir: dir}, gen: g.generation.Load()}
+	pg := &projectPage{g: g, p: project{Name: projectNameOf(dir), Dir: dir}}
 
 	pg.overview = newOverviewPage(pg)
 	pg.source = newSourcePage(pg)
@@ -707,9 +661,15 @@ func (pg *projectPage) selectTab(i int) {
 // activeProblem 返回当前编辑/评测的题号。单题项目没有题号，返回空串。
 func (pg *projectPage) activeProblem() string { return "" }
 
-// alive 判断本页面的后台任务是否仍然有效（用户可能已切到别的项目）。
+// alive 判断本页面的后台任务是否仍然有效（标签是否已关闭）。
 func (pg *projectPage) alive() bool {
-	return pg.g.generation.Load() == pg.gen
+	return !pg.closed.Load()
+}
+
+// close 标记标签已关闭，并停掉后台任务。
+func (pg *projectPage) close() {
+	pg.closed.Store(true)
+	pg.stop()
 }
 
 // stop 停止该页面正在运行的任务。

@@ -14,13 +14,13 @@
 #   所以图形版既有资源管理器里的图标与文件属性，又不会弹黑框。
 #
 # 用法：scripts/build-windows.sh [版本号]
-#   版本号写进 -X main.otkVersion，默认 v2.7.0。
+#   版本号写进 -X main.otkVersion，默认 v2.8.0。
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-VER="${1:-v2.7.0}"
+VER="${1:-v2.8.0}"
 FLAGS="-s -w -X main.otkVersion=${VER}"
 SYSO="resource_windows_amd64.syso"
 

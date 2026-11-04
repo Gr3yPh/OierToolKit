@@ -165,13 +165,10 @@ func (s *stressPage) run() {
 
 	p := s.pg.p
 	keepGoing := s.keepChk.Checked
-	// 记下启动时的 generation：中途切走项目后，结束回调不能再去动
-	// 新页面的忙碌状态和控件（与 judgePage.run 一致）。
-	gen := s.pg.g.generation.Load()
 	go func() {
 		res, err := runStress(p, count, keepGoing, func(ev stressEvent) {
 			ui(func() {
-				if s.pg.g.generation.Load() != gen {
+				if !s.pg.alive() {
 					return
 				}
 				switch ev.Stage {
@@ -187,7 +184,7 @@ func (s *stressPage) run() {
 		}, func() bool { return s.cancel.Load() })
 
 		ui(func() {
-			if s.pg.g.generation.Load() != gen {
+			if !s.pg.alive() {
 				return
 			}
 			s.running.Store(false)

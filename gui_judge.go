@@ -160,14 +160,13 @@ func (j *judgePage) run() {
 	j.stopBtn.Enable()
 	j.target.SetText(j.targetText(p))
 
-	gen := j.pg.gen
 	go func() {
 		props := p.cfg()
 		limit, memCap := judgeLimits(props)
 		threads := judgeThreads(props)
 		// limit 会被 UI 线程的列表模板与详情面板读取，写入必须回 UI 线程。
 		ui(func() {
-			if j.alive(gen) {
+			if j.alive() {
 				j.setLimits(limit, memCap)
 			}
 		})
@@ -175,7 +174,7 @@ func (j *judgePage) run() {
 		log, ok := compileProjectTo(srcPath, exePath, props)
 		if !ok {
 			ui(func() {
-				if !j.alive(gen) {
+				if !j.alive() {
 					return
 				}
 				j.running.Store(false)
@@ -194,7 +193,7 @@ func (j *judgePage) run() {
 		checkerExe, ceLog, checkerOK := prepareChecker(p, props)
 		if !checkerOK {
 			ui(func() {
-				if !j.alive(gen) {
+				if !j.alive() {
 					return
 				}
 				j.running.Store(false)
@@ -210,7 +209,7 @@ func (j *judgePage) run() {
 		}
 
 		ui(func() {
-			if !j.alive(gen) {
+			if !j.alive() {
 				return
 			}
 			j.status.SetText(fmt.Sprintf(tr("正在评测 %s（%d 线程）"), name, threads))
@@ -239,7 +238,7 @@ func (j *judgePage) run() {
 		rep := evalSamples(job, func(pt pointResult) {
 			done := atomic.AddInt64(&doneCount, 1)
 			ui(func() {
-				if !j.alive(gen) {
+				if !j.alive() {
 					return
 				}
 				j.limit = limit
@@ -259,7 +258,7 @@ func (j *judgePage) run() {
 		}
 
 		ui(func() {
-			if !j.alive(gen) {
+			if !j.alive() {
 				return
 			}
 			j.points = rep.Points
@@ -330,7 +329,6 @@ func (j *judgePage) retest() {
 	}
 	id := j.selectedID
 	p := j.pg.p
-	gen := j.pg.gen
 
 	j.running.Store(true)
 	j.cancel.Store(false)
@@ -348,7 +346,7 @@ func (j *judgePage) retest() {
 			log, ok := compileProjectTo(p.sourcePath(), p.exePath(), props)
 			if !ok {
 				ui(func() {
-					if !j.alive(gen) {
+					if !j.alive() {
 						return
 					}
 					j.running.Store(false)
@@ -364,7 +362,7 @@ func (j *judgePage) retest() {
 		checkerExe, ceLog, checkerOK := prepareChecker(p, props)
 		if !checkerOK {
 			ui(func() {
-				if !j.alive(gen) {
+				if !j.alive() {
 					return
 				}
 				j.running.Store(false)
@@ -390,7 +388,7 @@ func (j *judgePage) retest() {
 		}
 		rep := evalSamples(job, func(pt pointResult) {
 			ui(func() {
-				if !j.alive(gen) {
+				if !j.alive() {
 					return
 				}
 				// 结果按编号原地替换，保持列表顺序稳定。
@@ -409,7 +407,7 @@ func (j *judgePage) retest() {
 		}, j.cancel.Load)
 
 		ui(func() {
-			if !j.alive(gen) {
+			if !j.alive() {
 				return
 			}
 			j.running.Store(false)
@@ -571,11 +569,10 @@ func (j *judgePage) compileOnly() {
 	p := j.pg.p
 	j.pg.g.busy(true, fmt.Sprintf(tr("编译 %s ..."), p.codeName()))
 	j.note.SetText(tr("编译中 ..."))
-	gen := j.pg.gen
 	go func() {
 		log, ok := compileProjectTo(p.sourcePath(), p.exePath(), p.cfg())
 		ui(func() {
-			if !j.alive(gen) {
+			if !j.alive() {
 				return
 			}
 			if ok {
@@ -672,8 +669,8 @@ func (j *judgePage) stop() {
 }
 
 // alive 判断后台任务是否仍应更新界面。
-func (j *judgePage) alive(gen int64) bool {
-	return j.pg.g.generation.Load() == gen
+func (j *judgePage) alive() bool {
+	return j.pg.alive()
 }
 
 // showDetail 在右侧展示单个测试点的详情。
