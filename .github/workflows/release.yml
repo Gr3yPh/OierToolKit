@@ -245,6 +245,16 @@ jobs:
           echo "Downloaded files:"
           ls -lah downloads || true
 
+      - name: Write version manifest
+        run: |
+          set -euo pipefail
+          # The app checks this file first, so users in mainland China do not
+          # need to reach api.github.com just to know the latest version.
+          jq -n --arg version "$TAG" --arg repo "$REPO" \
+            '{version:$version, page:"https://otk.gr3yph4ntom.cn/", github:("https://github.com/"+$repo+"/releases/tag/"+$version)}' \
+            > downloads/version.json
+          cat downloads/version.json
+
       - name: Upload each file to mirror via HTTP
         run: |
           set -euo pipefail

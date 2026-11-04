@@ -145,14 +145,7 @@ func cmdGui() {
 			g.maybeAskShortcut()
 		})
 		// 后台查一次新版本：失败静默，不打扰离线使用。
-		go func() {
-			if latest := fetchLatestVersion(); isNewerVersion(latest, otkVersion) {
-				ui(func() {
-					g.setStatus(fmt.Sprintf(tr("发现新版本 %s（当前 %s），%s 可下载"),
-						latest, otkVersion, releasesPageURL))
-				})
-			}
-		}()
+		g.checkForUpdates(false)
 	})
 
 	w.ShowAndRun()

@@ -437,6 +437,7 @@ func (g *guiApp) settingsDialog() {
 					}
 				}),
 				widget.NewButton(tr("环境诊断"), g.diagnosticsDialog),
+				widget.NewButton(tr("检查更新"), func() { g.checkForUpdates(true) }),
 			),
 		),
 	)
