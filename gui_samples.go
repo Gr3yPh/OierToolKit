@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -37,12 +38,15 @@ type samplesPage struct {
 	list     *widget.List
 	selected string
 
-	inBox  *widget.Entry
-	outBox *widget.Entry
-	title  *widget.Label
-	note   *widget.Label
+	inBox   *widget.Entry
+	outBox  *widget.Entry
+	title   *widget.Label
+	note    *widget.Label
+	saveBtn *widget.Button
 
-	loading bool
+	loading     bool
+	tooLarge    bool
+	lastLargeID string
 }
 
 func newSamplesPage(pg *projectPage) *samplesPage {
@@ -91,7 +95,8 @@ func newSamplesPage(pg *projectPage) *samplesPage {
 	s.outBox.SetPlaceHolder(tr("期望输出（.out / .ans）"))
 	s.outBox.OnChanged = func(string) { s.note.SetText(tr("有未保存的修改")) }
 
-	saveBtn := widget.NewButtonWithIcon(tr("保存样例"), theme.DocumentSaveIcon(), s.save)
+	s.saveBtn = widget.NewButtonWithIcon(tr("保存样例"), theme.DocumentSaveIcon(), s.save)
+	saveBtn := s.saveBtn
 	inPane := container.NewBorder(caption(tr("输入 .in")), nil, nil, nil, s.inBox)
 	outPane := container.NewBorder(caption(tr("期望输出")), nil, nil, nil, s.outBox)
 
@@ -119,7 +124,12 @@ func (s *samplesPage) reload() {
 
 	if len(s.ids) == 0 {
 		s.selected = ""
+		s.tooLarge = false
+		s.lastLargeID = ""
 		s.title.SetText(tr("还没有样例"))
+		s.inBox.Enable()
+		s.outBox.Enable()
+		s.saveBtn.Enable()
 		s.inBox.SetText("")
 		s.outBox.SetText("")
 		s.note.SetText(tr("在项目目录里放入成对的 .in 与 .out/.ans 后点“同步”"))
@@ -147,15 +157,41 @@ func (s *samplesPage) selectSample(id string) {
 	s.loadSample(id)
 }
 
-// loadSample 把样例内容填进编辑器。
+// loadSample 把样例内容填进编辑器。过大的样例不进 Entry：Fyne 的
+// MultiLineEntry 处理几 MB 文本会长时间卡住 UI，直接提示用外部编辑器。
 func (s *samplesPage) loadSample(id string) {
+	s.title.SetText("#" + id)
+	size := sampleDataSize(s.pg.p, id)
+	if size > maxInAppSampleSize {
+		s.loading = true
+		s.inBox.SetText("")
+		s.outBox.SetText("")
+		s.loading = false
+		s.tooLarge = true
+		s.inBox.Disable()
+		s.outBox.Disable()
+		s.saveBtn.Disable()
+		s.note.SetText(fmt.Sprintf(tr("样例过大（%s），请使用外部编辑器查看。"), humanSize(int(size))))
+		if s.lastLargeID != id {
+			s.lastLargeID = id
+			s.pg.g.showInfo(tr("样例过大"),
+				fmt.Sprintf(tr("样例过大（%s），请使用外部编辑器查看。"), humanSize(int(size))))
+		}
+		return
+	}
+
+	s.tooLarge = false
+	s.lastLargeID = ""
+	s.inBox.Enable()
+	s.outBox.Enable()
+	s.saveBtn.Enable()
+
 	input, output, err := readSample(s.pg.p, id)
 	s.loading = true
 	s.inBox.SetText(input)
 	s.outBox.SetText(output)
 	s.loading = false
 
-	s.title.SetText("#" + id)
 	switch {
 	case err != nil:
 		s.note.SetText(fmt.Sprintf(tr("读取不完整：%v"), err))
@@ -164,9 +200,22 @@ func (s *samplesPage) loadSample(id string) {
 	}
 }
 
+// maxInAppSampleSize 是软件内查看样例的上限；超过后不再塞进 Fyne Entry。
+const maxInAppSampleSize int64 = 512 << 10
+
+func sampleDataSize(p project, id string) int64 {
+	var total int64
+	for _, kind := range []string{"in", "out"} {
+		if info, err := os.Stat(sampleFilePath(p, id, kind)); err == nil {
+			total += info.Size()
+		}
+	}
+	return total
+}
+
 // save 写回当前样例；没有选中样例时什么也不做。
 func (s *samplesPage) save() {
-	if s.selected == "" || s.loading {
+	if s.selected == "" || s.loading || s.tooLarge {
 		return
 	}
 	if err := writeSample(s.pg.p, s.selected, s.inBox.Text, s.outBox.Text); err != nil {

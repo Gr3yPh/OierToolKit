@@ -713,6 +713,15 @@ func revealInFileManager(dir string) error {
 	return openPath(dir)
 }
 
+// showInfo 在当前窗口弹出普通提示框。
+func (g *guiApp) showInfo(title, msg string) {
+	if g.win == nil {
+		fmt.Fprintln(os.Stderr, title+": "+msg)
+		return
+	}
+	dialog.ShowInformation(title, msg, g.win)
+}
+
 // showError 在当前窗口弹出错误对话框。
 func (g *guiApp) showError(err error) {
 	if err == nil {
