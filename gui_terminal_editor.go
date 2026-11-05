@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"runtime"
 	"time"
 
@@ -85,14 +86,64 @@ type terminalEditorPage struct {
 	term    *terminal.Terminal
 	content fyne.CanvasObject
 	started bool
+
+	split         *container.Split
+	statement     *widget.RichText
+	statementPane fyne.CanvasObject
+	statementBtn  *widget.Button
 }
 
 func newTerminalEditorPage(pg *projectPage) *terminalEditorPage {
-	t := terminal.New()
-	t.SetStartDir(pg.p.Dir)
+	e := &terminalEditorPage{pg: pg}
+	e.term = terminal.New()
+	e.term.SetStartDir(pg.p.Dir)
+
+	e.statement = widget.NewRichText()
+	statementScroll := scrollWithWheel(container.NewVScroll(container.NewPadded(e.statement)))
+	e.statementPane = container.NewBorder(
+		container.NewPadded(caption(tr("题面"))), nil, nil, nil,
+		statementScroll,
+	)
+
+	e.statementBtn = widget.NewButtonWithIcon(tr("题面"), theme.FileTextIcon(), e.toggleStatement)
 	closeBtn := widget.NewButtonWithIcon(tr("关闭终端"), theme.CancelIcon(), pg.closeEditorTab)
-	head := container.NewHBox(layout.NewSpacer(), closeBtn)
-	return &terminalEditorPage{pg: pg, term: t, content: container.NewBorder(head, nil, nil, nil, t)}
+	head := container.NewHBox(e.statementBtn, layout.NewSpacer(), closeBtn)
+	termPane := container.NewBorder(head, nil, nil, nil, e.term)
+
+	e.statementPane.Hide()
+	e.split = container.NewHSplit(termPane, e.statementPane)
+	e.split.SetOffset(0.7)
+	e.content = e.split
+	return e
+}
+
+// toggleStatement 在终端右侧打开/收起题面分栏。题面每次打开都重新读盘，
+// 这样在 nvim 里改了 problem.md 后再切回来能看到最新内容。
+func (e *terminalEditorPage) toggleStatement() {
+	if e.statementPane.Visible() {
+		e.statementPane.Hide()
+		e.statementBtn.SetText(tr("题面"))
+		e.split.Refresh()
+		return
+	}
+	e.reloadStatement()
+	e.statementPane.Show()
+	e.statementBtn.SetText(tr("收起题面"))
+	e.split.Refresh()
+}
+
+func (e *terminalEditorPage) reloadStatement() {
+	path := findStatement(e.pg.p)
+	if path == "" {
+		renderMarkdown(e.statement, stmtPreviewText(""))
+		return
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		renderMarkdown(e.statement, fmt.Sprintf(tr("读取失败：%v"), err))
+		return
+	}
+	renderMarkdown(e.statement, string(data))
 }
 
 func (e *terminalEditorPage) start() {

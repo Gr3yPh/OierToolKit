@@ -36,6 +36,7 @@ var enUI = map[string]string{
 	"打开 .stress 目录": "Open .stress", "发现反例后继续收集": "Collect more after WA",
 	"保存": "Save", "重新加载": "Reload", "外部编辑器": "External Editor",
 	"终端编辑器": "Terminal editor",
+	"收起题面":  "Hide statement",
 	"关闭终端":  "Close terminal",
 	"在应用内置终端中打开编辑器（适合 nvim / vim）": "Open the editor in the built-in terminal (for nvim / vim)",
 	"终端编辑器退出：%v":                   "Terminal editor exited: %v",
