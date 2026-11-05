@@ -4,6 +4,14 @@ otk-remote 是 OierToolKit 的远程 OJ 互操作协议：**otk 只做客户端*
 提交、等待结果），OJ 侧实现下面三个 HTTP 端点即可接入。纯 JSON over HTTP，
 无任何外部依赖要求，PHP / Node / Go 等任意技术栈都能实现。
 
+> **客户端形态：GUI / CLI 双模式。**
+> OierToolKit 不是只能敲命令的命令行工具。同一份发布包同时提供 `otk`
+> 命令行入口和 `otk-gui` 图形入口，两者共用同一个配置和同一套 `/otk/v1`
+> 协议：GUI 里可以在「设置 → 远端列表」配置 OJ，可以从网站添加题目、提交
+> 代码并查看轮询结果；CLI 则用 `otk clone`、`otk submit` 等命令完成同样的
+> 流程。OJ 编写接入文档或做联调时，请不要只提供/假设命令行用法，至少同时
+> 说明 GUI 的配置入口和操作路径。
+
 ## 通用约定
 
 - 传输：HTTP 或 HTTPS，请求与响应体均为 `application/json; charset=utf-8`
@@ -14,6 +22,18 @@ otk-remote 是 OierToolKit 的远程 OJ 互操作协议：**otk 只做客户端*
 - 错误：非 2xx 状态码，响应体建议 `{"error": "人类可读原因"}`
   （客户端报错时优先展示该字段）
 - 题号、提交号按不透明字符串处理，客户端会对它们做 URL 编码
+
+## 客户端入口
+
+协议端点与客户端形态无关，OJ 不需要为 GUI 和 CLI 分别实现接口。
+
+| 形态 | 入口 | 远端配置 | 拉题 / 提交 / 查看结果 |
+|---|---|---|---|
+| GUI | `otk-gui`，或 `otk gui` | 设置 → 远端列表 | 从网站添加题目、提交页、评测明细 |
+| CLI | `otk` | `otk config remote ...` / `OTK_TOKEN` | `otk clone` / `otk submit` |
+
+两端读写同一份 `~/.otkprofile` 配置。OJ 的接入说明应同时覆盖 GUI 和 CLI，
+不要把 otk-remote 描述成“只支持命令行的 OJ 插件”。
 
 ## 1. 获取题目
 
@@ -159,3 +179,5 @@ verdict 取值（大小写不敏感，客户端按大写比较）：
 - 执行用户代码的沙箱、权限、限流由 OJ 侧全权负责，协议不作规定
 - 建议对 `source` 大小设上限（如 256KB），并对提交频率限流
 - 题目不存在返回 404 + `{"error": "..."}`；认证失败返回 401
+- 对用户的接入文档请明确 OierToolKit 是 GUI / CLI 双模式；GUI 的远端配置
+  在「设置 → 远端列表」，不要只写 `otk clone` / `otk submit` 命令示例
