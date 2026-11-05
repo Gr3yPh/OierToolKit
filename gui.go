@@ -284,11 +284,7 @@ func (g *guiApp) build() {
 
 	root := container.NewBorder(g.buildHeader(), g.buildStatusBar(), nil, nil,
 		sidebarSplit(g.buildSidebar(), g.workspace))
-	g.win.SetContent(newResizeRefresh(root, func() {
-		if g.win != nil && g.win.Canvas() != nil {
-			refreshCanvasRoot(g.win.Canvas().Content())
-		}
-	}))
+	g.win.SetContent(root)
 }
 
 // screenWorkArea 返回当前屏幕的可用尺寸（主窗口所在的显示器）。
