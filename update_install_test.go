@@ -135,3 +135,9 @@ func TestDownloadUpdateProgress(t *testing.T) {
 		t.Fatalf("progress = %d/%d, want %d", done, total, len(body))
 	}
 }
+
+func TestShellQuote(t *testing.T) {
+	if got, want := shellQuote("a'b"), `'a'\''b'`; got != want {
+		t.Fatalf("shellQuote = %q, want %q", got, want)
+	}
+}
