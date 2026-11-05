@@ -20,20 +20,27 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
+	"sort"
+	"strings"
 )
 
 // finishUpdateInstall 在 Unix 上直接原子替换（运行中的可执行文件也可以
 // 先 unlink/rename），然后启动新进程。调用方随后关闭旧窗口。
-func finishUpdateInstall(dir, currentBase, _ string, sources map[string]string) error {
-	for name, src := range sources {
-		if !isUpdateBinaryName(name) {
-			continue
+func finishUpdateInstall(dir, currentBase, tempDir string, sources map[string]string) error {
+	if err := replaceUpdateFiles(dir, sources); err != nil {
+		if !errors.Is(err, os.ErrPermission) {
+			return err
 		}
-		if err := atomicReplaceFile(src, filepath.Join(dir, name)); err != nil {
+		// 程序通常装在 /usr/local/bin；普通用户没有写权限时走系统认证，
+		// Linux 用 pkexec（PolicyKit 弹窗），macOS 用 osascript 的管理员授权。
+		if err := replaceUpdateFilesElevated(dir, tempDir, sources); err != nil {
 			return err
 		}
 	}
@@ -72,4 +79,67 @@ func atomicReplaceFile(src, dst string) error {
 		return err
 	}
 	return os.Rename(tmpName, dst)
+}
+
+func replaceUpdateFiles(dir string, sources map[string]string) error {
+	names := sortedUpdateNames(sources)
+	for _, name := range names {
+		if err := atomicReplaceFile(sources[name], filepath.Join(dir, name)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func sortedUpdateNames(sources map[string]string) []string {
+	names := make([]string, 0, len(sources))
+	for name := range sources {
+		if isUpdateBinaryName(name) {
+			names = append(names, name)
+		}
+	}
+	sort.Strings(names)
+	return names
+}
+
+func replaceUpdateFilesElevated(dir, tempDir string, sources map[string]string) error {
+	scriptPath := filepath.Join(tempDir, "elevated-update.sh")
+	var b strings.Builder
+	b.WriteString("#!/bin/sh\nset -e\n")
+	for _, name := range sortedUpdateNames(sources) {
+		src := sources[name]
+		dst := filepath.Join(dir, name)
+		fmt.Fprintf(&b, "cp -f %s %s\n", shellQuote(src), shellQuote(dst))
+		fmt.Fprintf(&b, "chmod 755 %s\n", shellQuote(dst))
+	}
+	if err := os.WriteFile(scriptPath, []byte(b.String()), 0755); err != nil {
+		return err
+	}
+
+	switch runtime.GOOS {
+	case "linux":
+		pkexec, err := exec.LookPath("pkexec")
+		if err != nil {
+			return fmt.Errorf("%s", tr("安装目录需要管理员权限，但系统中没有找到 pkexec；请手动更新。"))
+		}
+		cmd := exec.Command(pkexec, "/bin/sh", scriptPath)
+		return cmd.Run()
+	case "darwin":
+		command := "/bin/sh " + shellQuote(scriptPath)
+		apple := "do shell script " + appleScriptQuote(command) + " with administrator privileges"
+		cmd := exec.Command("osascript", "-e", apple)
+		return cmd.Run()
+	default:
+		return fmt.Errorf("%s", tr("当前平台无法请求管理员权限，请手动更新。"))
+	}
+}
+
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
+func appleScriptQuote(s string) string {
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\"", "\\\"")
+	return "\"" + s + "\""
 }

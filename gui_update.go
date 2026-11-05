@@ -28,8 +28,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// checkForUpdates 检查新版本。manual=false 时只更新状态栏，失败静默；
-// manual=true 时给出明确结果，方便用户主动点击后知道发生了什么。
+// checkForUpdates 检查新版本。启动自动检查失败静默，发现新版本会弹窗；
+// manual=true 时也会给出“已是最新”或失败结果。
 func (g *guiApp) checkForUpdates(manual bool) {
 	if manual {
 		g.setStatus(tr("正在检查更新 ..."))
@@ -54,32 +54,38 @@ func (g *guiApp) checkForUpdates(manual bool) {
 			return
 		}
 
-		link := updatePageURL(info)
 		ui(func() {
-			if manual {
-				label := widget.NewLabel(fmt.Sprintf(tr("发现新版本 %s（当前 %s）。"), info.Version, otkVersion))
-				openLabel := tr("打开主页")
-				if uiLangIsEnglish() {
-					openLabel = tr("打开发布页")
-				}
-				var updateDialog *dialog.CustomDialog
-				updateBtn := widget.NewButtonWithIcon(tr("立即更新"), theme.DownloadIcon(), func() {
-					if updateDialog != nil {
-						updateDialog.Hide()
-					}
-					g.startUpdate(info)
-				})
-				updateBtn.Importance = widget.HighImportance
-				content := container.NewVBox(label, updateBtn,
-					widget.NewHyperlink(openLabel, parseURL(link)))
-				updateDialog = dialog.NewCustom(tr("检查更新"), tr("关闭"), content, g.win)
-				updateDialog.Show()
-				return
-			}
-			g.setStatus(fmt.Sprintf(tr("发现新版本 %s（当前 %s），%s 可下载"),
-				info.Version, otkVersion, link))
+			g.setStatus(fmt.Sprintf(tr("发现新版本 %s（当前 %s），建议立即更新"), info.Version, otkVersion))
+			g.showUpdatePrompt(info)
 		})
 	}()
+}
+
+// showUpdatePrompt 显示新版本提示。启动自动检查和手动检查共用这一套，
+// 这样检测到更新时用户可以直接看到「立即更新」按钮。
+func (g *guiApp) showUpdatePrompt(info updateInfo) {
+	if g.win == nil {
+		return
+	}
+	link := updatePageURL(info)
+	label := widget.NewLabel(fmt.Sprintf(tr("发现新版本 %s（当前 %s），建议立即更新。"),
+		info.Version, otkVersion))
+	openLabel := tr("打开主页")
+	if uiLangIsEnglish() {
+		openLabel = tr("打开发布页")
+	}
+	var updateDialog *dialog.CustomDialog
+	updateBtn := widget.NewButtonWithIcon(tr("立即更新"), theme.DownloadIcon(), func() {
+		if updateDialog != nil {
+			updateDialog.Hide()
+		}
+		g.startUpdate(info)
+	})
+	updateBtn.Importance = widget.HighImportance
+	content := container.NewVBox(label, updateBtn,
+		widget.NewHyperlink(openLabel, parseURL(link)))
+	updateDialog = dialog.NewCustom(tr("发现新版本"), tr("关闭"), content, g.win)
+	updateDialog.Show()
 }
 
 // startUpdate 一键下载当前平台的发行包，显示下载进度，替换并重启。
