@@ -283,6 +283,11 @@ func writeUpdateBinary(dest, name string, r io.Reader) error {
 	return closeErr
 }
 
+// shellQuote 把路径安全地放进 /bin/sh 脚本。
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+}
+
 // installUpdatePackage 替换程序文件并启动新进程。Windows 会交给延时批处理。
 func installUpdatePackage(pkg *updatePackage) error {
 	_, base, dir, err := currentUpdateExecutable()
