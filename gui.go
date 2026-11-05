@@ -82,6 +82,11 @@ type guiApp struct {
 
 	// startMaximized 表示"启动后要最大化"，真正的最大化动作在窗口 Show 之后做。
 	startMaximized bool
+	// maximized 记录我们通过 F11 / 启动恢复设置的最大化状态；Linux 没有
+	// 原生 IsMaximized 可查，只能自己记。
+	maximized bool
+	// windowedSize 是上次窗口化时的尺寸，最大化后再还原时用它。
+	windowedSize fyne.Size
 
 	// sheet 是当前显示的浮层面板（设置、新建项目等），sheetBase 是它下面
 	// 原本的窗口内容，关闭时原样还原。不用 canvas.Overlays()：overlay 会顶替
@@ -120,6 +125,9 @@ func cmdGui() {
 	// Resize(屏幕尺寸)（那是把客户区撑大，会盖住任务栏且不算最大化状态）。
 	// 窗口 Show() 之后才有真正的 HWND，最大化动作放到应用启动事件里做。
 	g.startMaximized = guiPrefBool(prefWinMax, true)
+	if w, h := guiPrefInt(prefWinW, 0), guiPrefInt(prefWinH, 0); w > 200 && h > 150 {
+		g.windowedSize = fyne.NewSize(float32(w), float32(h))
+	}
 	w.Resize(fyne.NewSize(1180, 760))
 	// 关闭前记住窗口状态，供下次启动恢复最大化/窗口化。
 	w.SetCloseIntercept(func() {
@@ -137,6 +145,9 @@ func cmdGui() {
 	a.Lifecycle().SetOnStarted(func() {
 		ui(func() {
 			if g.startMaximized {
+				// 启动恢复最大化时，windowedSize 已从偏好里读出来；
+				// 先标记为最大化，避免 setMaximized 把 1180×760 当成“上次尺寸”覆盖掉。
+				g.maximized = true
 				g.setMaximized(true)
 				g.startMaximized = false
 			} else {
@@ -217,7 +228,15 @@ func (g *guiApp) setMaximized(on bool) {
 	if g.win == nil {
 		return
 	}
+	if on && !g.maximized {
+		if c := g.win.Canvas(); c != nil {
+			if sz := c.Size(); sz.Width > 200 && sz.Height > 150 {
+				g.windowedSize = sz
+			}
+		}
+	}
 	g.win.SetFullScreen(false)
+	g.maximized = on
 	if nativeMaximize(g.win, on) {
 		return
 	}
@@ -232,7 +251,11 @@ func (g *guiApp) setMaximized(on bool) {
 		g.win.CenterOnScreen()
 		return
 	}
-	g.win.Resize(fyne.NewSize(1180, 760))
+	size := g.windowedSize
+	if size.Width <= 200 || size.Height <= 150 {
+		size = fyne.NewSize(1180, 760)
+	}
+	g.win.Resize(size)
 	g.win.CenterOnScreen()
 }
 
@@ -261,7 +284,11 @@ func (g *guiApp) build() {
 
 	root := container.NewBorder(g.buildHeader(), g.buildStatusBar(), nil, nil,
 		sidebarSplit(g.buildSidebar(), g.workspace))
-	g.win.SetContent(root)
+	g.win.SetContent(newResizeRefresh(root, func() {
+		if g.win != nil && g.win.Canvas() != nil {
+			refreshCanvasRoot(g.win.Canvas().Content())
+		}
+	}))
 }
 
 // screenWorkArea 返回当前屏幕的可用尺寸（主窗口所在的显示器）。

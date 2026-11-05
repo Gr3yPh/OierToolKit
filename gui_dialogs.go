@@ -47,13 +47,18 @@ func (g *guiApp) newProjectDialog() {
 	nameEntry := widget.NewEntry()
 	nameEntry.SetPlaceHolder(tr("项目名称（默认取目录名）"))
 
-	if cwd, err := os.Getwd(); err == nil {
+	if parent := lastProjectParent(); parent != "" {
+		dir := filepath.Join(parent, "new-project")
+		dirEntry.SetText(dir)
+		nameEntry.SetText(filepath.Base(dir))
+	} else if cwd, err := os.Getwd(); err == nil {
 		dirEntry.SetText(cwd)
 		nameEntry.SetText(filepath.Base(cwd))
 	}
 
 	browse := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
 		g.pickFolder(dirEntry, func(dir string) {
+			rememberProjectParent(filepath.Dir(dir))
 			nameEntry.SetText(filepath.Base(dir))
 		})
 	})
@@ -155,6 +160,7 @@ func (g *guiApp) newProjectDialog() {
 			return
 		}
 
+		rememberProjectParent(filepath.Dir(p.Dir))
 		g.reloadProjects()
 		g.showProject(p.Dir)
 
@@ -195,11 +201,13 @@ func (g *guiApp) cloneDialog() {
 	idEntry.SetPlaceHolder(tr("题号，例如 1001"))
 
 	dirEntry := widget.NewEntry()
-	if cwd, err := os.Getwd(); err == nil {
+	if parent := lastProjectParent(); parent != "" {
+		dirEntry.SetText(parent)
+	} else if cwd, err := os.Getwd(); err == nil {
 		dirEntry.SetText(cwd)
 	}
 	browse := widget.NewButtonWithIcon("", theme.FolderOpenIcon(), func() {
-		g.pickFolder(dirEntry, nil)
+		g.pickFolder(dirEntry, func(dir string) { rememberProjectParent(dir) })
 	})
 	dirRow := container.NewBorder(nil, nil, nil, browse, dirEntry)
 
@@ -230,6 +238,7 @@ func (g *guiApp) cloneDialog() {
 					g.showError(err)
 					return
 				}
+				rememberProjectParent(parent)
 				g.reloadProjects()
 				g.showProject(p.Dir)
 				g.setStatus(fmt.Sprintf(tr("已添加题目 %s（%d 组样例）"), prob.ID, len(prob.Samples)))

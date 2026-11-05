@@ -20,6 +20,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -36,6 +37,7 @@ const (
 	prefJudgeParallel  = "gui_judge_parallel"  // 评测并发度：0=自动（CPU核数-1，上限8）
 	prefTheme          = "gui_theme"           // 主题：auto=跟随系统 / light / dark
 	prefEditorTerminal = "gui_editor_terminal" // 在应用内终端中启动编辑器
+	prefProjectParent  = "gui_project_parent"  // 上次新建/克隆项目的父目录
 
 	// 窗口状态记忆：关闭时的最大化状态与窗口化时的尺寸/位置。
 	prefWinMax = "gui_win_max"
@@ -96,19 +98,40 @@ func setGuiPrefInt(key string, value int) error {
 	return setGuiPref(key, strconv.Itoa(value))
 }
 
+// lastProjectParent 返回上次用于新建/克隆项目的父目录；不存在时返回空。
+func lastProjectParent() string {
+	dir := strings.TrimSpace(guiPref(prefProjectParent, ""))
+	if dir != "" && dirExists(dir) {
+		return dir
+	}
+	return ""
+}
+
+// rememberProjectParent 记住项目保存路径的父目录。
+func rememberProjectParent(dir string) {
+	if dir == "" {
+		return
+	}
+	if abs, err := filepath.Abs(dir); err == nil {
+		dir = abs
+	}
+	_ = setGuiPref(prefProjectParent, dir)
+}
+
 // saveWindowState 在窗口关闭前记住当前状态：
 // 是否最大化；窗口化时的客户区尺寸与屏幕位置（位置仅 Windows 支持）。
 func (g *guiApp) saveWindowState() {
 	if g == nil || g.win == nil {
 		return
 	}
-	maxed := nativeIsMaximized(g.win)
+	maxed := nativeIsMaximized(g.win) || g.maximized
 	_ = setGuiPrefBool(prefWinMax, maxed)
 	if maxed {
 		return
 	}
 	if c := g.win.Canvas(); c != nil {
 		if sz := c.Size(); sz.Width > 100 && sz.Height > 100 {
+			g.windowedSize = sz
 			_ = setGuiPrefInt(prefWinW, int(sz.Width))
 			_ = setGuiPrefInt(prefWinH, int(sz.Height))
 		}
