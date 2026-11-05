@@ -15,7 +15,7 @@
 //    You should have received a copy of the GNU General Public License
 //    along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-module github.com/Gr3yPh/OierToolKit
+module github.com/Gr3yPh/OierToolKit/v2
 
 go 1.26.3
 
