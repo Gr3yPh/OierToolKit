@@ -20,7 +20,9 @@ package main
 import (
 	"strconv"
 	"strings"
+	"unicode"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 )
 
@@ -44,12 +46,28 @@ const mathTokenSuffix = "X"
 // 换成占位符，交给 Fyne 解析后再替换成公式段。这样标题、列表、表格、
 // 链接等 Markdown 行为仍然完全由 Fyne 负责，不需要另写一套解析器。
 func renderMarkdown(rich *widget.RichText, content string) {
+	rich.Wrapping = markdownWrapping(content)
 	prepared, formulas := prepareMathMarkdown(content)
 	rich.ParseMarkdown(prepared)
 	if len(formulas) > 0 {
 		rich.Segments = injectMathSegments(rich.Segments, formulas)
 	}
 	rich.Refresh()
+}
+
+// markdownWrapping 对中文使用按字符换行。Fyne 的 Word 模式只把空格当作
+// 换行点，中文里为了排版插入的英文/公式空格会变成错误的断行位置。
+func markdownWrapping(content string) fyne.TextWrap {
+	for _, r := range content {
+		switch {
+		case unicode.Is(unicode.Han, r),
+			unicode.Is(unicode.Hiragana, r),
+			unicode.Is(unicode.Katakana, r),
+			unicode.Is(unicode.Hangul, r):
+			return fyne.TextWrapBreak
+		}
+	}
+	return fyne.TextWrapWord
 }
 
 // prepareMathMarkdown 扫描 Markdown，保护代码块/行内代码，并把数学公式

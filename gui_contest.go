@@ -1037,7 +1037,6 @@ func (p *contestPage) problemDetail(prob contestProblem, rows []rankRow) fyne.Ca
 	if strings.TrimSpace(prob.Statement) != "" {
 		rich := widget.NewRichText()
 		renderMarkdown(rich, prob.Statement)
-		rich.Wrapping = fyne.TextWrapWord
 		items = append(items, container.NewPadded(rich), widget.NewSeparator())
 	}
 

@@ -26,6 +26,15 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+func TestMarkdownWrapping(t *testing.T) {
+	if got := markdownWrapping("C 国有 $n$ 个城市"); got != fyne.TextWrapBreak {
+		t.Fatalf("CJK wrapping = %v, want break", got)
+	}
+	if got := markdownWrapping("English text only"); got != fyne.TextWrapWord {
+		t.Fatalf("English wrapping = %v, want word", got)
+	}
+}
+
 func TestPrepareMathMarkdown(t *testing.T) {
 	tests := []struct {
 		name    string
