@@ -63,11 +63,14 @@ func updateAssetName() (string, bool) {
 }
 
 func updateAssetURLs(info updateInfo, asset string) []string {
-	urls := []string{"https://otk.gr3yph4ntom.cn/releases/" + asset}
-	if info.Version != "" {
-		urls = append(urls, "https://github.com/"+updateRepo+"/releases/download/"+info.Version+"/"+asset)
+	if info.Version == "" {
+		return nil
 	}
-	return urls
+	github := "https://github.com/" + updateRepo + "/releases/download/" + info.Version + "/" + asset
+	return []string{
+		"https://gh-proxy.com/" + github,
+		github,
+	}
 }
 
 // currentUpdateExecutable 返回当前正在运行的、可更新的程序路径。

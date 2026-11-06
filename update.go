@@ -25,13 +25,14 @@ import (
 	"time"
 )
 
-// 启动/手动检查更新：先问国内主页的 version.json，失败再回退 GitHub。
-// 国内网络访问 GitHub API 经常超时，而镜像站至少能保证拿到版本号。
+// 启动/手动检查更新：优先走 gh-proxy 加速 GitHub API，失败再回退
+// 站点 version.json（兼容旧客户端）和直连 GitHub API。
 const (
-	updateManifestURL = "https://otk.gr3yph4ntom.cn/version.json"
-	updateCheckURL    = "https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
-	releasesPageURL   = "https://github.com/Gr3yPh/OierToolKit/releases"
-	homepageURL       = "https://otk.gr3yph4ntom.cn/"
+	updateManifestURL      = "https://otk.gr3yph4ntom.cn/version.json"
+	updateCheckURL         = "https://gh-proxy.com/https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
+	updateCheckFallbackURL = "https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
+	releasesPageURL        = "https://github.com/Gr3yPh/OierToolKit/releases"
+	homepageURL            = "https://otk.gr3yph4ntom.cn/"
 )
 
 type updateInfo struct {
@@ -39,14 +40,20 @@ type updateInfo struct {
 	GitHub  string `json:"github"`
 }
 
-// fetchLatestUpdate 先查主页清单，再回退 GitHub API。失败返回零值。
+// fetchLatestUpdate 先查 gh-proxy 的 GitHub API，再回退主页清单，
+// 最后回退直连 GitHub API。失败返回零值。
 func fetchLatestUpdate() updateInfo {
+	if info := fetchGitHubUpdate(); info.Version != "" {
+		if _, ok := parseSemver(info.Version); ok {
+			return info
+		}
+	}
 	if info := fetchMirrorUpdate(); info.Version != "" {
 		if _, ok := parseSemver(info.Version); ok {
 			return info
 		}
 	}
-	return fetchGitHubUpdate()
+	return fetchGitHubUpdateFallback()
 }
 
 func fetchMirrorUpdate() updateInfo {
@@ -75,8 +82,16 @@ func fetchMirrorUpdate() updateInfo {
 }
 
 func fetchGitHubUpdate() updateInfo {
+	return fetchGitHubUpdateFrom(updateCheckURL)
+}
+
+func fetchGitHubUpdateFallback() updateInfo {
+	return fetchGitHubUpdateFrom(updateCheckFallbackURL)
+}
+
+func fetchGitHubUpdateFrom(url string) updateInfo {
 	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("GET", updateCheckURL, nil)
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return updateInfo{}
 	}

@@ -5,11 +5,11 @@
 #
 # 环境变量：
 #   OTK_INSTALL_DIR  指定安装目录（默认 /usr/local/bin，无权限时回退 ~/.local/bin）
-#   OTK_SOURCE       mirror / github 强制下载源（默认国内镜像，失败自动回退 GitHub）
+#   OTK_SOURCE       ghproxy / github 强制下载源（默认 gh-proxy，失败自动回退 GitHub）
 set -euo pipefail
 
 REPO="Gr3yPh/OierToolKit"
-MIRROR="https://otk.gr3yph4ntom.cn"
+GHPROXY="https://gh-proxy.com"
 
 die() {
     echo "otk-install: $*" >&2
@@ -30,7 +30,7 @@ esac
 asset="otk-$platform-$arch.tar.gz"
 
 # --- 下载 ---
-# 下载时保留进度条：镜像的 30MB 安装包在慢速网络下要等很久，
+# 下载时保留进度条：30MB 安装包在慢速网络下要等很久，
 # 静默下载很容易让人以为脚本卡死。
 fetch() {
     if command -v curl >/dev/null 2>&1; then
@@ -56,8 +56,8 @@ trap 'rm -rf "$tmp"' EXIT
 
 case "${OTK_SOURCE:-}" in
     github) urls="https://github.com/$REPO/releases/latest/download/$asset" ;;
-    mirror) urls="$MIRROR/releases/$asset" ;;
-    *)      urls="$MIRROR/releases/$asset https://github.com/$REPO/releases/latest/download/$asset" ;;
+    mirror|ghproxy) urls="$GHPROXY/https://github.com/$REPO/releases/latest/download/$asset" ;;
+    *)      urls="$GHPROXY/https://github.com/$REPO/releases/latest/download/$asset https://github.com/$REPO/releases/latest/download/$asset" ;;
 esac
 
 ok=

@@ -7,12 +7,12 @@
 #
 # 环境变量：
 #   OTK_INSTALL_DIR  指定安装目录（默认 %LOCALAPPDATA%\Programs\otk）
-#   OTK_SOURCE       mirror / github 强制下载源（默认镜像优先，失败回退 GitHub）
+#   OTK_SOURCE       ghproxy / github 强制下载源（默认 gh-proxy 优先，失败回退 GitHub）
 
 & {
     $ErrorActionPreference = 'Stop'
     $repo   = 'Gr3yPh/OierToolKit'
-    $mirror = 'https://otk.gr3yph4ntom.cn'
+    $ghproxy = 'https://gh-proxy.com'
 
     # --- 架构（32 位 PowerShell 跑在 64 位系统上时取原生架构） ---
     $raw = $env:PROCESSOR_ARCHITECTURE
@@ -24,11 +24,12 @@
     }
     $asset = "otk-windows-$arch.zip"
 
-    # --- 下载（镜像优先，失败自动回退 GitHub） ---
+    # --- 下载（gh-proxy 加速优先，失败自动回退 GitHub） ---
     switch ($env:OTK_SOURCE) {
         'github' { $urls = @("https://github.com/$repo/releases/latest/download/$asset") }
-        'mirror' { $urls = @("$mirror/releases/$asset") }
-        default  { $urls = @("$mirror/releases/$asset", "https://github.com/$repo/releases/latest/download/$asset") }
+        'mirror' { $urls = @("$ghproxy/https://github.com/$repo/releases/latest/download/$asset") }
+        'ghproxy' { $urls = @("$ghproxy/https://github.com/$repo/releases/latest/download/$asset") }
+        default  { $urls = @("$ghproxy/https://github.com/$repo/releases/latest/download/$asset", "https://github.com/$repo/releases/latest/download/$asset") }
     }
     try {
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
