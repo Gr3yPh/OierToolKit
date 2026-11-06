@@ -15,7 +15,7 @@ set -euo pipefail
 
 SRC=/mnt/d/OierToolKit
 WORK="${HOME}/otkbuild"
-VER="${1:-v2.13.1}"
+VER="${1:-v2.13.2}"
 export PATH="/usr/local/go/bin:${PATH}"
 export GOPROXY=https://goproxy.cn,direct
 export GOTOOLCHAIN=local
