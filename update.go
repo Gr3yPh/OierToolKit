@@ -25,11 +25,11 @@ import (
 	"time"
 )
 
-// 启动/手动检查更新：优先走 gh-proxy 加速 GitHub API，失败再回退
+// 启动/手动检查更新：优先走 v4.gh-proxy.org 加速 GitHub API，失败再回退
 // 站点 version.json（兼容旧客户端）和直连 GitHub API。
 const (
 	updateManifestURL      = "https://otk.gr3yph4ntom.cn/version.json"
-	updateCheckURL         = "https://gh-proxy.com/https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
+	updateCheckURL         = "https://v4.gh-proxy.org/https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
 	updateCheckFallbackURL = "https://api.github.com/repos/Gr3yPh/OierToolKit/releases/latest"
 	releasesPageURL        = "https://github.com/Gr3yPh/OierToolKit/releases"
 	homepageURL            = "https://otk.gr3yph4ntom.cn/"
@@ -40,7 +40,7 @@ type updateInfo struct {
 	GitHub  string `json:"github"`
 }
 
-// fetchLatestUpdate 先查 gh-proxy 的 GitHub API，再回退主页清单，
+// fetchLatestUpdate 先查 v4.gh-proxy.org 的 GitHub API，再回退主页清单，
 // 最后回退直连 GitHub API。失败返回零值。
 func fetchLatestUpdate() updateInfo {
 	if info := fetchGitHubUpdate(); info.Version != "" {

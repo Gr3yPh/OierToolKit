@@ -5,11 +5,11 @@
 #
 # 环境变量：
 #   OTK_INSTALL_DIR  指定安装目录（默认 /usr/local/bin，无权限时回退 ~/.local/bin）
-#   OTK_SOURCE       ghproxy / github 强制下载源（默认 gh-proxy，失败自动回退 GitHub）
+#   OTK_SOURCE       ghproxy / github 强制下载源（默认 v4.gh-proxy.org，失败自动回退 GitHub）
 set -euo pipefail
 
 REPO="Gr3yPh/OierToolKit"
-GHPROXY="https://gh-proxy.com"
+GHPROXY="https://v4.gh-proxy.org"
 
 die() {
     echo "otk-install: $*" >&2

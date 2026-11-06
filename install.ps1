@@ -7,12 +7,12 @@
 #
 # 环境变量：
 #   OTK_INSTALL_DIR  指定安装目录（默认 %LOCALAPPDATA%\Programs\otk）
-#   OTK_SOURCE       ghproxy / github 强制下载源（默认 gh-proxy 优先，失败回退 GitHub）
+#   OTK_SOURCE       ghproxy / github 强制下载源（默认 v4.gh-proxy.org 优先，失败回退 GitHub）
 
 & {
     $ErrorActionPreference = 'Stop'
     $repo   = 'Gr3yPh/OierToolKit'
-    $ghproxy = 'https://gh-proxy.com'
+    $ghproxy = 'https://v4.gh-proxy.org'
 
     # --- 架构（32 位 PowerShell 跑在 64 位系统上时取原生架构） ---
     $raw = $env:PROCESSOR_ARCHITECTURE
@@ -24,7 +24,7 @@
     }
     $asset = "otk-windows-$arch.zip"
 
-    # --- 下载（gh-proxy 加速优先，失败自动回退 GitHub） ---
+    # --- 下载（v4.gh-proxy.org 加速优先，失败自动回退 GitHub） ---
     switch ($env:OTK_SOURCE) {
         'github' { $urls = @("https://github.com/$repo/releases/latest/download/$asset") }
         'mirror' { $urls = @("$ghproxy/https://github.com/$repo/releases/latest/download/$asset") }

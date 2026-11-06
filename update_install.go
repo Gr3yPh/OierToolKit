@@ -68,7 +68,7 @@ func updateAssetURLs(info updateInfo, asset string) []string {
 	}
 	github := "https://github.com/" + updateRepo + "/releases/download/" + info.Version + "/" + asset
 	return []string{
-		"https://gh-proxy.com/" + github,
+		"https://v4.gh-proxy.org/" + github,
 		github,
 	}
 }
