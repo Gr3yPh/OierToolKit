@@ -32,10 +32,11 @@ import (
 // 项目目录移动后分组跟着项目走。
 const (
 	prefProjectGroups = "gui_project_groups"
-	newGroupChoice    = "＋ 新建分组…"
 )
 
 func noGroupChoiceText() string { return tr("不分组") }
+
+func newGroupChoiceText() string { return tr("＋ 新建分组…") }
 
 // projectGroups 返回已登记的分组名（去掉空项与重复项）。
 func projectGroups() []string {
@@ -93,7 +94,7 @@ func groupSelectOptions(current string) []string {
 	if current != "" && !containsString(options, current) {
 		options = append(options, current)
 	}
-	options = append(options, newGroupChoice)
+	options = append(options, newGroupChoiceText())
 	return options
 }
 
@@ -106,7 +107,7 @@ func (g *guiApp) newGroupSelect(current string, onChange func(string)) *widget.S
 		lastValue = noGroupChoiceText()
 	}
 	sel = widget.NewSelect(groupSelectOptions(current), func(value string) {
-		if value == newGroupChoice {
+		if value == newGroupChoiceText() {
 			// 先回到上一个合法值；取消新建时不把“新建分组…”留在下拉框里。
 			sel.SetSelected(lastValue)
 			g.newGroupDialog(func(name string) {

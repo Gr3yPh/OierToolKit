@@ -866,6 +866,7 @@ var enUI = map[string]string{
 	"不分组":               "No group",
 	"未分组":               "Ungrouped",
 	"新建分组":              "New group",
+	"＋ 新建分组…":           "＋ New group…",
 	"分组名":               "Group name",
 	"分组名不能为空":           "Group name cannot be empty",
 	"分组名不能包含竖线 |":       "Group name cannot contain a vertical bar (|)",
