@@ -30,17 +30,17 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// 项目库总览页：把所有登记过的项目摊成一张表，可按列排序、按名字筛选，
+// 项目库总览页：把所有登记过的项目按分组整理成树，可按名字/分组/路径筛选，
 // 选中后可以直接打开、打包、存为模板或移除。
 //
-// 为什么单独做一页而不是把左侧列表换成表格：侧栏只占窗口 25%（约 300px），
-// 五六列塞进去每列只剩几十像素，等于什么都看不清。侧栏继续当"快速切换"，
-// 这里当"管理视图"。
+// 侧栏继续当"快速切换"，这里当"管理视图"；两处都用树形展示，避免
+// 把所有项目摊平后难以按分组查找。
 
 // projectMeta 是项目库一行的元数据，全部来自项目目录里的文件。
 type projectMeta struct {
 	Dir       string
 	Name      string
+	Group     string
 	Samples   int
 	TimeLimit string
 	MemLimit  string
@@ -59,6 +59,7 @@ func scanProjectMeta(dir string) projectMeta {
 	}
 	p := project{Name: m.Name, Dir: dir}
 	props := p.cfg()
+	m.Group = strings.TrimSpace(props["group"])
 	m.TimeLimit = propsOr(props, "time_limit", "1.00")
 	m.MemLimit = propsOr(props, "memory_limit", "125")
 	m.Samples = len(readIndex(p))
@@ -210,6 +211,9 @@ func (g *guiApp) buildProjectList() fyne.CanvasObject {
 				widget.NewLabelWithStyle(tr("项目库"), fyne.TextAlignLeading, fyne.TextStyle{Bold: true}),
 			),
 			container.NewCenter(container.NewHBox(
+				widget.NewButtonWithIcon(tr("新建分组"), theme.FolderNewIcon(), func() {
+					g.newGroupDialog(nil)
+				}),
 				widget.NewButtonWithIcon(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog),
 				g.newProjectButton(),
 			)),
@@ -267,6 +271,7 @@ func filterProjectMetas(list []projectMeta, keyword string) []projectMeta {
 	for _, m := range list {
 		if keyword == "" ||
 			strings.Contains(strings.ToLower(m.Name), keyword) ||
+			strings.Contains(strings.ToLower(m.Group), keyword) ||
 			strings.Contains(strings.ToLower(m.Dir), keyword) {
 			out = append(out, m)
 		}
@@ -274,87 +279,11 @@ func filterProjectMetas(list []projectMeta, keyword string) []projectMeta {
 	return out
 }
 
-// projectTable 生成表格与底部操作条。onSort 由表头点击触发，参数是列号。
+// projectTable 生成项目树与底部操作条。项目库页用树展示分组层级，
+// 底部操作条沿用原来的选择逻辑。
 func (g *guiApp) projectTable(rows []projectMeta, sortCol int, sortDesc bool,
 	onSort func(int)) (fyne.CanvasObject, fyne.CanvasObject) {
-
-	cols := []struct {
-		title string
-		width float32
-		sort  int
-	}{
-		{tr("项目"), 164, projSortName},
-		{tr("目录"), 300, projSortDir},
-		{tr("样例"), 56, projSortSamples},
-		{tr("时限 / 内存"), 124, projSortLimit},
-		{tr("最近评测"), 132, projSortRecent},
-		{tr("状态"), 76, projSortStatus},
-	}
-
-	headers := container.NewHBox()
-	for _, col := range cols {
-		title := col.title
-		if col.sort == sortCol {
-			if sortDesc {
-				title += " ▼"
-			} else {
-				title += " ▲"
-			}
-		}
-		col := col
-		// 外面套一层 GridWrap 固定宽度：tapHeaderCell 自己虽然报了 MinSize，
-		// 但 HBox 里各格子的实际宽度只认自己的最小值，和表格列宽容易差几像素，
-		// 一列一列错开后就完全对不上了。
-		headers.Add(container.NewGridWrap(fyne.NewSize(col.width, 26),
-			newTapHeaderCell(title, col.width, col.sort == sortCol, func() {
-				onSort(col.sort)
-			})))
-	}
-
-	table := widget.NewTable(
-		func() (int, int) { return len(rows), len(cols) },
-		func() fyne.CanvasObject {
-			lbl := widget.NewLabel("")
-			// 单元格不换行、超出就省略：目录很长，不截断会糊到隔壁列上。
-			lbl.Wrapping = fyne.TextWrapOff
-			lbl.Truncation = fyne.TextTruncateEllipsis
-			return lbl
-		},
-		func(id widget.TableCellID, obj fyne.CanvasObject) {
-			lbl := obj.(*widget.Label)
-			if id.Row < 0 || id.Row >= len(rows) {
-				lbl.SetText("")
-				return
-			}
-			m := rows[id.Row]
-			lbl.TextStyle = fyne.TextStyle{}
-			lbl.Importance = widget.MediumImportance
-			switch id.Col {
-			case 0:
-				lbl.TextStyle = fyne.TextStyle{Bold: true}
-				lbl.SetText(m.Name)
-			case 1:
-				lbl.SetText(m.Dir)
-			case 2:
-				// 目录都没了，样例数没有意义，别拿 0 冒充。
-				lbl.SetText(missingDash(m.Missing, strconv.Itoa(m.Samples)))
-			case 3:
-				lbl.SetText(missingDash(m.Missing, m.TimeLimit+"s / "+m.MemLimit+"MB"))
-			case 4:
-				lbl.SetText(m.lastText())
-			case 5:
-				// 先改 Importance 再 SetText：SetText 才会触发刷新去取新颜色，
-				// 反过来的话这一格要等下一次刷新才变色。
-				if m.Missing {
-					lbl.Importance = widget.DangerImportance
-				}
-				lbl.SetText(m.statusText())
-			}
-		},
-	)
-	for i, col := range cols {
-		table.SetColumnWidth(i, col.width)
-	}
+	selected := ""
 
 	openBtn := widget.NewButtonWithIcon(tr("打开"), theme.NavigateNextIcon(), nil)
 	openBtn.Importance = widget.HighImportance
@@ -364,9 +293,8 @@ func (g *guiApp) projectTable(rows []projectMeta, sortCol int, sortDesc bool,
 	delBtn := deleteIconButton(tr("移除项目…"), nil)
 	actions := container.NewHBox(openBtn, dirBtn, packBtn, tplBtn, delBtn)
 
-	selected := -1
 	syncActions := func() {
-		on := selected >= 0 && selected < len(rows)
+		on := selected != ""
 		for _, b := range []*widget.Button{openBtn, dirBtn, packBtn, tplBtn, delBtn} {
 			if on {
 				b.Enable()
@@ -378,8 +306,10 @@ func (g *guiApp) projectTable(rows []projectMeta, sortCol int, sortDesc bool,
 	syncActions()
 
 	current := func() (projectMeta, bool) {
-		if selected >= 0 && selected < len(rows) {
-			return rows[selected], true
+		for _, m := range rows {
+			if m.Dir == selected {
+				return m, true
+			}
 		}
 		return projectMeta{}, false
 	}
@@ -412,17 +342,6 @@ func (g *guiApp) projectTable(rows []projectMeta, sortCol int, sortDesc bool,
 		}
 	}
 
-	table.OnSelected = func(id widget.TableCellID) {
-		if id.Row < 0 || id.Row >= len(rows) {
-			return
-		}
-		selected = id.Row
-		syncActions()
-	}
-	table.OnUnselected = func(widget.TableCellID) {
-		selected = -1
-		syncActions()
-	}
-
-	return container.NewBorder(headers, nil, nil, nil, table), actions
+	tree := g.newProjectListTree(rows, &selected, syncActions)
+	return tree, actions
 }

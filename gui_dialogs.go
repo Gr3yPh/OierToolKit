@@ -46,6 +46,8 @@ func (g *guiApp) newProjectDialog() {
 	dirEntry.SetPlaceHolder(tr("项目目录，例如 D:\\OI\\aplusb"))
 	nameEntry := widget.NewEntry()
 	nameEntry.SetPlaceHolder(tr("项目名称（默认取目录名）"))
+	group := ""
+	groupSel := g.newGroupSelect("", func(value string) { group = value })
 
 	if parent := lastProjectParent(); parent != "" {
 		dir := filepath.Join(parent, "new-project")
@@ -131,6 +133,7 @@ func (g *guiApp) newProjectDialog() {
 			widget.NewFormItem(tr("模板"), tplRow),
 			widget.NewFormItem(tr("目录"), dirRow),
 			widget.NewFormItem(tr("名称"), nameEntry),
+			widget.NewFormItem(tr("分组"), groupSel),
 		),
 		descLbl,
 	)
@@ -158,6 +161,12 @@ func (g *guiApp) newProjectDialog() {
 		if err != nil {
 			g.showError(err)
 			return
+		}
+		if group != "" {
+			if _, err := setProjectConfig(p, "group", group); err != nil {
+				g.showError(err)
+				return
+			}
 		}
 
 		rememberProjectParent(filepath.Dir(p.Dir))
@@ -199,6 +208,8 @@ func (g *guiApp) cloneDialog() {
 
 	idEntry := widget.NewEntry()
 	idEntry.SetPlaceHolder(tr("题号，例如 1001"))
+	group := ""
+	groupSel := g.newGroupSelect("", func(value string) { group = value })
 
 	dirEntry := widget.NewEntry()
 	if parent := lastProjectParent(); parent != "" {
@@ -217,6 +228,7 @@ func (g *guiApp) cloneDialog() {
 			widget.NewFormItem(tr("网站地址"), baseEntry),
 			widget.NewFormItem(tr("题号"), idEntry),
 			widget.NewFormItem(tr("保存到"), dirRow),
+			widget.NewFormItem(tr("分组"), groupSel),
 		),
 	)
 
@@ -237,6 +249,12 @@ func (g *guiApp) cloneDialog() {
 				if err != nil {
 					g.showError(err)
 					return
+				}
+				if group != "" {
+					if _, err := setProjectConfig(p, "group", group); err != nil {
+						g.showError(err)
+						return
+					}
 				}
 				rememberProjectParent(parent)
 				g.reloadProjects()
@@ -609,7 +627,7 @@ func (g *guiApp) aboutDialog() {
 		widget.NewSeparator(),
 		container.NewCenter(links),
 		container.NewCenter(license),
-		caption(tr("界面字体：更纱黑体 SC 与 BlexMono 子集（SIL Open Font License 1.1）")),
+		caption(tr("界面字体：使用系统字体")),
 	)
 	dialog.ShowCustom(tr("关于"), tr("关闭"), content, g.win)
 }

@@ -38,23 +38,24 @@ type overviewPage struct {
 	pg      *projectPage
 	content fyne.CanvasObject
 
-	name    *widget.Label
-	dir     *widget.Label
-	source  *widget.Label
-	count   *widget.Label
-	remote  *widget.Label
-	compSel *widget.Select
-	timeIn  *widget.Entry
-	memIn   *widget.Entry
-	langSel *widget.Select
-	o2      *widget.Check
-	cflags  *widget.Entry
-	threads *widget.Entry
-	ioFile  *widget.Check
-	ioIn    *widget.Entry
-	ioOut   *widget.Entry
-	spjTip  *widget.Label
-	note    *widget.Label
+	name     *widget.Label
+	dir      *widget.Label
+	source   *widget.Label
+	count    *widget.Label
+	remote   *widget.Label
+	compSel  *widget.Select
+	groupSel *widget.Select
+	timeIn   *widget.Entry
+	memIn    *widget.Entry
+	langSel  *widget.Select
+	o2       *widget.Check
+	cflags   *widget.Entry
+	threads  *widget.Entry
+	ioFile   *widget.Check
+	ioIn     *widget.Entry
+	ioOut    *widget.Entry
+	spjTip   *widget.Label
+	note     *widget.Label
 
 	loading     bool
 	savePending atomic.Bool // 自动保存去抖：连续修改只落一次盘
@@ -65,6 +66,9 @@ var cLanguageOptions = []string{"c89", "c99", "c11", "c17"}
 
 func newOverviewPage(pg *projectPage) *overviewPage {
 	o := &overviewPage{pg: pg}
+	// 分组下拉的初始 SetSelected 也会触发 OnChanged；先按加载中处理，
+	// 避免打开项目页时把当前分组误当成一次编辑重新写盘。
+	o.loading = true
 
 	o.name = strong("")
 	o.name.Truncation = fyne.TextTruncateEllipsis
@@ -80,6 +84,19 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	o.memIn.SetPlaceHolder("125")
 
 	o.langSel = widget.NewSelect(languageOptions, func(string) { o.markDirty() })
+
+	// 分组：下拉选择已有分组，也可现场新建；保存到项目配置 group=。
+	o.groupSel = pg.g.newGroupSelect(projectGroupOf(pg.p), func(group string) {
+		if o.loading {
+			return
+		}
+		if _, err := setProjectConfig(pg.p, "group", group); err != nil {
+			pg.g.showError(err)
+			return
+		}
+		pg.g.reloadProjects()
+		o.markDirty()
+	})
 
 	// 编译器：g++（C++）或 gcc（C，源码按 C 编译并链接 -lm）。
 	o.compSel = widget.NewSelect([]string{"g++", "gcc"}, func(v string) {
@@ -161,6 +178,7 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 		field(tr("内存（MB）"), o.memIn),
 		field(tr("编译器"), o.compSel),
 		field(tr("语言标准"), o.langSel),
+		field(tr("分组"), o.groupSel),
 		field(tr("编译参数"), o.cflags),
 		field(tr("并发线程"), o.threads),
 		field(tr("优化"), o.o2),
@@ -223,6 +241,13 @@ func (o *overviewPage) reload() {
 	}
 	o.langSel.SetOptions(options)
 	o.langSel.SetSelected(version)
+	group := projectGroupOf(p)
+	o.groupSel.SetOptions(groupSelectOptions(group))
+	if group == "" {
+		o.groupSel.SetSelected(noGroupChoiceText())
+	} else {
+		o.groupSel.SetSelected(group)
+	}
 	o.o2.SetChecked(propsOr(props, "o2", "1") == "1")
 	o.cflags.SetText(props["cflags"])
 	o.threads.SetText(propsOr(props, "threads", "0"))
@@ -302,6 +327,11 @@ func (o *overviewPage) autoSave() {
 	if o.langSel.Selected != "" {
 		write("version", o.langSel.Selected)
 	}
+	group := o.groupSel.Selected
+	if group == noGroupChoiceText() {
+		group = ""
+	}
+	write("group", strings.TrimSpace(group))
 	if o.compSel.Selected != "" {
 		write("compiler", o.compSel.Selected)
 	}

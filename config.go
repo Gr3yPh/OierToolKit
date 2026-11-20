@@ -430,8 +430,24 @@ func setProjectConfig(p project, item, value string) (string, error) {
 		props["remote_id"] = value
 		msg = fmt.Sprintf("remote_id=%s", value)
 
+	case "group":
+		group := strings.TrimSpace(value)
+		if strings.Contains(group, "|") {
+			return "", fmt.Errorf("%s", tr("分组名不能包含竖线 |"))
+		}
+		if group == "" {
+			delete(props, "group")
+			msg = tr("group=（未分组）")
+		} else {
+			if _, err := addProjectGroup(group); err != nil {
+				return "", err
+			}
+			props["group"] = group
+			msg = "group=" + group
+		}
+
 	default:
-		return "", fmt.Errorf(tr("未知配置项 '%s'（项目: time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）"), item)
+		return "", fmt.Errorf(tr("未知配置项 '%s'（项目: time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）"), item)
 	}
 
 	writeIni(p.configPath(), props)

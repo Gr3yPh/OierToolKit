@@ -157,8 +157,8 @@ func (g *guiApp) activateWorkspaceTab(t *workspaceTab) {
 		g.setStatus(tr("就绪"))
 	}
 	g.setNav(g.mode)
-	if g.list != nil {
-		g.list.Refresh()
+	if g.tree != nil {
+		g.tree.Refresh()
 	}
 }
 

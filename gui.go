@@ -59,11 +59,13 @@ type guiApp struct {
 	dirs    []string // 项目库全部目录
 	visible []string // 过滤后的目录
 
-	search  *widget.Entry
-	list    *widget.List
-	count   *widget.Label
-	status  *widget.Label
-	spinner *widget.ProgressBarInfinite
+	search     *widget.Entry
+	tree       *widget.Tree
+	treeModel  *projectTreeModel
+	treeOpened bool
+	count      *widget.Label
+	status     *widget.Label
+	spinner    *widget.ProgressBarInfinite
 
 	// 顶层工作区：DocTabs 的每个标签是一个项目、比赛或静态页。
 	workspace *container.DocTabs
@@ -101,7 +103,8 @@ func cmdGui() {
 	// 先装中文词条，再建窗口：Fyne 的控件在构造时就会取翻译文本。
 	installTranslations()
 
-	// 主题变体只在创建 App 时读一次，必须赶在 app.NewWithID 之前。
+	// 主题与字体环境只在创建 App 时读一次，必须赶在 app.NewWithID 之前。
+	applyFontEnv()
 	applyThemeEnv()
 
 	a := app.NewWithID(appDesktopID)
@@ -336,28 +339,7 @@ func (g *guiApp) buildSidebar() fyne.CanvasObject {
 	g.search.OnChanged = func(string) { g.applyFilter() }
 	g.search.SetIcon(theme.SearchIcon())
 
-	g.list = widget.NewList(
-		func() int { return len(g.visible) },
-		func() fyne.CanvasObject { return newProjectRow(nil) },
-		func(id widget.ListItemID, obj fyne.CanvasObject) {
-			if id < 0 || id >= len(g.visible) {
-				return
-			}
-			dir := g.visible[id]
-			row := obj.(*projectRow)
-			row.update(projectNameOf(dir), dir, dir == g.selected, !dirExists(dir))
-			// 模板对象会被复用，回调按当前 dir 重绑，避免点到上一行的项目。
-			row.remove.OnTapped = func() {
-				g.removeProjectDialog(project{Name: projectNameOf(dir), Dir: dir})
-			}
-		},
-	)
-	g.list.OnSelected = func(id widget.ListItemID) {
-		if id < 0 || id >= len(g.visible) {
-			return
-		}
-		g.showProject(g.visible[id])
-	}
+	g.tree = g.newProjectSidebarTree()
 
 	g.count = caption("")
 
@@ -375,7 +357,7 @@ func (g *guiApp) buildSidebar() fyne.CanvasObject {
 	)
 	foot := inset(8, 4, 8, 4, g.count)
 
-	return container.NewBorder(head, foot, nil, nil, g.list)
+	return container.NewBorder(head, foot, nil, nil, g.tree)
 }
 
 func (g *guiApp) buildStatusBar() fyne.CanvasObject {
@@ -436,14 +418,20 @@ func (g *guiApp) applyFilter() {
 	for _, dir := range g.dirs {
 		if keyword == "" ||
 			strings.Contains(strings.ToLower(filepath.Base(dir)), keyword) ||
+			strings.Contains(strings.ToLower(projectGroupOfDir(dir)), keyword) ||
 			strings.Contains(strings.ToLower(dir), keyword) {
 			g.visible = append(g.visible, dir)
 		}
 	}
 
-	if g.list != nil {
-		g.list.UnselectAll()
-		g.list.Refresh()
+	g.treeModel = newProjectTreeModelFromDirs(g.visible)
+	if g.tree != nil {
+		g.tree.UnselectAll()
+		if !g.treeOpened {
+			g.tree.OpenAllBranches()
+			g.treeOpened = true
+		}
+		g.tree.Refresh()
 	}
 	if g.count != nil {
 		missing := 0
@@ -515,13 +503,11 @@ func dirExists(path string) bool {
 	return err == nil && fi.IsDir()
 }
 
-// projectRow 是项目库列表中的一行：项目名 + 目录，行尾带删除入口。
-// 删除按钮只在选中时出现，平时不打扰阅读；也避免鼠标移到按钮上时
-// 行先收到 MouseOut 把按钮藏掉的闪烁。
+// projectRow 是侧栏项目树里的一行：只显示项目名，不再显示路径。
+// 删除按钮只在选中时出现，平时不打扰阅读。
 type projectRow struct {
 	widget.BaseWidget
 	name   *widget.Label
-	path   *widget.Label
 	remove *widget.Button
 	accent *canvas.Rectangle
 
@@ -531,11 +517,9 @@ type projectRow struct {
 func newProjectRow(onRemove func()) *projectRow {
 	r := &projectRow{
 		name:   strong(""),
-		path:   caption(""),
 		accent: canvas.NewRectangle(theme.Color(theme.ColorNamePrimary)),
 	}
 	r.name.Truncation = fyne.TextTruncateEllipsis
-	r.path.Truncation = fyne.TextTruncateEllipsis
 	r.accent.Resize(fyne.NewSize(2, 1))
 	r.accent.Hide()
 	r.remove = deleteIconButton(tr("删除这个项目…"), onRemove)
@@ -544,14 +528,12 @@ func newProjectRow(onRemove func()) *projectRow {
 	return r
 }
 
-func (r *projectRow) update(name, path string, selected, missing bool) {
+func (r *projectRow) update(name string, selected, missing bool) {
 	r.selected = selected
 	r.name.SetText(name)
-	r.path.SetText(prettyPath(path))
 	switch {
 	case missing:
 		r.name.Importance = widget.LowImportance
-		r.path.SetText(tr("目录缺失"))
 	case selected:
 		r.name.Importance = widget.HighImportance
 	default:
@@ -568,7 +550,7 @@ func (r *projectRow) update(name, path string, selected, missing bool) {
 }
 
 func (r *projectRow) CreateRenderer() fyne.WidgetRenderer {
-	return &projectRowRenderer{row: r, objects: []fyne.CanvasObject{r.accent, r.name, r.path, r.remove}}
+	return &projectRowRenderer{row: r, objects: []fyne.CanvasObject{r.accent, r.name, r.remove}}
 }
 
 type projectRowRenderer struct {
@@ -583,12 +565,8 @@ func (r *projectRowRenderer) Layout(size fyne.Size) {
 	r.row.accent.Move(fyne.NewPos(0, 0))
 	r.row.accent.Resize(fyne.NewSize(2, size.Height))
 
-	// Fyne 的 Label 自带上下各 5px 内边距（MinSize 已经含进去），
-	// 两行标签实际要 56px 左右。这里让 path 压进 name 的底边距 4px，
-	// 把行高收到 52px 左右，既不重叠文字，也不像原来那样 72px 一行。
 	nameH := r.row.name.MinSize().Height
-	pathH := r.row.path.MinSize().Height
-	y := (size.Height - nameH - pathH + 4) / 2
+	y := (size.Height - nameH) / 2
 	if y < 0 {
 		y = 0
 	}
@@ -598,8 +576,6 @@ func (r *projectRowRenderer) Layout(size fyne.Size) {
 	}
 	r.row.name.Move(fyne.NewPos(pad+2, y))
 	r.row.name.Resize(fyne.NewSize(textW, nameH))
-	r.row.path.Move(fyne.NewPos(pad+2, y+nameH-4))
-	r.row.path.Resize(fyne.NewSize(textW, pathH))
 
 	r.row.remove.Resize(fyne.NewSize(removeSize, removeSize))
 	r.row.remove.Move(fyne.NewPos(size.Width-pad-removeSize, (size.Height-removeSize)/2))
@@ -607,10 +583,8 @@ func (r *projectRowRenderer) Layout(size fyne.Size) {
 
 func (r *projectRowRenderer) MinSize() fyne.Size {
 	nameH := r.row.name.MinSize().Height
-	pathH := r.row.path.MinSize().Height
-	// 两个 Label 各带 10px 上下内边距；叠掉 4px 后行高约 52px，
-	// 默认窗口里 8 个项目能一屏放下。
-	return fyne.NewSize(180, nameH+pathH-4)
+	// 单行项目名，行高压到 Label 自身高度，侧栏一屏能放下更多项目。
+	return fyne.NewSize(180, nameH)
 }
 
 func (r *projectRowRenderer) Refresh() {

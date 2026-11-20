@@ -21,6 +21,9 @@ import (
 	_ "embed"
 	"image/color"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"fyne.io/fyne/v2"
@@ -55,6 +58,142 @@ func applyThemeEnv() {
 	}
 }
 
+// applyFontEnv 在创建 App 前把系统字体路径交给 Fyne。
+//
+// Fyne 默认主题内置字体；设置 FYNE_FONT / FYNE_FONT_MONOSPACE 后，
+// defaultTheme 会在初始化时读取这些文件，正文与等宽字体就跟随系统。
+// Linux 用 fontconfig 查询，Windows/macOS 使用系统常见字体路径；
+// 找不到时保持 Fyne 默认回退链（仍会用系统字体补齐缺失字形）。
+func applyFontEnv() {
+	if os.Getenv("FYNE_FONT") == "" {
+		var path string
+		switch runtime.GOOS {
+		case "linux":
+			path = fcFontFile([]string{":lang=zh-cn"}, "sans-serif:lang=zh-cn")
+			if path == "" {
+				path = fcFontFile(nil, "sans-serif")
+			}
+		case "windows":
+			path = firstExistingFont(os.Getenv("WINDIR"), []string{
+				"Fonts/segoeui.ttf", "Fonts/arial.ttf", "Fonts/simhei.ttf",
+			})
+		case "darwin":
+			path = firstExistingFont("", []string{
+				"/System/Library/Fonts/Supplemental/Arial.ttf",
+				"/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+				"/Library/Fonts/Arial.ttf",
+			})
+		}
+		if path != "" {
+			_ = os.Setenv("FYNE_FONT", path)
+		}
+	}
+
+	if os.Getenv("FYNE_FONT_MONOSPACE") == "" {
+		var path string
+		switch runtime.GOOS {
+		case "linux":
+			path = fcFontFile([]string{":spacing=100"}, "monospace")
+		case "windows":
+			path = firstExistingFont(os.Getenv("WINDIR"), []string{
+				"Fonts/consola.ttf", "Fonts/cour.ttf",
+			})
+		case "darwin":
+			path = firstExistingFont("", []string{
+				"/System/Library/Fonts/Supplemental/Courier New.ttf",
+				"/Library/Fonts/Courier New.ttf",
+			})
+		}
+		if path != "" {
+			_ = os.Setenv("FYNE_FONT_MONOSPACE", path)
+		}
+	}
+}
+
+// fcFontFile 用 fontconfig 查询可被 Fyne 解析的系统字体文件。
+// fc-match 在很多发行版会返回 .ttc 集合，而 Fyne 只接受单个 TTF/OTF，
+// 所以先用 fc-list 挑单字体文件，再退回 fc-match。
+func fcFontFile(listArgs []string, matchPattern string) string {
+	if path := fcListFont(listArgs); path != "" {
+		return path
+	}
+	return fcMatch(matchPattern)
+}
+
+func fcListFont(args []string) string {
+	cmdArgs := append([]string{}, args...)
+	cmdArgs = append(cmdArgs, "file")
+	out, err := exec.Command("fc-list", cmdArgs...).Output()
+	if err != nil {
+		return ""
+	}
+	var candidates []string
+	for _, line := range strings.Split(string(out), "\n") {
+		path := strings.TrimSpace(line)
+		path = strings.TrimSuffix(path, ":")
+		path = strings.TrimSpace(path)
+		if path != "" {
+			candidates = append(candidates, path)
+		}
+	}
+	return pickSystemFont(candidates)
+}
+
+// fcMatch 查询 fontconfig 推荐字体，但只接受 Fyne 能解析的扩展名。
+func fcMatch(pattern string) string {
+	out, err := exec.Command("fc-match", "-f", "%{file}", pattern).Output()
+	if err != nil {
+		return ""
+	}
+	path := strings.TrimSpace(string(out))
+	if !isLoadableFont(path) {
+		return ""
+	}
+	return path
+}
+
+// pickSystemFont 优先选择 Regular，避免第一项恰好是斜体/粗体。
+func pickSystemFont(candidates []string) string {
+	fallback := ""
+	for _, path := range candidates {
+		if !isLoadableFont(path) {
+			continue
+		}
+		lower := strings.ToLower(path)
+		if strings.Contains(lower, "regular") &&
+			!strings.Contains(lower, "bold") && !strings.Contains(lower, "italic") {
+			return path
+		}
+		if fallback == "" {
+			fallback = path
+		}
+	}
+	return fallback
+}
+
+// isLoadableFont 判断扩展名是否能交给 Fyne 的 ParseTTF。
+func isLoadableFont(path string) bool {
+	if path == "" || !fileExists(path) {
+		return false
+	}
+	lower := strings.ToLower(path)
+	return strings.HasSuffix(lower, ".ttf") || strings.HasSuffix(lower, ".otf")
+}
+
+// firstExistingFont 在候选路径里找第一个存在的字体文件。
+func firstExistingFont(root string, candidates []string) string {
+	for _, candidate := range candidates {
+		path := candidate
+		if root != "" && !filepath.IsAbs(path) {
+			path = filepath.Join(root, path)
+		}
+		if fileExists(path) {
+			return path
+		}
+	}
+	return ""
+}
+
 // themeIndexFromValue 把偏好值转成下拉框下标（未知值按"跟随系统"）。
 func themeIndexFromValue(v string) int {
 	v = strings.ToLower(strings.TrimSpace(v))
@@ -65,37 +204,6 @@ func themeIndexFromValue(v string) int {
 	}
 	return 0
 }
-
-// 内置字体：Fyne 自带字体不含 CJK 字形，不打字体的话界面会出现豆腐块。
-//
-// 四份都是子集（SIL OFL 1.1，见 assets/font/OFL.txt）：
-//   - Sarasa Gothic SC Regular：正文，GB2312 与源码中的界面用字，约 2.2MB；
-//   - Sarasa Gothic SC Bold：标题与强调，同样覆盖界面常用字，约 2.2MB；
-//   - BlexMono Regular：代码/日志/表格数字，ASCII + 常用符号，约 60KB；
-//   - BlexMono Bold：等宽加粗场景，约 60KB。
-//
-// BlexMono 不含 CJK；代码里的中文会由 Fyne 的回退链交给系统等宽字体，
-// 不会出现豆腐块。去掉 TrueType hinting 是因为 Fyne 使用 go-text 的
-// 矢量排版，不消费 hint 指令，保留只会白白增加嵌入体积。
-//
-//go:embed assets/font/SarasaGothicSC-Regular.ttf
-var guiFontData []byte
-
-//go:embed assets/font/SarasaGothicSC-Bold.ttf
-var guiFontBoldData []byte
-
-//go:embed assets/font/BlexMono-Regular.ttf
-var guiFontMonoData []byte
-
-//go:embed assets/font/BlexMono-Bold.ttf
-var guiFontMonoBoldData []byte
-
-var (
-	guiFont         = fyne.NewStaticResource("SarasaGothicSC-Regular.ttf", guiFontData)
-	guiFontBold     = fyne.NewStaticResource("SarasaGothicSC-Bold.ttf", guiFontBoldData)
-	guiFontMono     = fyne.NewStaticResource("BlexMono-Regular.ttf", guiFontMonoData)
-	guiFontMonoBold = fyne.NewStaticResource("BlexMono-Bold.ttf", guiFontMonoBoldData)
-)
 
 // 内置简体中文翻译：Fyne 自带的 zh-Hans 词条很少，像 Select 的占位
 // 提示 "(Select one)" 会缺失并在日志里刷 "Translation failure"。这里补全
@@ -155,7 +263,7 @@ const (
 	sizeNameSection fyne.ThemeSizeName = "otkSection"
 )
 
-// otkTheme 只覆盖字体、强调色与几个面板色，其余交给 Fyne 默认主题，
+// otkTheme 只覆盖强调色、尺寸与几个面板色，其余交给 Fyne 默认主题，
 // 这样浅色/深色两套配色都能自动跟随系统。
 type otkTheme struct {
 	base fyne.Theme
@@ -165,22 +273,10 @@ func newOtkTheme() fyne.Theme {
 	return &otkTheme{base: theme.DefaultTheme()}
 }
 
+// Font 直接交给 Fyne 默认主题：字体已在启动前通过 applyFontEnv 指向
+// 系统字体，未设置时使用 Fyne 默认字体与系统字体回退链。
 func (t *otkTheme) Font(style fyne.TextStyle) fyne.Resource {
-	if style.Symbol {
-		return t.base.Font(style)
-	}
-	// 按样式返回不同资源。等宽优先于加粗，但两者同时出现时仍尽量
-	// 使用等宽的粗体，避免代码块里的强调退化成普通正文。
-	if style.Monospace {
-		if style.Bold {
-			return guiFontMonoBold
-		}
-		return guiFontMono
-	}
-	if style.Bold {
-		return guiFontBold
-	}
-	return guiFont
+	return t.base.Font(style)
 }
 
 func (t *otkTheme) Icon(name fyne.ThemeIconName) fyne.Resource {

@@ -29,6 +29,7 @@ A lightweight cross-platform local judge and problem management tool customized 
 * **Statement Math**: statement Markdown supports inline `$...$` and display `$$...$$` (plus `\(...\)` / `\[...\]`), rendered locally without a browser or external TeX installation.
 * **Update Check and One-Click Update**: checks at startup or on demand from Settings; a new release can be downloaded in-app with a progress bar and installed/restarted automatically. Downloads prefer v4.gh-proxy.org acceleration for GitHub Releases, with direct GitHub as fallback; the site remains as a display page and serves the `version.json` manifest.
 * **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
+* **Project Groups**: The project library and sidebar show projects as a group tree; groups can be set from project settings, new-project and clone dialogs, and new groups can be created inline.
 * **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
 * **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
 * **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
