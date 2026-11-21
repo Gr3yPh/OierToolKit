@@ -59,13 +59,9 @@ func trSelect(s string) string {
 	return s
 }
 
-// installTranslations 把内置中文词条注册到 Fyne 语言包。加载失败不影响
-// 使用（只会退回英文原文），因此错误被忽略。界面语言选英文时不注册，
-// 让 Fyne 内部控件（文件选择器、确认框等）保持英文。
+// installTranslations 把内置中文词条注册到 Fyne 语言包。Fyne 内部控件
+// 按系统 locale 翻译，和应用自己的界面语言偏好分开；加载失败不影响使用。
 func installTranslations() {
-	if uiLangIsEnglish() {
-		return
-	}
 	_ = lang.AddTranslationsForLocale(guiZhLangData, fyne.Locale("zh-Hans"))
 }
 

@@ -75,6 +75,34 @@ func addProjectGroup(name string) (string, error) {
 	return name, nil
 }
 
+func deleteProjectGroup(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf("%s", tr("请选择要删除的分组"))
+	}
+	groups := projectGroups()
+	if !containsString(groups, name) {
+		return fmt.Errorf(tr("分组不存在: %s"), name)
+	}
+	for _, dir := range registryRead() {
+		if projectGroupOfDir(dir) != name {
+			continue
+		}
+		p := project{Name: projectNameOf(dir), Dir: dir}
+		if _, err := setProjectConfig(p, "group", ""); err != nil {
+			return err
+		}
+	}
+
+	kept := make([]string, 0, len(groups)-1)
+	for _, group := range groups {
+		if group != name {
+			kept = append(kept, group)
+		}
+	}
+	return setGuiPref(prefProjectGroups, strings.Join(kept, "|"))
+}
+
 // projectGroupOfDir 读取项目的分组；目录缺失或未配置时返回空。
 func projectGroupOfDir(dir string) string {
 	return strings.TrimSpace(readIni(projectConfigPathOf(dir))["group"])
@@ -159,6 +187,48 @@ func (g *guiApp) newGroupDialog(after func(string)) {
 	}, g.win)
 }
 
+func (g *guiApp) deleteGroupDialog() {
+	groups := projectGroups()
+	if len(groups) == 0 {
+		g.setStatus(tr("没有可删除的分组"))
+		return
+	}
+	groupSel := widget.NewSelect(groups, nil)
+	groupSel.SetSelectedIndex(0)
+	content := container.NewVBox(
+		widget.NewForm(widget.NewFormItem(tr("分组"), groupSel)),
+		caption(tr("删除后，该组项目将变为未分组。")),
+	)
+	g.showFormConfirm(tr("删除分组"), tr("删除"), tr("取消"), content, func(ok bool) {
+		if !ok {
+			return
+		}
+		g.deleteGroupFromLibrary(groupSel.Selected)
+	}, g.win)
+}
+
+func (g *guiApp) confirmDeleteGroup(name string) {
+	content := container.NewVBox(
+		wrappedCaption(fmt.Sprintf("%s: %s", tr("分组"), name)),
+		caption(tr("删除后，该组项目将变为未分组。")),
+	)
+	g.showFormConfirm(tr("删除分组"), tr("删除"), tr("取消"), content, func(ok bool) {
+		if ok {
+			g.deleteGroupFromLibrary(name)
+		}
+	}, g.win)
+}
+
+func (g *guiApp) deleteGroupFromLibrary(name string) {
+	if err := deleteProjectGroup(name); err != nil {
+		g.showError(err)
+		return
+	}
+	g.selectedGroup = ""
+	g.reloadProjects()
+	g.setStatus(fmt.Sprintf(tr("已删除分组 %s"), name))
+}
+
 // projectTreeEntry 是树里的一条项目记录。
 type projectTreeEntry struct {
 	Dir   string
@@ -223,6 +293,17 @@ func newProjectTreeModel(entries []projectTreeEntry) *projectTreeModel {
 
 func projectTreeGroupID(name string) string {
 	return projectTreeGroupPrefix + name
+}
+
+func projectTreeGroupName(uid string) (string, bool) {
+	if !strings.HasPrefix(uid, projectTreeGroupPrefix) {
+		return "", false
+	}
+	name := strings.TrimPrefix(uid, projectTreeGroupPrefix)
+	if name == "__ungrouped__" {
+		return "", false
+	}
+	return name, true
 }
 
 func projectTreeProjectID(dir string) string {
@@ -323,9 +404,7 @@ func (g *guiApp) newProjectSidebarTree() *widget.Tree {
 		},
 		func(branch bool) fyne.CanvasObject {
 			if branch {
-				label := widget.NewLabel("")
-				label.Truncation = fyne.TextTruncateEllipsis
-				return label
+				return newProjectRow(nil)
 			}
 			return newProjectRow(nil)
 		},
@@ -334,10 +413,15 @@ func (g *guiApp) newProjectSidebarTree() *widget.Tree {
 				return
 			}
 			if branch {
-				label := obj.(*widget.Label)
-				label.TextStyle = fyne.TextStyle{Bold: true}
-				label.Truncation = fyne.TextTruncateEllipsis
-				label.SetText(g.treeModel.groupLabel(uid))
+				row := obj.(*projectRow)
+				name, isGroup := projectTreeGroupName(uid)
+				deletable := isGroup && containsString(projectGroups(), name)
+				row.update(g.treeModel.groupLabel(uid), deletable && g.selectedGroup == name, false)
+				if deletable {
+					row.remove.OnTapped = func() { g.confirmDeleteGroup(name) }
+				} else {
+					row.remove.OnTapped = nil
+				}
 				return
 			}
 			dir, ok := g.treeModel.dirForID(uid)
@@ -356,6 +440,11 @@ func (g *guiApp) newProjectSidebarTree() *widget.Tree {
 		if g.treeModel == nil {
 			return
 		}
+		g.selectedGroup = ""
+		if name, ok := projectTreeGroupName(uid); ok && containsString(projectGroups(), name) {
+			g.selectedGroup = name
+		}
+		tree.Refresh()
 		if dir, ok := g.treeModel.dirForID(uid); ok {
 			g.showProject(dir)
 		}

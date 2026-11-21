@@ -77,10 +77,11 @@ type guiApp struct {
 	navList    *widget.Button
 	navContest *widget.Button
 
-	mode     string // start / project / projects / contest
-	selected string
-	page     *projectPage
-	contest  *contestPage
+	mode          string // start / project / projects / contest
+	selected      string
+	selectedGroup string
+	page          *projectPage
+	contest       *contestPage
 
 	// startMaximized 表示"启动后要最大化"，真正的最大化动作在窗口 Show 之后做。
 	startMaximized bool
@@ -426,6 +427,7 @@ func (g *guiApp) applyFilter() {
 
 	g.treeModel = newProjectTreeModelFromDirs(g.visible)
 	if g.tree != nil {
+		g.selectedGroup = ""
 		g.tree.UnselectAll()
 		if !g.treeOpened {
 			g.tree.OpenAllBranches()

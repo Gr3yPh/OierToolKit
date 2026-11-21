@@ -65,3 +65,20 @@ func TestGuiTranslations(t *testing.T) {
 	}
 	_ = fyne.Locale("")
 }
+
+func TestInstallTranslationsWithEnglishAppPreference(t *testing.T) {
+	oldBaseDir := baseDir
+	baseDir = t.TempDir()
+	t.Cleanup(func() { baseDir = oldBaseDir })
+	if err := setGuiPref(prefLang, "en"); err != nil {
+		t.Fatal(err)
+	}
+
+	installTranslations()
+	if !strings.HasPrefix(strings.ToLower(lang.SystemLocale().String()), "zh") {
+		t.Skip("system locale is not Chinese")
+	}
+	if got := lang.L("(Select one)"); got != "（请选择）" {
+		t.Fatalf("Fyne Select placeholder translation = %q", got)
+	}
+}

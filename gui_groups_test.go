@@ -17,7 +17,13 @@
 
 package main
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"fyne.io/fyne/v2/test"
+)
 
 func TestProjectTreeModel(t *testing.T) {
 	model := newProjectTreeModel([]projectTreeEntry{
@@ -42,5 +48,71 @@ func TestProjectTreeModel(t *testing.T) {
 	}
 	if dir, ok := model.dirForID(projectTreeProjectID("/p/a")); !ok || dir != "/p/a" {
 		t.Fatalf("dirForID = %q, %v", dir, ok)
+	}
+}
+
+func TestDeleteProjectGroupClearsAssignments(t *testing.T) {
+	oldBaseDir := baseDir
+	baseDir = t.TempDir()
+	t.Cleanup(func() { baseDir = oldBaseDir })
+
+	projectDir := filepath.Join(t.TempDir(), "project")
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeIni(projectConfigPathOf(projectDir), map[string]string{
+		"group":      "基础",
+		"time_limit": "2",
+	})
+	registryWrite([]string{projectDir})
+	if err := setGuiPref(prefProjectGroups, "基础|其他"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := deleteProjectGroup("基础"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectGroups(); len(got) != 1 || got[0] != "其他" {
+		t.Fatalf("remaining groups = %#v", got)
+	}
+	props := readIni(projectConfigPathOf(projectDir))
+	if _, ok := props["group"]; ok {
+		t.Fatalf("project group was not cleared: %#v", props)
+	}
+	if props["time_limit"] != "2" {
+		t.Fatalf("unrelated project config changed: %#v", props)
+	}
+}
+
+func TestSidebarGroupDeleteButtonTracksSelection(t *testing.T) {
+	app := test.NewApp()
+	defer app.Quit()
+
+	oldBaseDir := baseDir
+	baseDir = t.TempDir()
+	t.Cleanup(func() { baseDir = oldBaseDir })
+	if err := setGuiPref(prefProjectGroups, "基础"); err != nil {
+		t.Fatal(err)
+	}
+
+	g := &guiApp{treeModel: newProjectTreeModel(nil)}
+	tree := g.newProjectSidebarTree()
+	groupID := projectTreeGroupID("基础")
+	row := tree.CreateNode(true).(*projectRow)
+	tree.UpdateNode(groupID, true, row)
+	if row.remove.Visible() {
+		t.Fatal("group delete button should be hidden before selection")
+	}
+
+	tree.OnSelected(groupID)
+	tree.UpdateNode(groupID, true, row)
+	if !row.remove.Visible() {
+		t.Fatal("group delete button should be visible for the selected group")
+	}
+
+	tree.OnSelected(projectTreeRootID)
+	tree.UpdateNode(groupID, true, row)
+	if row.remove.Visible() {
+		t.Fatal("group delete button should be hidden after selecting the root")
 	}
 }

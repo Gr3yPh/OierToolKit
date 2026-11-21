@@ -214,6 +214,7 @@ func (g *guiApp) buildProjectList() fyne.CanvasObject {
 				widget.NewButtonWithIcon(tr("新建分组"), theme.FolderNewIcon(), func() {
 					g.newGroupDialog(nil)
 				}),
+				widget.NewButtonWithIcon(tr("删除分组"), theme.DeleteIcon(), g.deleteGroupDialog),
 				widget.NewButtonWithIcon(tr("批量评测"), theme.MediaPlayIcon(), g.batchJudgeDialog),
 				g.newProjectButton(),
 			)),

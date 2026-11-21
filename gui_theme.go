@@ -58,20 +58,25 @@ func applyThemeEnv() {
 	}
 }
 
-// applyFontEnv 在创建 App 前把系统字体路径交给 Fyne。
+// applyFontEnv 在创建 App 前把 Fyne 可加载的系统字体路径交给 Fyne。
 //
 // Fyne 默认主题内置字体；设置 FYNE_FONT / FYNE_FONT_MONOSPACE 后，
 // defaultTheme 会在初始化时读取这些文件，正文与等宽字体就跟随系统。
-// Linux 用 fontconfig 查询，Windows/macOS 使用系统常见字体路径；
-// 找不到时保持 Fyne 默认回退链（仍会用系统字体补齐缺失字形）。
+// Linux 优先检查 KDE 首选字体，再用 fontconfig 查询；Windows/macOS 使用
+// 系统常见字体路径。TTC 字体和缺少 Fyne 命名变体的字体不作为 FYNE_FONT，
+// 以免强制替换成不兼容字体或产生缺失粗体/斜体的错误日志。
 func applyFontEnv() {
 	if os.Getenv("FYNE_FONT") == "" {
 		var path string
 		switch runtime.GOOS {
 		case "linux":
-			path = fcFontFile([]string{":lang=zh-cn"}, "sans-serif:lang=zh-cn")
-			if path == "" {
-				path = fcFontFile(nil, "sans-serif")
+			if family := kdeFontFamily(); family != "" {
+				path = fcFontFile([]string{":family=" + family, ":lang=zh-cn"}, family+":lang=zh-cn")
+			} else {
+				path = fcFontFile([]string{":lang=zh-cn"}, "sans-serif:lang=zh-cn")
+				if path == "" {
+					path = fcFontFile(nil, "sans-serif")
+				}
 			}
 		case "windows":
 			path = firstExistingFont(os.Getenv("WINDIR"), []string{
@@ -84,7 +89,7 @@ func applyFontEnv() {
 				"/Library/Fonts/Arial.ttf",
 			})
 		}
-		if path != "" {
+		if fontHasThemeVariants(path) {
 			_ = os.Setenv("FYNE_FONT", path)
 		}
 	}
@@ -108,6 +113,43 @@ func applyFontEnv() {
 			_ = os.Setenv("FYNE_FONT_MONOSPACE", path)
 		}
 	}
+}
+
+func kdeFontFamily() string {
+	for _, command := range []string{"kreadconfig6", "kreadconfig5", "kreadconfig"} {
+		path, err := exec.LookPath(command)
+		if err != nil {
+			continue
+		}
+		out, err := exec.Command(path, "--file", "kdeglobals", "--group", "General", "--key", "font").Output()
+		if err != nil {
+			continue
+		}
+		if family := kdeFontFamilyFromSetting(string(out)); family != "" {
+			return family
+		}
+	}
+	return ""
+}
+
+func kdeFontFamilyFromSetting(setting string) string {
+	family, _, _ := strings.Cut(strings.TrimSpace(setting), ",")
+	return strings.TrimSpace(family)
+}
+
+func fontHasThemeVariants(path string) bool {
+	if !isLoadableFont(path) {
+		return false
+	}
+	if !strings.Contains(path, "Regular") {
+		return true
+	}
+	for _, variant := range []string{"Bold", "Italic", "BoldItalic"} {
+		if !fileExists(strings.ReplaceAll(path, "Regular", variant)) {
+			return false
+		}
+	}
+	return true
 }
 
 // fcFontFile 用 fontconfig 查询可被 Fyne 解析的系统字体文件。

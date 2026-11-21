@@ -335,62 +335,12 @@ func navButton(label string, icon fyne.Resource, tapped func()) *widget.Button {
 	return b
 }
 
-// sidebarSplit 用固定宽度的侧栏替代按比例分栏：窗口最大化后
-// 侧栏不会跟着涨到 480px，列表始终有稳定的阅读宽度。
+// sidebarSplit 创建可拖动调整的侧栏分隔器。
 func sidebarSplit(side, main fyne.CanvasObject) fyne.CanvasObject {
-	w := &sidebarSplitWidget{side: side, main: main}
-	w.ExtendBaseWidget(w)
-	return w
+	split := container.NewHSplit(side, main)
+	split.Offset = 0.24
+	return split
 }
-
-type sidebarSplitWidget struct {
-	widget.BaseWidget
-	side fyne.CanvasObject
-	main fyne.CanvasObject
-}
-
-func (w *sidebarSplitWidget) CreateRenderer() fyne.WidgetRenderer {
-	return &sidebarSplitRenderer{w: w}
-}
-
-type sidebarSplitRenderer struct {
-	w *sidebarSplitWidget
-}
-
-func (r *sidebarSplitRenderer) Layout(size fyne.Size) {
-	w := float32(280)
-	if size.Width < 900 {
-		w = 240
-	}
-	if w > size.Width*0.4 {
-		w = size.Width * 0.4
-	}
-	r.w.side.Move(fyne.NewPos(0, 0))
-	r.w.side.Resize(fyne.NewSize(w, size.Height))
-	r.w.main.Move(fyne.NewPos(w, 0))
-	r.w.main.Resize(fyne.NewSize(size.Width-w, size.Height))
-}
-
-func (r *sidebarSplitRenderer) MinSize() fyne.Size {
-	s := r.w.side.MinSize()
-	m := r.w.main.MinSize()
-	h := s.Height
-	if m.Height > h {
-		h = m.Height
-	}
-	return fyne.NewSize(s.Width+m.Width, h)
-}
-
-func (r *sidebarSplitRenderer) Refresh() {
-	canvas.Refresh(r.w.side)
-	canvas.Refresh(r.w.main)
-}
-
-func (r *sidebarSplitRenderer) Objects() []fyne.CanvasObject {
-	return []fyne.CanvasObject{r.w.side, r.w.main}
-}
-
-func (r *sidebarSplitRenderer) Destroy() {}
 
 // scrollHint 把长文本放进纵向滚动区域。
 func scrollHint(text string) fyne.CanvasObject {

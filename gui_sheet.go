@@ -106,13 +106,13 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 	if g.win == nil || g.win.Canvas() == nil {
 		return
 	}
-	base := g.win.Content()
-	if base == nil {
-		return
-	}
 	// 已经有一个浮层在显示时先撤掉，避免叠成两层。
 	if g.sheet != nil {
 		g.closeSheet()
+	}
+	base := g.win.Content()
+	if base == nil {
+		return
 	}
 
 	ratio := opt.WidthRatio
@@ -134,7 +134,6 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 
 	title := widget.NewLabelWithStyle(opt.Title, fyne.TextAlignLeading, fyne.TextStyle{Bold: true})
 	title.SizeName = theme.SizeNameSubHeadingText
-
 	head := container.NewVBox(
 		inset(8, 6, 8, 6, title),
 		widget.NewSeparator(),
@@ -149,11 +148,10 @@ func (g *guiApp) showSheet(opt sheetOptions) {
 		}
 	}
 	doConfirm := func() {
-		// 先交给调用方：校验失败时它自己会再弹一次浮层。
+		g.closeSheet()
 		if opt.OnConfirm != nil {
 			opt.OnConfirm()
 		}
-		g.closeSheet()
 	}
 
 	dismissBtn := widget.NewButton(dismissText, cancel)
