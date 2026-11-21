@@ -319,8 +319,12 @@ func setGlobalConfig(item, value string) (string, error) {
 		return "editor=" + props["editor"], nil
 	case "remote":
 		return "remote=" + props["remote"], nil
-	default:
+	case "remote_token":
 		return "remote_token=****", nil
+	case "lang", "language":
+		return "lang=" + props[prefLang], nil
+	default:
+		return "", fmt.Errorf(tr("未知配置项 '%s'"), item)
 	}
 }
 

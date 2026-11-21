@@ -105,11 +105,18 @@ func TestCLIHelpEnglishUsesTranslation(t *testing.T) {
 func TestCLILanguageConfig(t *testing.T) {
 	useTempBaseDir(t)
 
-	if _, err := setGlobalConfig("lang", "en"); err != nil {
+	if msg, err := setGlobalConfig("lang", "en"); err != nil {
 		t.Fatal(err)
+	} else if msg != "lang=en" {
+		t.Fatalf("lang result = %q", msg)
 	}
 	if got := guiPref(prefLang, "auto"); got != "en" {
 		t.Fatalf("lang preference = %q", got)
+	}
+	if msg, err := setGlobalConfig("lang", "zh"); err != nil {
+		t.Fatal(err)
+	} else if msg != "lang=zh" {
+		t.Fatalf("zh result = %q", msg)
 	}
 	if _, err := setGlobalConfig("language", "中文"); err != nil {
 		t.Fatal(err)
