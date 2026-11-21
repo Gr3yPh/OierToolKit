@@ -127,8 +127,19 @@ func registryFindUnique(name string) string {
 	return ""
 }
 
-// cmdLs 列出项目库中的全部项目。
-func cmdLs() {
+// cmdLs 列出项目库中的全部项目，可按分组筛选。
+func cmdLs(groups ...string) {
+	if len(groups) > 1 {
+		fatal(tr("用法: otk ls [分组]"))
+	}
+	filter := ""
+	if len(groups) == 1 {
+		filter = strings.TrimSpace(groups[0])
+		if filter == "-" || filter == tr("未分组") {
+			filter = "__ungrouped__"
+		}
+	}
+
 	paths := registryRead()
 	if len(paths) == 0 {
 		fmt.Println(tr("（项目库为空，用 'otk init' 创建项目）"))
@@ -136,20 +147,46 @@ func cmdLs() {
 	}
 	width := 0
 	for _, dir := range paths {
+		group := projectGroupOfDir(dir)
+		if filter == "__ungrouped__" && group != "" {
+			continue
+		}
+		if filter != "" && filter != "__ungrouped__" && group != filter {
+			continue
+		}
+		name := filepath.Base(dir)
 		if n := len(filepath.Base(dir)); n > width {
 			width = n
 		}
+		_ = name
 	}
 	alive := 0
+	shown := 0
 	for _, dir := range paths {
+		group := projectGroupOfDir(dir)
+		if filter == "__ungrouped__" && group != "" {
+			continue
+		}
+		if filter != "" && filter != "__ungrouped__" && group != filter {
+			continue
+		}
+		shown++
 		name := filepath.Base(dir)
 		pad := strings.Repeat(" ", width-len(name))
 		if _, err := os.Stat(dir); err != nil {
 			fmt.Printf(tr("  %s%s%s%s  %s缺失%s\n"), yellow, name, reset, pad, yellow, reset)
 			continue
 		}
-		fmt.Printf("  %s%s%s%s  %s\n", cyan, name, reset, pad, dir)
+		if group == "" {
+			fmt.Printf("  %s%s%s%s  %s\n", cyan, name, reset, pad, dir)
+		} else {
+			fmt.Printf("  %s%s%s%s  %s  [%s]\n", cyan, name, reset, pad, dir, group)
+		}
 		alive++
+	}
+	if shown == 0 {
+		fmt.Println(tr("无匹配项目"))
+		return
 	}
 	fmt.Printf(tr("共 %d 个项目\n"), alive)
 }
@@ -287,4 +324,52 @@ func removeFileIfExists(path string) error {
 		return nil
 	}
 	return err
+}
+
+// cmdGroups 管理项目分组：ls、add、rm。
+func cmdGroups(args ...string) {
+	action := "ls"
+	name := ""
+	if len(args) > 0 {
+		action = args[0]
+	}
+	if len(args) > 2 {
+		fatal(tr("用法: otk groups ls | add <分组名> | rm <分组名>"))
+	}
+	if len(args) == 2 {
+		name = strings.TrimSpace(args[1])
+	}
+
+	switch action {
+	case "ls", "list":
+		if len(args) != 1 {
+			fatal(tr("用法: otk groups ls"))
+		}
+		groups := projectGroups()
+		if len(groups) == 0 {
+			fmt.Println(tr("（没有分组）"))
+			return
+		}
+		for _, group := range groups {
+			fmt.Println(group)
+		}
+	case "add", "new":
+		if name == "" {
+			fatal(tr("用法: otk groups add <分组名>"))
+		}
+		if _, err := addProjectGroup(name); err != nil {
+			fatal("%v", err)
+		}
+		fmt.Printf(tr("已新建分组 %s\n"), name)
+	case "rm", "remove", "delete":
+		if name == "" {
+			fatal(tr("用法: otk groups rm <分组名>"))
+		}
+		if err := deleteProjectGroup(name); err != nil {
+			fatal("%v", err)
+		}
+		fmt.Printf(tr("已删除分组 %s\n"), name)
+	default:
+		fatal(tr("用法: otk groups ls | add <分组名> | rm <分组名>"))
+	}
 }

@@ -82,6 +82,46 @@ func TestTr(t *testing.T) {
 	}
 }
 
+func TestCLIHelpEnglishUsesTranslation(t *testing.T) {
+	oldBaseDir := baseDir
+	baseDir = t.TempDir()
+	t.Cleanup(func() { baseDir = oldBaseDir })
+	if err := setGuiPref(prefLang, "en"); err != nil {
+		t.Fatal(err)
+	}
+	var buf strings.Builder
+	printUsage(&buf)
+	if !strings.Contains(buf.String(), "Usage: otk <command> [arguments]") {
+		t.Fatalf("English CLI help missing usage heading: %q", buf.String())
+	}
+	if !strings.Contains(buf.String(), "Projects:") || !strings.Contains(buf.String(), "otk groups ls") {
+		t.Fatalf("English CLI help missing project or group command: %q", buf.String())
+	}
+	if strings.Contains(buf.String(), "项目:") {
+		t.Fatalf("English CLI help still contains Chinese project heading")
+	}
+}
+
+func TestCLILanguageConfig(t *testing.T) {
+	useTempBaseDir(t)
+
+	if _, err := setGlobalConfig("lang", "en"); err != nil {
+		t.Fatal(err)
+	}
+	if got := guiPref(prefLang, "auto"); got != "en" {
+		t.Fatalf("lang preference = %q", got)
+	}
+	if _, err := setGlobalConfig("language", "中文"); err != nil {
+		t.Fatal(err)
+	}
+	if got := guiPref(prefLang, "auto"); got != "zh" {
+		t.Fatalf("Chinese lang preference = %q", got)
+	}
+	if _, err := setGlobalConfig("lang", "invalid"); err == nil {
+		t.Fatal("invalid CLI language should fail")
+	}
+}
+
 func TestLanguageValueRoundTrip(t *testing.T) {
 	for display, value := range map[string]string{"中文": "zh", "English": "en", "跟随系统": "auto"} {
 		if languageValueFromChoice(display) != value {

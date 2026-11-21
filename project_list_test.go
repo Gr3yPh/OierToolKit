@@ -182,3 +182,33 @@ func TestProjectNameRemainsEditableAndIndependentOfCodeName(t *testing.T) {
 		t.Fatal("empty name should remove the name config key")
 	}
 }
+
+func TestCLIProjectNameAndGroupConfig(t *testing.T) {
+	useTempBaseDir(t)
+	dir := filepath.Join(t.TempDir(), "cli-project")
+	p, _, _, err := initProjectAt(dir, "cli-project")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := setProjectConfig(p, "name", "CLI 显示名"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectNameOf(dir); got != "CLI 显示名" {
+		t.Fatalf("project name = %q", got)
+	}
+
+	if _, err := setProjectConfig(p, "group", "基础"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectGroupOf(p); got != "基础" {
+		t.Fatalf("project group = %q", got)
+	}
+
+	if _, err := setProjectConfig(p, "group", "-"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectGroupOf(p); got != "" {
+		t.Fatalf("cleared project group = %q", got)
+	}
+}

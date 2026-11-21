@@ -116,3 +116,34 @@ func TestSidebarGroupDeleteButtonTracksSelection(t *testing.T) {
 		t.Fatal("group delete button should be hidden after selecting the root")
 	}
 }
+
+func TestCLICanManageProjectGroups(t *testing.T) {
+	oldBaseDir := baseDir
+	baseDir = t.TempDir()
+	t.Cleanup(func() { baseDir = oldBaseDir })
+
+	projectDir := filepath.Join(t.TempDir(), "cli-project")
+	if err := os.MkdirAll(projectDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	writeIni(projectConfigPathOf(projectDir), map[string]string{"group": "基础"})
+	registryWrite([]string{projectDir})
+
+	name, err := addProjectGroup("基础")
+	if err != nil || name != "基础" {
+		t.Fatalf("add group: name=%q err=%v", name, err)
+	}
+	if got := projectGroupOfDir(projectDir); got != "基础" {
+		t.Fatalf("project group = %q", got)
+	}
+
+	if err := deleteProjectGroup("基础"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectGroupOfDir(projectDir); got != "" {
+		t.Fatalf("project should become ungrouped, got %q", got)
+	}
+	if got := projectGroups(); len(got) != 0 {
+		t.Fatalf("remaining groups = %#v", got)
+	}
+}

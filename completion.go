@@ -47,7 +47,7 @@ func cmdCompletion(args []string) {
 }
 
 // otkCommands 是补全脚本共用的子命令清单，改命令列表时同步更新。
-const otkCommands = "init status st ls search se rm cd refresh rf samples clone submit sub config judge j history his run r debug d edit e stress ss pack pk contest gui show wizard doctor help h version v completion"
+const otkCommands = "init status st ls groups search se rm cd refresh rf samples clone submit sub config judge j history his run r debug d edit e stress ss pack pk contest gui show wizard doctor help h version v completion"
 
 const bashCompletion = `# otk bash 补全 —— 写进 ~/.bashrc：source <(otk completion bash)
 _otk_completions() {
@@ -64,9 +64,14 @@ _otk_completions() {
             fi
             COMPREPLY=( $(compgen -W "$dirs" -- "$cur") )
             ;;
+        groups)
+            if [ "$COMP_CWORD" -eq 2 ]; then
+                COMPREPLY=( $(compgen -W "ls add rm" -- "$cur") )
+            fi
+            ;;
         config)
             if [ "$COMP_CWORD" -eq 2 ]; then
-                COMPREPLY=( $(compgen -W "time memory version o2 threads io io_in io_out cflags spj remote_base remote_id editor remote remote_token" -- "$cur") )
+                COMPREPLY=( $(compgen -W "time memory version o2 threads io io_in io_out cflags spj remote_base remote_id name group lang editor remote remote_token" -- "$cur") )
             fi
             ;;
         completion)
@@ -89,6 +94,7 @@ _otk() {
         'init:在当前目录初始化项目'
         'status:当前项目状态'
         'ls:列出全部项目'
+        'groups:管理项目分组'
         'search:搜索项目'
         'rm:移除项目'
         'cd:在新 shell 中打开项目目录'
@@ -125,9 +131,14 @@ _otk() {
                 cd|rm)
                     _files
                     ;;
+                groups)
+                    if (( CURRENT == 2 )); then
+                        _values 'action' ls add rm
+                    fi
+                    ;;
                 config)
                     if (( CURRENT == 2 )); then
-                        _values 'item' time memory version o2 threads io io_in io_out cflags spj remote_base remote_id editor remote remote_token
+                        _values 'item' time memory version o2 threads io io_in io_out cflags spj remote_base remote_id name group lang editor remote remote_token
                     fi
                     ;;
                 completion)

@@ -23,20 +23,13 @@ A lightweight cross-platform local judge and problem management tool customized 
 </p>
 
 ## 🌟 Features
-* **GUI and CLI in One Binary**: one binary, two entry points — `otk` (CLI) and `otk-gui` (native GUI on Windows / macOS / Linux, full feature parity), so they never get in each other's way. The workspace uses tabs, so multiple projects, contests and Start Here can stay open. The GUI restores the last window state (maximized on first launch; title bar and window buttons kept; F11 toggles). CLI output is safe to redirect (colors are disabled off-terminal).
-* **Desktop and Application Menu Shortcuts**: the GUI asks once on first launch whether to create a desktop shortcut; Settings can also register OierToolKit in the application menu. On Linux Wayland the taskbar icon relies on this menu entry too.
-* **Built-in Terminal Editor**: Settings can run nvim/vim inside a terminal tab next to the source editor; the terminal tab can open a statement split on the right; when disabled, the original external-editor behavior is kept.
-* **Statement Math**: statement Markdown supports inline `$...$` and display `$$...$$` (plus `\(...\)` / `\[...\]`), rendered locally without a browser or external TeX installation.
-* **Update Check and One-Click Update**: checks at startup or on demand from Settings; a new release can be downloaded in-app with a progress bar and installed/restarted automatically. Downloads prefer v4.gh-proxy.org acceleration for GitHub Releases, with direct GitHub as fallback; the site remains as a display page and serves the `version.json` manifest.
-* **Project Registry**: Projects can live in any directory (`otk init`); they are all registered into a central registry for unified management.
-* **Project Groups**: The project library and sidebar show projects as a group tree; groups can be set from project settings, new-project and clone dialogs, and new groups can be created inline.
-* **Samples Are Just Files**: Drop paired `.in` + `.out` files (contest-provided `.ans` works too) into the project directory and run `otk refresh` to register them.
-* **Cross-platform Measurement**: Runtime and peak memory come directly from OS interfaces — no GNU time or other external tools.
-* **Diff Engine**: With `-v`, WA shows expected vs your output and RE shows stderr.
-* **Stress Testing**: gen.cpp generates tests, brute.cpp serves as the reference; counter-examples are saved to `.stress/`.
-* **Remote OJ**: `otk clone` clones problems from any OJ implementing the [otk-remote protocol](PROTOCOL.md) into a fresh project directory, importing the title, site name, Markdown statement and samples; `otk submit` submits locally and waits for the verdict.
-* **Mock Contests**: `otk contest` imports a whole contest folder (multi-problem, multi-contestant), judges in parallel with subtask scoring (`all` / `any` / `sum`), and exports a standalone HTML leaderboard.
-* **Scripting**: Non-zero exit code when any test is not AC.
+
+- **GUI and CLI**: One binary provides a command-line interface and a tabbed desktop interface.
+- **Projects and Groups**: Keep projects anywhere, manage them in the project registry and group tree, and edit names and groups.
+- **Samples and Judging**: Register paired `.in/.out` or `.in/.ans` samples; includes diff, SPJ, stress testing and history.
+- **Contests and Remote OJ**: Import contests, judge in parallel, export leaderboards, clone problems and submit solutions.
+- **Cross-platform Updates**: Supports Linux, Windows and macOS, with startup update checks and in-app updates.
+
 
 ## 🚀 Installation
 
@@ -79,7 +72,7 @@ otk j                         # compile and judge
 #   #sample1 AC    2ms 4.36MB
 ```
 
-Projects can live anywhere — `otk init` registers them into the registry (`~/.otkprofile/registry`): browse them with `otk ls` and jump to one with `otk cd <name>` (exit returns to the original directory). `otk rm [--soft|--hard] [name]` soft-deletes OTK metadata, stress data, and compiled artifacts by default while preserving source and sample files; `--hard` deletes the entire project directory.
+Projects can live anywhere — `otk init` registers them into the registry (`~/.otkprofile/registry`): browse them with `otk ls` and jump to one with `otk cd <name>` (exit returns to the original directory). From inside a project, use `otk config name "Display name"` to rename it and `otk config group "Group"` to set its group; an empty name or `-` resets the name or clears the group. `otk rm [--soft|--hard] [name]` soft-deletes OTK metadata, stress data, and compiled artifacts by default while preserving source and sample files; `--hard` deletes the entire project directory.
 
 For a wrong solution, stress-test it: prepare gen.cpp and brute.cpp, then run `otk stress 100`; counter-examples are saved to `.stress/`.
 

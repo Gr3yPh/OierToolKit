@@ -206,6 +206,7 @@ func saveRemoteToken(name, token string) error {
 func showConfig() {
 	globalProps := readIni(globalConfigPath())
 	fmt.Printf("editor=%s\n", propsOr(globalProps, "editor", defaultEditorCommand()))
+	fmt.Printf("lang=%s\n", propsOr(globalProps, prefLang, "auto"))
 	remotes := listRemotes()
 	for _, r := range remotes {
 		fmt.Printf("remote[%s]=%s\n", r.Name, r.Base)
@@ -233,6 +234,12 @@ func showConfig() {
 		fmt.Printf("io=file in=%s out=%s\n",
 			propsOr(props, "io_in", tr("（<源码名>.in）")),
 			propsOr(props, "io_out", tr("（<源码名>.out）")))
+	}
+	if name := props["name"]; name != "" {
+		fmt.Printf("name=%s\n", name)
+	}
+	if group := projectGroupOf(p); group != "" {
+		fmt.Printf("group=%s\n", group)
 	}
 	if c := props["cflags"]; c != "" {
 		fmt.Printf("cflags=%s\n", c)
@@ -275,7 +282,7 @@ func setConfig(item, value string) {
 // isGlobalConfigItem 判断配置项是否属于全局配置（不依赖当前项目）。
 func isGlobalConfigItem(item string) bool {
 	switch strings.ToLower(item) {
-	case "editor", "remote", "remote_token":
+	case "editor", "remote", "remote_token", "lang", "language":
 		return true
 	}
 	return false
@@ -291,6 +298,17 @@ func setGlobalConfig(item, value string) (string, error) {
 		props["remote"] = strings.TrimRight(value, "/")
 	case "remote_token":
 		props["remote_token"] = value
+	case "lang", "language":
+		switch strings.ToLower(strings.TrimSpace(value)) {
+		case "zh", "zh-cn", "zh-hans", "中文":
+			props[prefLang] = "zh"
+		case "en", "english", "英文":
+			props[prefLang] = "en"
+		case "auto", "跟随系统":
+			props[prefLang] = "auto"
+		default:
+			return "", fmt.Errorf("%s", tr("language 必须是 zh/en/auto"))
+		}
 	default:
 		return "", fmt.Errorf(tr("未知配置项 '%s'"), item)
 	}
@@ -442,6 +460,9 @@ func setProjectConfig(p project, item, value string) (string, error) {
 
 	case "group":
 		group := strings.TrimSpace(value)
+		if group == "-" {
+			group = ""
+		}
 		if strings.Contains(group, "|") {
 			return "", fmt.Errorf("%s", tr("分组名不能包含竖线 |"))
 		}

@@ -55,6 +55,7 @@ var cmdAlias = map[string]string{
 	"status":     "status",
 	"st":         "status",
 	"ls":         "ls",
+	"groups":     "groups",
 	"search":     "search",
 	"se":         "search",
 	"rm":         "rm",
@@ -118,8 +119,9 @@ func main() {
 		requireNoArgs(args[1:], "status")
 		cmdStatus()
 	case "ls":
-		requireNoArgs(args[1:], "ls")
-		cmdLs()
+		cmdLs(args[1:]...)
+	case "groups":
+		cmdGroups(args[1:]...)
 	case "search":
 		cmdSearch(args[1:])
 	case "rm":
@@ -288,59 +290,126 @@ func cmdCd(args []string) {
 }
 
 func printUsage(w io.Writer) {
-	fmt.Fprint(w, `用法: otk <命令> [参数...]
+	if uiLangIsEnglish() {
+		fmt.Fprintf(w, `Usage: otk <command> [arguments]
+
+Projects:
+  otk init [-t template] [name]          Initialize a project here (-t: blank/io/multi/fileio/stress)
+  otk status | st                        Show the current project status
+  otk ls [group|-]                       List projects, optionally filtered by group or ungrouped (-)
+  otk groups ls | add <name> | rm <name> List, add or remove project groups
+  otk se <regex>                         Search projects by name, path or label
+  otk rm [--soft|--hard] [name]         Remove from the registry, or delete project data
+  otk cd [name]                          Open a project in a new shell
+  otk pack | pk [directory] [output.zip] Pack source, samples and project config
+
+Samples:
+  otk refresh | rf                       Sync sample files
+  otk samples                            List samples
+
+Config:
+  otk config                             Show the current configuration
+  otk config <key> <value>               Change a setting
+  otk config name <name>                 Set project name (project folder: empty value resets it)
+  otk config group <name|->              Set project group (project folder: - removes the group)
+  otk config lang zh|en|auto             Change the CLI and GUI language
+  otk config export [zip] [-r] [-t]      Export settings (-r: registry, -t: tokens)
+  otk config import <zip> [-f] [-r] [-t] Import settings (-f: overwrite, -r: registry, -t: tokens)
+
+Run:
+  otk judge | j [-v] [sample...]         Compile and judge (-v: show RE/WA details)
+  otk history | his [-e json|csv] [N]    Show or export evaluation history
+  otk run | r                            Compile and run
+  otk debug | d                          Debug with gdb
+  otk edit | e                           Edit source
+  otk stress | ss [N]                    Stress test counterexamples
+
+Remote OJ:
+  otk clone [-r remote] [address] <id>   Clone a problem
+  otk submit | sub [-q]                  Submit source and wait for the verdict (-q: submit only)
+
+Contests:
+  otk contest | ct add <directory> [name] Import a contest (data/ + source/)
+  otk contest ls                          List contests
+  otk contest judge [name]                Judge a contest and generate standings
+  otk contest rank [name] [-w file]       Show or export standings
+  otk contest export <name> [output.zip]  Export a contest package
+  otk contest dup <name> [new-name]       Duplicate a contest
+
+Misc:
+  otk gui                                 Open the graphical interface
+  otk wizard                              Interactive setup and workflow guide
+  otk doctor                              Diagnose terminal and runtime issues
+  otk completion <shell>                  Print completion script (bash/zsh/powershell)
+  otk show w|c                            Warranty / license
+  otk version                             Show the version
+  otk help                                Show this help
+
+OierToolKit %s — 魇珩Gr3yPh4ntom
+Copyright (C) 2026 魇珩Gr3yPh4ntom. GPLv3+, no warranty.
+https://github.com/Gr3yPh/OierToolKit
+Homepage: https://otk.gr3yph4ntom.cn
+`, otkVersion)
+		return
+	}
+
+	fmt.Fprintf(w, `用法: otk <命令> [参数]
 
 项目:
-  otk init [-t 模板] [名称]  在当前目录初始化项目（-t 选模板，如 blank/io/multi/fileio/stress）
-  otk status | st        当前项目状态
-  otk ls                 列出全部项目
-  otk se <正则>          搜索项目
-  otk rm [--soft|--hard] [名称]  移除项目
-  otk cd [名称]          在新 shell 中打开项目目录
-  otk pack | pk [目录] [输出.zip]  把项目打包（源码 + 样例 + .otk 配置）
+  otk init [-t 模板] [名称]             在当前目录初始化项目（-t 可选 blank/io/multi/fileio/stress）
+  otk status | st                        显示当前项目状态
+  otk ls [分组名|-]                      按分组列出项目；- 或“未分组”筛选未分组项目
+  otk groups ls | add <分组名> | rm <分组名>  列出、新建或删除分组
+  otk se <正则>                          按名称、路径或标签搜索项目
+  otk rm [--soft|--hard] [名称]          移除项目库记录或删除项目数据
+  otk cd [名称]                          在新 shell 中打开项目目录
+  otk pack | pk [目录] [输出.zip]        打包源码、样例和项目配置
 
 样例:
-  otk refresh | rf       同步样例库
-  otk samples            列出样例
+  otk refresh | rf                       同步样例库
+  otk samples                            列出样例
 
 配置:
-  otk config             查看配置
-  otk config <项> <值>   修改配置
-  otk config export [zip] [-r] [-t]  导出配置（-r 含项目库，-t 含令牌）
-  otk config import <zip> [-f] [-r] [-t]  导入配置（-f 覆盖同名项）
+  otk config                             查看配置
+  otk config <项> <值>                   修改配置
+  otk config name <名称>                 修改当前项目名称（空名称恢复目录名）
+  otk config group <分组名|->            修改当前项目分组（- 清除分组）
+  otk config lang zh|en|auto             切换中英文界面和命令行输出
+  otk config export [zip] [-r] [-t]      导出配置（-r 含项目库，-t 含令牌）
+  otk config import <zip> [-f] [-r] [-t] 导入配置（-f 覆盖同名项，-r 含项目库，-t 含令牌）
 
 运行:
-  otk judge | j [-v] [样例...]  编译并评测（-v 显示报错与 WA 详情；指定样例号只测该点）
-  otk history | his [-e json|csv] [次数]  评测历史，-e 导出记录
-  otk run | r            编译并运行
-  otk debug | d          gdb 调试
-  otk edit | e           编辑源码
-  otk stress | ss [N]    对拍
+  otk judge | j [-v] [样例...]           编译并评测（-v 显示 RE/WA 详情）
+  otk history | his [-e json|csv] [次数] 查看或导出评测历史
+  otk run | r                            编译并运行
+  otk debug | d                          使用 gdb 调试
+  otk edit | e                           编辑源码
+  otk stress | ss [N]                    运行对拍并保存反例
 
 远程 OJ:
-  otk clone [-r 远端名] [地址] <题号>  从网站添加题目（协议见 PROTOCOL.md）
-  otk submit | sub [-q]  提交源码评测并等待结果（-q 只提交）
+  otk clone [-r 远端名] [地址] <题号>    从网站添加题目（协议见 PROTOCOL.md）
+  otk submit | sub [-q]                  提交源码并等待 verdict（-q 只提交）
 
 模拟赛:
-  otk contest | ct add <目录> [名称]   导入一整场模拟赛（data/ + source/）
-  otk contest ls                       列出已导入的比赛
-  otk contest judge [名称]             评测整场比赛并生成榜单
-  otk contest rank [名称] [-w 文件]    查看榜单，-w 导出 HTML
-  otk contest export <名称> [输出.zip] 导出比赛数据包
-  otk contest dup <名称> [新名称]      复制一场比赛
+  otk contest | ct add <目录> [名称]     导入比赛（data/ + source/）
+  otk contest ls                         列出已导入的比赛
+  otk contest judge [名称]               评测整场比赛并生成榜单
+  otk contest rank [名称] [-w 文件]      查看或导出 HTML 榜单
+  otk contest export <名称> [输出.zip]   导出比赛数据包
+  otk contest dup <名称> [新名称]        复制一场比赛
 
 杂项:
-  otk gui                打开图形界面（安装脚本也会生成 otk-gui 入口，双击即进 GUI）
-  otk wizard             新手向导，完整体验一遍工作流
-  otk doctor             诊断终端环境（显示异常时运行并反馈输出）
-  otk completion <shell> 输出补全脚本（bash / zsh / powershell）
-  otk show w|c           担保 / 许可证
-  otk version            版本
-  otk help               帮助
+  otk gui                                打开图形界面
+  otk wizard                             新手向导，一步步体验工作流
+  otk doctor                             诊断终端和运行环境问题
+  otk completion <shell>                 输出补全脚本（bash / zsh / powershell）
+  otk show w|c                           显示担保或许可证
+  otk version                            显示版本
+  otk help                               显示帮助
 
-OierToolKit `+otkVersion+` — 魇珩Gr3yPh4ntom
+OierToolKit %s — 魇珩Gr3yPh4ntom
 Copyright (C) 2026 魇珩Gr3yPh4ntom. 按 GPLv3+ 发布，不提供任何担保。
 https://github.com/Gr3yPh/OierToolKit
 主页: https://otk.gr3yph4ntom.cn
-`)
+`, otkVersion)
 }
