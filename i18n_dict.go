@@ -74,6 +74,8 @@ var enUI = map[string]string{
 	"文件存在":     "File present", "文件缺失": "File missing",
 	"项目目录，例如 D:\\OI\\aplusb": "Project folder, e.g. D:\\OI\\aplusb",
 	"项目名称（默认取目录名）":           "Project name (defaults to folder name)",
+	"项目名称":                   "Project name",
+	"name=（使用目录名）":           "name=(use folder name)",
 	"请填写项目目录":                "Please enter a project folder",
 	"搜索项目名或路径":               "Search project name or path",
 	"从项目库移除记录":               "Remove from library",
@@ -879,7 +881,7 @@ var enUI = map[string]string{
 	"分组名，例如：基础 / 动态规划": "Group name, e.g. Basics / Dynamic Programming",
 	"已新建分组 %s":         "Created group %s",
 	"group=（未分组）":      "group=(ungrouped)",
-	"未知配置项 '%s'（项目: time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）": "Unknown config key '%s' (project: time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id; global: editor/remote/remote_token; remotes: otk config remote ls|add|token|rm)",
+	"未知配置项 '%s'（项目: name/time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）": "Unknown config key '%s' (project: name/time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id; global: editor/remote/remote_token; remotes: otk config remote ls|add|token|rm)",
 
 	// 配置导出/导入
 	"导出配置": "Export Config", "导入配置": "Import Config", "下一步": "Next",

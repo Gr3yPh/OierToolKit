@@ -38,7 +38,7 @@ type overviewPage struct {
 	pg      *projectPage
 	content fyne.CanvasObject
 
-	name     *widget.Label
+	name     *widget.Entry
 	dir      *widget.Label
 	source   *widget.Label
 	count    *widget.Label
@@ -70,8 +70,9 @@ func newOverviewPage(pg *projectPage) *overviewPage {
 	// 避免打开项目页时把当前分组误当成一次编辑重新写盘。
 	o.loading = true
 
-	o.name = strong("")
-	o.name.Truncation = fyne.TextTruncateEllipsis
+	o.name = widget.NewEntry()
+	o.name.SetPlaceHolder(tr("项目名称"))
+	o.name.OnChanged = func(string) { o.markDirty() }
 	o.dir = monoLabel("")
 	o.source = monoLabel("")
 	o.count = widget.NewLabel("")
@@ -312,6 +313,21 @@ func (o *overviewPage) autoSave() {
 	p := o.pg.p
 	write := func(item, value string) {
 		_, _ = setProjectConfig(p, item, value)
+	}
+
+	name := strings.TrimSpace(o.name.Text)
+	write("name", name)
+	p.Name = projectNameOf(p.Dir)
+	o.pg.p = p
+	if o.pg.g != nil {
+		o.pg.g.reloadProjects()
+		if o.pg.g.workspace != nil {
+			if tab := o.pg.g.findWorkspaceTab(tabProject, p.Dir); tab != nil {
+				tab.title = p.Name
+				tab.item.Text = p.Name
+				o.pg.g.workspace.Refresh()
+			}
+		}
 	}
 
 	if t := strings.TrimSpace(o.timeIn.Text); t != "" {

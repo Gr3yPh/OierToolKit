@@ -430,6 +430,16 @@ func setProjectConfig(p project, item, value string) (string, error) {
 		props["remote_id"] = value
 		msg = fmt.Sprintf("remote_id=%s", value)
 
+	case "name":
+		name := strings.TrimSpace(value)
+		if name == "" {
+			delete(props, "name")
+			msg = tr("name=（使用目录名）")
+		} else {
+			props["name"] = name
+			msg = "name=" + name
+		}
+
 	case "group":
 		group := strings.TrimSpace(value)
 		if strings.Contains(group, "|") {
@@ -447,7 +457,7 @@ func setProjectConfig(p project, item, value string) (string, error) {
 		}
 
 	default:
-		return "", fmt.Errorf(tr("未知配置项 '%s'（项目: time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）"), item)
+		return "", fmt.Errorf(tr("未知配置项 '%s'（项目: name/time/memory/version/compiler/o2/threads/io/io_in/io_out/cflags/spj/group/remote_base/remote_id；全局: editor/remote/remote_token；远端管理: otk config remote ls|add|token|rm）"), item)
 	}
 
 	writeIni(p.configPath(), props)

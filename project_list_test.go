@@ -150,3 +150,35 @@ func TestScanProjectMeta(t *testing.T) {
 		t.Errorf("缺失行的文本不对: %q / %q", gone.lastText(), gone.statusText())
 	}
 }
+
+func TestProjectNameRemainsEditableAndIndependentOfCodeName(t *testing.T) {
+	useTempBaseDir(t)
+	dir := filepath.Join(t.TempDir(), "alpha-dir")
+	p, _, _, err := initProjectAt(dir, "alpha-dir")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := setProjectConfig(p, "name", "甲 题目名称"); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectNameOf(dir); got != "甲 题目名称" {
+		t.Fatalf("renamed project name = %q", got)
+	}
+	if p.codeName() != "alpha-dir" {
+		t.Fatalf("code name changed with display name: %q", p.codeName())
+	}
+	if got := p.sourcePath(); got != filepath.Join(dir, "alpha-dir.cpp") {
+		t.Fatalf("source path changed: %q", got)
+	}
+
+	if _, err := setProjectConfig(p, "name", "  "); err != nil {
+		t.Fatal(err)
+	}
+	if got := projectNameOf(dir); got != "alpha-dir" {
+		t.Fatalf("empty name should fall back to directory name, got %q", got)
+	}
+	if _, ok := p.cfg()["name"]; ok {
+		t.Fatal("empty name should remove the name config key")
+	}
+}
